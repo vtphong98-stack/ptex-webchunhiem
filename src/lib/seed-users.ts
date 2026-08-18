@@ -35,7 +35,7 @@ export function getSeedUsers(): SeedUser[] {
       role: "lopTruong",
       teamNumber: null,
       aliases: ["loptruong"],
-      resetPassword: true,
+      resetPassword: false,
     },
     {
       username: "lpht",
@@ -44,7 +44,7 @@ export function getSeedUsers(): SeedUser[] {
       role: "lopPhoHocTap",
       teamNumber: null,
       aliases: ["lopphohoctap"],
-      resetPassword: true,
+      resetPassword: false,
     },
     {
       username: "lpld",
@@ -53,7 +53,7 @@ export function getSeedUsers(): SeedUser[] {
       role: "lopPhoLaoDong",
       teamNumber: null,
       aliases: ["loppholaodong"],
-      resetPassword: true,
+      resetPassword: false,
     },
     {
       username: "lppt",
@@ -62,7 +62,7 @@ export function getSeedUsers(): SeedUser[] {
       role: "lopPhoPhongTrao",
       teamNumber: null,
       aliases: ["lopphophongtrao"],
-      resetPassword: true,
+      resetPassword: false,
     },
     {
       username: "lptt",
@@ -71,7 +71,7 @@ export function getSeedUsers(): SeedUser[] {
       role: "lopPhoTratTu",
       teamNumber: null,
       aliases: ["lopphotrattu"],
-      resetPassword: true,
+      resetPassword: false,
     },
     {
       username: "thuquy",
@@ -79,7 +79,7 @@ export function getSeedUsers(): SeedUser[] {
       fullName: "Thủ quỹ",
       role: "thuQuy",
       teamNumber: null,
-      resetPassword: true,
+      resetPassword: false,
     },
     {
       username: "tt1",
@@ -87,7 +87,7 @@ export function getSeedUsers(): SeedUser[] {
       fullName: "Tổ trưởng tổ 1",
       role: "toTruong",
       teamNumber: 1,
-      resetPassword: true,
+      resetPassword: false,
     },
     {
       username: "tt2",
@@ -95,7 +95,7 @@ export function getSeedUsers(): SeedUser[] {
       fullName: "Tổ trưởng tổ 2",
       role: "toTruong",
       teamNumber: 2,
-      resetPassword: true,
+      resetPassword: false,
     },
     {
       username: "tt3",
@@ -103,7 +103,7 @@ export function getSeedUsers(): SeedUser[] {
       fullName: "Tổ trưởng tổ 3",
       role: "toTruong",
       teamNumber: 3,
-      resetPassword: true,
+      resetPassword: false,
     },
     {
       username: "tt4",
@@ -111,7 +111,7 @@ export function getSeedUsers(): SeedUser[] {
       fullName: "Tổ trưởng tổ 4",
       role: "toTruong",
       teamNumber: 4,
-      resetPassword: true,
+      resetPassword: false,
     },
   ];
 }

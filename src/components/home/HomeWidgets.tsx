@@ -97,8 +97,40 @@ export function ExamCountdown() {
         </div>
       </div>
       <p style={{ textAlign: "center", color: "#64748b" }}>
-        {CLASS_SITE.examTitle}: {CLASS_SITE.examDate}
+        {CLASS_SITE.examTitle}: {CLASS_SITE.examDate} · {CLASS_SITE.hk2Title}: {CLASS_SITE.hk2Date} · {CLASS_SITE.tnTitle}: {CLASS_SITE.tnDate}
       </p>
     </div>
+  );
+}
+
+export function HomeRanking() {
+  const [data, setData] = useState<{
+    rankingWeek: number;
+    ranking: { scores: Array<{ teamNumber: number; score: number }>; firstPlace: string };
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/ranking")
+      .then((response) => response.json())
+      .then(setData)
+      .catch(() => setData(null));
+  }, []);
+
+  if (!data?.rankingWeek) return null;
+
+  return (
+    <section className="site-section">
+      <h2>Thi đua tổ · Tuần {data.rankingWeek}</h2>
+      <div className="site-widget">
+        <p style={{ margin: 0, fontWeight: 700 }}>Hạng nhất: {data.ranking.firstPlace || "Chưa có"}</p>
+        <ul style={{ margin: "12px 0 0", paddingLeft: 20 }}>
+          {data.ranking.scores.map((item) => (
+            <li key={item.teamNumber}>
+              Tổ {item.teamNumber}: {item.score} điểm
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }

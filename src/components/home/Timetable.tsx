@@ -46,7 +46,7 @@ function TimetableTable({
 export function Timetable() {
   return (
     <>
-      <TimetableTable periods={[1, 2, 3, 4, 5]} rows={MORNING_TIMETABLE} title="Buổi Sáng (Áp dụng: 01-12-2025)" />
+      <TimetableTable periods={[1, 2, 3, 4, 5]} rows={MORNING_TIMETABLE} title="Buổi Sáng" />
       <TimetableTable periods={[2, 3, 4, 5]} rows={AFTERNOON_TIMETABLE} title="Trái Buổi: Chiều" />
     </>
   );

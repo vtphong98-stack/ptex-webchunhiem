@@ -8,8 +8,6 @@ import { createSession, getUserByUsername } from "@/lib/session";
 import { toPlainString } from "@/lib/utils";
 
 export async function loginAction(formData: FormData) {
-  await ensureSeedData();
-
   const username = toPlainString(formData.get("username")).toLowerCase();
   const password = toPlainString(formData.get("password"));
   const userQuery = username ? `&user=${encodeURIComponent(username)}` : "";
@@ -18,7 +16,11 @@ export async function loginAction(formData: FormData) {
     redirect(`/login?error=missing${userQuery}`);
   }
 
-  const user = await getUserByUsername(username);
+  let user = await getUserByUsername(username);
+  if (!user) {
+    await ensureSeedData();
+    user = await getUserByUsername(username);
+  }
 
   if (!user || !user.active) {
     redirect(`/login?error=invalid${userQuery}`);

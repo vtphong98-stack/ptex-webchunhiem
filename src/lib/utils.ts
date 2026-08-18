@@ -1,6 +1,8 @@
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+import { buildExcelWeeks, EXCEL_WEEK_COUNT } from "@/lib/weeks";
+
 export function cn(...inputs: Array<string | false | null | undefined>) {
   return twMerge(clsx(inputs));
 }
@@ -36,6 +38,11 @@ export function schoolYearLabelFromName(name: string) {
 }
 
 export function buildWeeks(startDate: string, weekCount: number) {
+  const excelWeeks = buildExcelWeeks();
+  if (weekCount === EXCEL_WEEK_COUNT) {
+    return excelWeeks;
+  }
+
   const weeks = [];
   const base = new Date(startDate);
 
@@ -44,10 +51,12 @@ export function buildWeeks(startDate: string, weekCount: number) {
     start.setDate(base.getDate() + index * 7);
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
+    const excelWeek = excelWeeks[index];
 
     weeks.push({
       weekNumber: index + 1,
       label: `Tuần ${index + 1}`,
+      dateRangeLabel: excelWeek?.dateRangeLabel ?? "",
       startDate: start.toISOString(),
       endDate: end.toISOString(),
     });

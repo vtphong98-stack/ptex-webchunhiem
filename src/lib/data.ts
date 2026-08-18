@@ -1,31 +1,61 @@
 import { ObjectId } from "mongodb";
 
-import { ensureSeedData } from "@/lib/bootstrap";
 import { getDb } from "@/lib/db";
 import type {
   AppRole,
   AuditLog,
   ClassConfig,
+  NavView,
   ParentContact,
   SchoolYear,
+  SessionUser,
   Student,
   UserAccount,
   WeeklyReport,
 } from "@/lib/types";
+import { buildExcelWeeks, EXCEL_WEEK_COUNT } from "@/lib/weeks";
 
 export async function getCurrentSchoolYear() {
-  await ensureSeedData();
   const db = await getDb();
   return db.collection<SchoolYear>("schoolYears").findOne({ isCurrent: true });
 }
 
-export async function getDashboardData(selectedYearId?: string | null) {
-  await ensureSeedData();
+export async function getOfficerDashboardData(session: SessionUser) {
+  const db = await getDb();
+  const weeks = buildExcelWeeks();
+  const schoolYear = await db.collection<SchoolYear>("schoolYears").findOne(
+    { isCurrent: true },
+    { projection: { _id: 1 } },
+  );
+  const reports = schoolYear?._id
+    ? await db
+        .collection<WeeklyReport>("weeklyReports")
+        .find({
+          schoolYearId: schoolYear._id,
+          reporterRole: session.role,
+          teamNumber: session.teamNumber ?? null,
+        })
+        .sort({ weekNumber: -1, updatedAt: -1 })
+        .limit(20)
+        .toArray()
+    : [];
+
+  return {
+    schoolYear: {
+      _id: schoolYear?._id,
+      weekCount: EXCEL_WEEK_COUNT,
+      weeks,
+    },
+    reports,
+  };
+}
+
+export async function getDashboardData(selectedYearId?: string | null, view: NavView = "reports") {
   const db = await getDb();
 
   const schoolYears = await db
     .collection<SchoolYear>("schoolYears")
-    .find({})
+    .find({}, { projection: { name: 1, label: 1, startDate: 1, endDate: 1, weekCount: 1, isCurrent: 1 } })
     .sort({ startDate: -1 })
     .toArray();
 
@@ -38,41 +68,47 @@ export async function getDashboardData(selectedYearId?: string | null) {
     throw new Error("No school year available.");
   }
 
-  const schoolYearId = currentSchoolYear._id;
+  currentSchoolYear.weeks = buildExcelWeeks();
+  currentSchoolYear.weekCount = EXCEL_WEEK_COUNT;
 
-  const [classConfig, students, parents, reports, accounts, auditLogs] = await Promise.all([
+  const schoolYearId = currentSchoolYear._id;
+  const loadStudents = view === "students";
+  const loadParents = view === "parents";
+  const loadAccounts = view === "accounts";
+  const loadAudit = view === "audit";
+  const loadReports = view === "reports";
+
+  const [classConfig, studentCount, parentCount, students, parents, reports, accounts, auditLogs] = await Promise.all([
     db.collection<ClassConfig>("classConfigs").findOne({ schoolYearId }),
-    db.collection<Student>("students").find({ schoolYearId }).sort({ fullName: 1 }).toArray(),
-    db.collection<ParentContact>("parents").find({ schoolYearId }).sort({ studentName: 1 }).toArray(),
-    db.collection<WeeklyReport>("weeklyReports").find({ schoolYearId }).sort({ weekNumber: -1, updatedAt: -1 }).toArray(),
-    db.collection<UserAccount>("users").find({}).sort({ role: 1, username: 1 }).toArray(),
-    db.collection<AuditLog>("auditLogs").find({ schoolYearId }).sort({ createdAt: -1 }).limit(30).toArray(),
+    db.collection<Student>("students").countDocuments({ schoolYearId }),
+    db.collection<ParentContact>("parents").countDocuments({ schoolYearId }),
+    loadStudents
+      ? db.collection<Student>("students").find({ schoolYearId }).sort({ fullName: 1 }).toArray()
+      : Promise.resolve([]),
+    loadParents
+      ? db.collection<ParentContact>("parents").find({ schoolYearId }).sort({ studentName: 1 }).toArray()
+      : Promise.resolve([]),
+    loadReports
+      ? db.collection<WeeklyReport>("weeklyReports").find({ schoolYearId }).sort({ weekNumber: -1, updatedAt: -1 }).toArray()
+      : Promise.resolve([]),
+    loadAccounts ? db.collection<UserAccount>("users").find({}).sort({ role: 1, username: 1 }).toArray() : Promise.resolve([]),
+    loadAudit
+      ? db.collection<AuditLog>("auditLogs").find({ schoolYearId }).sort({ createdAt: -1 }).limit(30).toArray()
+      : Promise.resolve([]),
   ]);
 
   return {
     schoolYears,
     currentSchoolYear,
     classConfig,
+    studentCount,
+    parentCount,
     students,
     parents,
     reports,
     accounts,
     auditLogs,
   };
-}
-
-export async function getHomePageData() {
-  await ensureSeedData();
-  const db = await getDb();
-  const schoolYear = await db.collection<SchoolYear>("schoolYears").findOne({ isCurrent: true });
-  const classConfig = schoolYear?._id
-    ? await db.collection<ClassConfig>("classConfigs").findOne({ schoolYearId: schoolYear._id })
-    : null;
-  const students = schoolYear?._id
-    ? await db.collection<Student>("students").find({ schoolYearId: schoolYear._id }).sort({ fullName: 1 }).toArray()
-    : [];
-
-  return { schoolYear, classConfig, students };
 }
 
 export function reportMatchesSlot(

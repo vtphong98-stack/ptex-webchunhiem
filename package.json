@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "import:legacy": "node --env-file=.env.local scripts/import-legacy.mjs"
+    "import:legacy": "node --env-file=.env.local scripts/import-legacy.mjs",
+    "import:xlsx": "node --env-file=.env.local scripts/import-xlsx.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

@@ -1,7 +1,7 @@
 "use server";
 
 import { hash } from "bcryptjs";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getDb } from "@/lib/db";
@@ -14,10 +14,12 @@ import {
   canSubmitReport,
 } from "@/lib/permissions";
 import { getReportFields } from "@/lib/report-fields";
+import { enrichReportFields } from "@/lib/report-schema";
 import { clearSession, requireSessionUser } from "@/lib/session";
 import type { AppRole } from "@/lib/types";
 import { APP_ROLES } from "@/lib/types";
 import { buildWeeks, toNumberOrNull, toPlainString } from "@/lib/utils";
+import { getExcelWeek } from "@/lib/weeks";
 
 function requirePermission(condition: boolean) {
   if (!condition) {
@@ -167,25 +169,42 @@ export async function saveReportAction(formData: FormData) {
   const reportsCollection = db.collection<any>("weeklyReports");
   const schoolYearId = toPlainString(formData.get("schoolYearId"));
   const weekNumber = Number(toPlainString(formData.get("weekNumber")) || "1");
-  const weekLabel = `Tuần ${weekNumber}`;
-  const fields: Record<string, string> = {};
+  const week = getExcelWeek(weekNumber);
+  const weekLabel = week?.label ?? `Tuần ${weekNumber}`;
+  const rawFields: Record<string, string> = {};
   for (const field of getReportFields(session.role)) {
-    fields[field.name] = toPlainString(formData.get(field.name));
+    rawFields[field.name] = toPlainString(formData.get(field.name));
   }
+  if (week?.dateRangeLabel) {
+    rawFields.week_range = week.dateRangeLabel;
+  }
+
+  let previousRemaining = 0;
+  if (session.role === "thuQuy" && weekNumber > 1) {
+    const previous = await reportsCollection.findOne({
+      schoolYearId,
+      weekNumber: weekNumber - 1,
+      reporterRole: "thuQuy",
+    });
+    previousRemaining = Number(previous?.fields?.remaining || 0) || 0;
+  }
+
+  const fields = enrichReportFields(session.role, rawFields, previousRemaining);
 
   const payload = {
     weekNumber,
     weekLabel,
     reporterRole: session.role,
     reporterName: session.fullName,
-    teamNumber: session.teamNumber,
-    summary: fields.summary || fields.campaign_name || fields.notice_guild || fields.good_points || "Đã nộp báo cáo tuần",
+    teamNumber: session.teamNumber ?? null,
+    summary: fields.summary || fields.campaign_name || fields.notice_guild || fields.good_points || fields.team_score || "Đã nộp báo cáo tuần",
     studyNotes: fields.good_points || fields.not_prepared_names || fields.speaking || "",
     disciplineNotes: fields.absent_student || fields.disorder_sdb || fields.disorder_names || "",
     activityNotes: fields.notice_guild || fields.progress || fields.social_media || "",
-    financeNotes: fields.fee_per_student || fields.estimated_cost || "",
+    financeNotes: fields.remaining || fields.fee_per_student || fields.estimated_cost || "",
     futurePlan: fields.future_plan || fields.feedback || fields.suggestions || "",
     fields,
+    source: "form" as const,
     status: "submitted" as const,
     updatedBy: session.id,
     updatedAt: new Date().toISOString(),
@@ -195,8 +214,7 @@ export async function saveReportAction(formData: FormData) {
     schoolYearId,
     weekNumber,
     reporterRole: session.role,
-    teamNumber: session.teamNumber,
-    createdBy: session.id,
+    teamNumber: session.teamNumber ?? null,
   });
 
   if (existing?._id) {
@@ -233,6 +251,8 @@ export async function saveReportAction(formData: FormData) {
     });
   }
 
+  revalidateTag("home", "max");
+  revalidatePath("/");
   revalidatePath("/dashboard");
 }
 

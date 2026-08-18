@@ -27,6 +27,7 @@ export type SchoolWeek = {
   label: string;
   startDate: string;
   endDate: string;
+  dateRangeLabel?: string;
 };
 
 export type SchoolYear = {
@@ -115,6 +116,7 @@ export type WeeklyReport = {
   financeNotes: string;
   futurePlan: string;
   fields?: Record<string, string>;
+  source?: "form" | "xlsx";
   status: "draft" | "submitted" | "reviewed";
   createdBy: string;
   updatedBy: string;

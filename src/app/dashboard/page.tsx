@@ -19,7 +19,7 @@ import {
   saveUserAction,
   setCurrentSchoolYearAction,
 } from "@/app/dashboard/actions";
-import { getDashboardData, reportMatchesSlot } from "@/lib/data";
+import { getDashboardData, getOfficerDashboardData, reportMatchesSlot } from "@/lib/data";
 import {
   canManageAccounts,
   canManageParents,
@@ -29,8 +29,9 @@ import {
   isClassOfficer,
 } from "@/lib/permissions";
 import { OFFICER_SLOTS, getOfficerTitle, getReportFields } from "@/lib/report-fields";
+import { assembleGvcnSummary, getTeamScoresForWeek } from "@/lib/report-schema";
 import { getSessionUser } from "@/lib/session";
-import type { AppRole, NavView, WeeklyReport } from "@/lib/types";
+import type { AppRole, NavView, SchoolWeek, WeeklyReport } from "@/lib/types";
 import { APP_ROLES } from "@/lib/types";
 import { formatDate, formatRoleLabel } from "@/lib/utils";
 
@@ -55,28 +56,27 @@ export default async function DashboardPage({
   }
 
   const params = await searchParams;
-  const data = await getDashboardData(params.year);
   const allowedViews = getAllowedViews(session.role);
   const currentView = (allowedViews.includes(params.view as NavView) ? params.view : allowedViews[0]) as NavView;
 
   if (isClassOfficer(session.role)) {
-    const myReports = data.reports.filter(
-      (report) => report.createdBy === session.id || (report.reporterRole === session.role && report.teamNumber === session.teamNumber),
-    );
+    const data = await getOfficerDashboardData(session);
     return (
       <main className="py-6">
         <OfficerReportView
-          reports={myReports}
+          reports={data.reports}
           role={session.role}
-          schoolYearId={data.currentSchoolYear?._id ?? ""}
+          schoolYearId={data.schoolYear?._id ?? ""}
           sessionName={session.fullName}
           teamNumber={session.teamNumber}
-          weekCount={data.currentSchoolYear?.weekCount ?? 35}
-          weeks={data.currentSchoolYear?.weeks ?? []}
+          weekCount={data.schoolYear?.weekCount ?? 35}
+          weeks={data.schoolYear?.weeks ?? []}
         />
       </main>
     );
   }
+
+  const data = await getDashboardData(params.year, currentView);
 
   const groupedStudents = new Map<number | null, typeof data.students>();
   for (const student of data.students) {
@@ -155,8 +155,8 @@ export default async function DashboardPage({
           </header>
 
           <section className="grid-cards">
-            <OverviewCard icon={<Users size={18} />} label="Học sinh" value={`${data.students.length} em`} />
-            <OverviewCard icon={<Phone size={18} />} label="Phụ huynh" value={`${data.parents.length} liên hệ`} />
+            <OverviewCard icon={<Users size={18} />} label="Học sinh" value={`${data.studentCount} em`} />
+            <OverviewCard icon={<Phone size={18} />} label="Phụ huynh" value={`${data.parentCount} liên hệ`} />
             <OverviewCard icon={<CalendarDays size={18} />} label="Số tuần" value={`${data.currentSchoolYear?.weekCount ?? 0} tuần`} />
             <OverviewCard
               icon={<GraduationCap size={18} />}
@@ -553,7 +553,7 @@ function OfficerReportView({
   teamNumber: number | null;
   sessionName: string;
   weekCount: number;
-  weeks: Array<{ weekNumber: number; label: string; startDate: string; endDate: string }>;
+  weeks: SchoolWeek[];
   reports: WeeklyReport[];
 }) {
   const fields = getReportFields(role);
@@ -580,11 +580,18 @@ function OfficerReportView({
         <input name="schoolYearId" type="hidden" value={schoolYearId} />
         <div>
           <label htmlFor="weekNumber">TUẦN THỨ (phải nhập chính xác)</label>
-          <input defaultValue={latest?.weekNumber ?? 1} id="weekNumber" max={weekCount} min={1} name="weekNumber" required type="number" />
-          <input name="weekLabel" type="hidden" value={latest?.weekLabel ?? "Tuần 1"} />
-          <p className="mt-2 text-center text-sm text-slate-500">
-            {weeks[0] ? `${weeks[0].label}: ${formatDate(weeks[0].startDate)} - ${formatDate(weeks[0].endDate)}` : `${weekCount} tuần trong năm học`}
-          </p>
+          <select defaultValue={String(latest?.weekNumber ?? 1)} id="weekNumber" name="weekNumber" required>
+            {Array.from({ length: weekCount }, (_, index) => {
+              const week = weeks.find((item) => item.weekNumber === index + 1);
+              const range = week?.dateRangeLabel ? ` · ${week.dateRangeLabel}` : "";
+              return (
+                <option key={index + 1} value={index + 1}>
+                  Tuần {index + 1}
+                  {range}
+                </option>
+              );
+            })}
+          </select>
         </div>
         {fields.map((field) => (
           <div key={field.name}>
@@ -611,11 +618,21 @@ function OfficerReportView({
                 {report.weekLabel} · {formatDate(report.updatedAt)}
               </summary>
               <div className="mt-3 space-y-2 text-sm">
-                {Object.entries(report.fields ?? {}).map(([key, value]) => (
-                  <p key={key}>
-                    <strong>{key}:</strong> {value || "—"}
+                {getReportFields(role).map((field) => (
+                  <p key={field.name}>
+                    <strong>{field.label}:</strong> {report.fields?.[field.name] || "—"}
                   </p>
                 ))}
+                {report.fields?.team_score ? (
+                  <p>
+                    <strong>Điểm tổ:</strong> {report.fields.team_score}
+                  </p>
+                ) : null}
+                {report.fields?.remaining ? (
+                  <p>
+                    <strong>Quỹ còn lại:</strong> {report.fields.remaining}
+                  </p>
+                ) : null}
               </div>
             </details>
           ))}
@@ -631,44 +648,82 @@ function GvcnWeekBoard({
   reports,
 }: {
   weekCount: number;
-  weeks: Array<{ weekNumber: number; label: string }>;
+  weeks: SchoolWeek[];
   reports: WeeklyReport[];
 }) {
   return (
-    <section className="card p-5">
-      <h3 className="text-lg font-semibold text-slate-900">Tổng kết báo cáo theo tuần</h3>
-      <p className="mt-2 text-sm text-slate-600">
-        GVCN không nhập báo cáo. Cột xanh là chức vụ đã nộp tuần đó, cột xám là còn thiếu.
-      </p>
-      <div className="week-board mt-4">
-        <table>
-          <thead>
-            <tr>
-              <th>Tuần</th>
-              {OFFICER_SLOTS.map((slot) => (
-                <th key={slot.key}>{slot.label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: weekCount }, (_, index) => index + 1).map((weekNumber) => (
-              <tr key={weekNumber}>
-                <td>{weeks.find((week) => week.weekNumber === weekNumber)?.label ?? `Tuần ${weekNumber}`}</td>
-                {OFFICER_SLOTS.map((slot) => {
-                  const submitted = reports.some(
-                    (report) => report.weekNumber === weekNumber && reportMatchesSlot(report, slot),
-                  );
-                  return (
-                    <td className={submitted ? "week-ok" : "week-missing"} key={`${weekNumber}-${slot.key}`}>
-                      {submitted ? "Có" : "—"}
-                    </td>
-                  );
-                })}
+    <section className="space-y-4">
+      <section className="card p-5">
+        <h3 className="text-lg font-semibold text-slate-900">Tổng kết báo cáo theo tuần</h3>
+        <p className="mt-2 text-sm text-slate-600">
+          Cột xanh là chức vụ đã nộp. Điểm tổ lấy đúng công thức sheet TT / ThiDua.
+        </p>
+        <div className="week-board mt-4">
+          <table>
+            <thead>
+              <tr>
+                <th>Tuần</th>
+                {OFFICER_SLOTS.map((slot) => (
+                  <th key={slot.key}>{slot.label}</th>
+                ))}
+                <th>Hạng nhất</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {Array.from({ length: weekCount }, (_, index) => index + 1).map((weekNumber) => {
+                const ranking = getTeamScoresForWeek(reports, weekNumber);
+                return (
+                  <tr key={weekNumber}>
+                    <td>
+                      {weeks.find((week) => week.weekNumber === weekNumber)?.label ?? `Tuần ${weekNumber}`}
+                    </td>
+                    {OFFICER_SLOTS.map((slot) => {
+                      const submitted = reports.some(
+                        (report) => report.weekNumber === weekNumber && reportMatchesSlot(report, slot),
+                      );
+                      return (
+                        <td className={submitted ? "week-ok" : "week-missing"} key={`${weekNumber}-${slot.key}`}>
+                          {submitted ? "Có" : "—"}
+                        </td>
+                      );
+                    })}
+                    <td>{ranking.firstPlace || "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {Array.from({ length: weekCount }, (_, index) => index + 1).map((weekNumber) => {
+        const weekReports = reports.filter((report) => report.weekNumber === weekNumber);
+        if (!weekReports.length) return null;
+        const week = weeks.find((item) => item.weekNumber === weekNumber);
+        const imported = weekReports.find((report) => report.reporterRole === "gvcn");
+        const summary = imported?.fields?.summary || imported?.summary || assembleGvcnSummary({
+          weekNumber,
+          dateRangeLabel: week?.dateRangeLabel,
+          reports: weekReports,
+        });
+        const ranking = getTeamScoresForWeek(weekReports, weekNumber);
+        return (
+          <details className="card p-5" key={`summary-${weekNumber}`}>
+            <summary className="cursor-pointer list-none">
+              <p className="text-lg font-semibold text-slate-900">
+                Tuần {weekNumber}
+                {week?.dateRangeLabel ? ` · ${week.dateRangeLabel}` : ""}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                {ranking.firstPlace ? `${ranking.firstPlace} hạng nhất` : "Chưa xếp hạng"} · {weekReports.length} báo cáo
+              </p>
+            </summary>
+            <pre className="mt-4 whitespace-pre-wrap rounded-3xl bg-slate-50 p-4 text-sm leading-6 text-slate-800">
+              {summary}
+            </pre>
+          </details>
+        );
+      })}
     </section>
   );
 }

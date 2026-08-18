@@ -12,75 +12,99 @@ import type {
   Student,
   UserAccount,
 } from "@/lib/types";
-import { buildWeeks, schoolYearLabelFromName } from "@/lib/utils";
+import { schoolYearLabelFromName } from "@/lib/utils";
+import { buildExcelWeeks, EXCEL_WEEK_COUNT } from "@/lib/weeks";
+
+let bootstrapPromise: Promise<void> | null = null;
 
 function timestamp() {
   return new Date().toISOString();
 }
 
-export async function ensureSeedUsers() {
+async function insertMissingUsers() {
   const db = await getDb();
   const users = db.collection<UserAccount>("users");
+  const accounts = getSeedUsers();
+  const usernames = accounts.flatMap((account) => [account.username, ...(account.aliases ?? [])]);
+  const existing = await users
+    .find({ username: { $in: usernames } } as never)
+    .project({ username: 1 })
+    .toArray();
+  const existingNames = new Set(existing.map((item) => item.username));
   const now = timestamp();
 
-  for (const account of getSeedUsers()) {
-    const existing = await users.findOne({
-      username: { $in: [account.username, ...(account.aliases ?? [])] } as never,
-    });
+  for (const account of accounts) {
+    const alreadyThere = [account.username, ...(account.aliases ?? [])].some((name) => existingNames.has(name));
+    if (alreadyThere) continue;
 
-    if (!existing) {
-      await users.insertOne({
-        _id: new ObjectId().toHexString(),
-        username: account.username,
-        passwordHash: await hash(account.password, 10),
-        fullName: account.fullName,
-        role: account.role,
-        teamNumber: account.teamNumber,
-        schoolYearScope: account.role === "admin" ? "all" : "current",
-        active: true,
-        mustChangePassword: false,
-        createdAt: now,
-        updatedAt: now,
-      });
-      continue;
-    }
-
-    const update: Partial<UserAccount> = {
+    await users.insertOne({
+      _id: new ObjectId().toHexString(),
       username: account.username,
+      passwordHash: await hash(account.password, 10),
       fullName: account.fullName,
       role: account.role,
       teamNumber: account.teamNumber,
+      schoolYearScope: account.role === "admin" ? "all" : "current",
       active: true,
+      mustChangePassword: false,
+      createdAt: now,
       updatedAt: now,
-    };
-
-    if (account.resetPassword) {
-      update.passwordHash = await hash(account.password, 10);
-    }
-
-    await users.updateOne({ _id: existing._id }, { $set: update });
+    });
   }
 }
 
-export async function ensureSeedData() {
+export async function ensureSchoolYearWeeks() {
   const db = await getDb();
-  const hasSchoolYear = await db.collection<SchoolYear>("schoolYears").countDocuments();
-  if (hasSchoolYear > 0) {
-    await ensureSeedUsers();
-    return;
+  const weeks = buildExcelWeeks();
+  const firstWeek = weeks.find((week) => week.startDate);
+  const lastWeek = [...weeks].reverse().find((week) => week.endDate);
+  const now = timestamp();
+  await db.collection<SchoolYear>("schoolYears").updateMany(
+    { isCurrent: true },
+    {
+      $set: {
+        name: "2025-2026",
+        label: schoolYearLabelFromName("2025-2026"),
+        weekCount: EXCEL_WEEK_COUNT,
+        weeks,
+        startDate: firstWeek?.startDate,
+        endDate: lastWeek?.endDate,
+        updatedAt: now,
+      },
+    },
+  );
+  const current = await db.collection<SchoolYear>("schoolYears").findOne({ isCurrent: true });
+  if (current?._id) {
+    await db.collection<ClassConfig>("classConfigs").updateMany(
+      { schoolYearId: current._id },
+      {
+        $set: {
+          fullName: "Lớp 12C1 - 2025-2026",
+          examTitle: "Thi học kỳ 1",
+          examDate: "2025-12-29",
+          updatedAt: now,
+        },
+      },
+    );
   }
+}
 
+async function seedFromLegacy() {
+  const db = await getDb();
   const legacy = await loadLegacySeedData();
   const now = timestamp();
+  const weeks = buildExcelWeeks();
+  const firstWeek = weeks.find((week) => week.startDate);
+  const lastWeek = [...weeks].reverse().find((week) => week.endDate);
   const currentYearId = new ObjectId().toHexString();
   const schoolYear: SchoolYear = {
     _id: currentYearId,
-    name: legacy.classInfo.schoolYear,
-    label: schoolYearLabelFromName(legacy.classInfo.schoolYear),
-    startDate: new Date(`${legacy.classInfo.schoolYear.split("-")[0]}-08-15`).toISOString(),
-    endDate: new Date(`${legacy.classInfo.schoolYear.split("-")[1]}-05-31`).toISOString(),
-    weekCount: 35,
-    weeks: buildWeeks(new Date(`${legacy.classInfo.schoolYear.split("-")[0]}-08-15`).toISOString(), 35),
+    name: "2025-2026",
+    label: schoolYearLabelFromName("2025-2026"),
+    startDate: firstWeek?.startDate || new Date("2025-09-08").toISOString(),
+    endDate: lastWeek?.endDate || new Date("2026-05-31").toISOString(),
+    weekCount: EXCEL_WEEK_COUNT,
+    weeks,
     isCurrent: true,
     createdAt: now,
     updatedAt: now,
@@ -90,13 +114,13 @@ export async function ensureSeedData() {
     _id: new ObjectId().toHexString(),
     schoolYearId: currentYearId,
     className: legacy.classInfo.className,
-    fullName: legacy.classInfo.fullName,
+    fullName: "Lớp 12C1 - 2025-2026",
     gvcnName: legacy.gvcnInfo.name,
     gvcnDisplayName: legacy.gvcnInfo.displayName,
     gvcnPhone: legacy.gvcnInfo.phone,
     gvcnZalo: legacy.gvcnInfo.zalo,
-    examTitle: legacy.examInfo.hk1Title,
-    examDate: legacy.examInfo.hk1DateFull,
+    examTitle: "Thi học kỳ 1",
+    examDate: "2025-12-29",
     note: "Du lieu duoc migrate tu web cu.",
     createdAt: now,
     updatedAt: now,
@@ -169,4 +193,41 @@ export async function ensureSeedData() {
   await db.collection<ParentContact>("parents").insertMany(parents);
   await db.collection<UserAccount>("users").insertMany(users);
   await db.collection<AuditLog>("auditLogs").insertOne(auditLog);
+}
+
+async function ensureIndexes() {
+  const db = await getDb();
+  await Promise.all([
+    db.collection("weeklyReports").createIndex({ schoolYearId: 1, reporterRole: 1, teamNumber: 1, weekNumber: -1 }),
+    db.collection("schoolYears").createIndex({ isCurrent: 1 }),
+    db.collection("students").createIndex({ schoolYearId: 1, fullName: 1 }),
+  ]);
+}
+
+async function bootstrapOnce() {
+  const db = await getDb();
+  const year =
+    (await db.collection<SchoolYear>("schoolYears").findOne({ isCurrent: true }, { projection: { weeks: 1 } })) ??
+    (await db.collection<SchoolYear>("schoolYears").findOne({}, { projection: { weeks: 1 } }));
+  if (!year) {
+    await seedFromLegacy();
+    await ensureIndexes();
+    return;
+  }
+
+  await insertMissingUsers();
+  if (!year.weeks?.[0]?.dateRangeLabel) {
+    await ensureSchoolYearWeeks();
+  }
+  await ensureIndexes();
+}
+
+export async function ensureSeedData() {
+  if (!bootstrapPromise) {
+    bootstrapPromise = bootstrapOnce().catch((error) => {
+      bootstrapPromise = null;
+      throw error;
+    });
+  }
+  await bootstrapPromise;
 }

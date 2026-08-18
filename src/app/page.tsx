@@ -1,24 +1,16 @@
 import Link from "next/link";
 
-import { BirthdayBanner, ExamCountdown, LuckyWheel } from "@/components/home/HomeWidgets";
+import { BirthdayBanner, ExamCountdown, HomeRanking, LuckyWheel } from "@/components/home/HomeWidgets";
 import { Timetable } from "@/components/home/Timetable";
-import { CLASS_SITE, LEARNING_LINKS, OFFICER_LINKS } from "@/lib/class-site";
-import { getHomePageData } from "@/lib/data";
+import { CLASS_SITE, CLASS_STUDENTS, LEARNING_LINKS, OFFICER_LINKS } from "@/lib/class-site";
 
-export const dynamic = "force-dynamic";
-
-export default async function HomePage() {
-  const { classConfig, schoolYear, students } = await getHomePageData();
-  const title = classConfig?.fullName || schoolYear?.label || CLASS_SITE.fullName;
-  const gvcn = classConfig?.gvcnDisplayName || CLASS_SITE.gvcnName;
-  const phone = classConfig?.gvcnPhone || CLASS_SITE.gvcnPhone;
-
+export default function HomePage() {
   return (
     <main className="py-4 md:py-8">
       <div className="site-shell">
         <header className="site-header">
-          <h1>{title}</h1>
-          <p className="site-gvcn">GVCN: {gvcn}</p>
+          <h1>{CLASS_SITE.fullName}</h1>
+          <p className="site-gvcn">GVCN: {CLASS_SITE.gvcnName}</p>
           <div className="site-actions">
             <a className="site-chip" href={CLASS_SITE.careerBot} rel="noreferrer" target="_blank">
               Bot Tư vấn hướng nghiệp
@@ -28,24 +20,18 @@ export default async function HomePage() {
             </a>
           </div>
           <div className="site-contact" style={{ marginTop: 14 }}>
-            <a href={`tel:${phone}`}>Gọi Điện</a>
-            <a href={`https://zalo.me/${phone}`} rel="noreferrer" target="_blank">
+            <a href={`tel:${CLASS_SITE.gvcnPhone}`}>Gọi Điện</a>
+            <a href={`https://zalo.me/${CLASS_SITE.gvcnPhone}`} rel="noreferrer" target="_blank">
               Liên hệ Zalo
             </a>
           </div>
         </header>
 
-        <BirthdayBanner
-          students={students.map((student) => ({
-            fullName: student.fullName,
-            birthDay: student.birthDay,
-            birthMonth: student.birthMonth,
-          }))}
-        />
+        <BirthdayBanner students={CLASS_STUDENTS} />
 
         <section className="site-section">
           <h2>Vòng quay may mắn</h2>
-          <LuckyWheel names={students.map((student) => student.fullName)} />
+          <LuckyWheel names={CLASS_STUDENTS.map((student) => student.fullName)} />
         </section>
 
         <section className="site-section">
@@ -53,6 +39,8 @@ export default async function HomePage() {
           <ExamCountdown />
           <Timetable />
         </section>
+
+        <HomeRanking />
 
         <section className="site-section">
           <h2>Học online và Roboki AI cho học sinh</h2>
@@ -93,7 +81,9 @@ export default async function HomePage() {
           <ul className="site-links">
             {OFFICER_LINKS.map((link) => (
               <li key={link.code}>
-                <Link href={{ pathname: "/login", query: { user: link.code } }}>{link.label}</Link>
+                <Link href={{ pathname: "/login", query: { user: link.code } }} prefetch>
+                  {link.label}
+                </Link>
               </li>
             ))}
           </ul>
@@ -103,10 +93,14 @@ export default async function HomePage() {
           <h2>Giáo viên chủ nhiệm</h2>
           <ul className="site-links">
             <li>
-              <Link href={{ pathname: "/login", query: { user: "gvcn" } }}>Tổng kết lớp theo tuần</Link>
+              <Link href={{ pathname: "/login", query: { user: "gvcn" } }} prefetch>
+                Tổng kết lớp theo tuần
+              </Link>
             </li>
             <li>
-              <Link href={{ pathname: "/login", query: { user: "gvcn" } }}>Dữ liệu lớp</Link>
+              <Link href={{ pathname: "/login", query: { user: "gvcn" } }} prefetch>
+                Dữ liệu lớp
+              </Link>
             </li>
             <li>
               <a href={CLASS_SITE.parents} rel="noreferrer" target="_blank">

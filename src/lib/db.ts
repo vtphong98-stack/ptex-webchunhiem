@@ -1,4 +1,4 @@
-import { MongoClient, ServerApiVersion } from "mongodb";
+import { MongoClient } from "mongodb";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -14,13 +14,12 @@ function getClientPromise() {
 
   if (!global.__mongoClientPromise) {
     const client = new MongoClient(uri, {
-      serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-      },
+      maxPoolSize: 5,
+      minPoolSize: 0,
+      maxIdleTimeMS: 10000,
+      serverSelectionTimeoutMS: 8000,
+      connectTimeoutMS: 8000,
     });
-
     global.__mongoClientPromise = client.connect();
   }
 
