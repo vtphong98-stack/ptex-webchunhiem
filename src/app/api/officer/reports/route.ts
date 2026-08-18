@@ -23,6 +23,9 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(Math.max(Number(searchParams.get("limit")) || 5, 1), 50);
   const skip = Math.max(Number(searchParams.get("skip")) || 0, 0);
+  const teamQuery = Number(searchParams.get("teamNumber"));
+  const reuseTeam = Number(searchParams.get("reuseTeam"));
+  const beforeWeek = Number(searchParams.get("beforeWeek"));
 
   const db = await getDb();
   const schoolYear = await db.collection<SchoolYear>("schoolYears").findOne(
@@ -30,6 +33,33 @@ export async function GET(request: Request) {
     { projection: { _id: 1 } },
   );
   const schoolYearId = schoolYear?._id ? String(schoolYear._id) : "";
+
+  if (schoolYearId && session.role === "lopPhoLaoDong" && reuseTeam >= 1 && reuseTeam <= 4 && beforeWeek > 1) {
+    const reuseReport = await db.collection<WeeklyReport>("weeklyReports").findOne(
+      {
+        schoolYearId,
+        reporterRole: "lopPhoLaoDong",
+        teamNumber: null,
+        weekNumber: { $lt: beforeWeek },
+        "fields.duty_team": String(reuseTeam),
+        "fields.labor_assignments_json": { $exists: true, $ne: "" },
+      },
+      {
+        projection: { weekNumber: 1, weekLabel: 1, fields: 1 },
+        sort: { weekNumber: -1 },
+      },
+    );
+    return NextResponse.json({
+      reuseReport: reuseReport
+        ? {
+            weekNumber: reuseReport.weekNumber,
+            weekLabel: reuseReport.weekLabel,
+            fields: reuseReport.fields ?? {},
+          }
+        : null,
+    });
+  }
+
   const reportFilter = {
     schoolYearId,
     reporterRole: session.role,
@@ -53,12 +83,19 @@ export async function GET(request: Request) {
     updatedAt: report.updatedAt,
   }));
 
+  const teamForRoster =
+    session.role === "toTruong" && session.teamNumber
+      ? session.teamNumber
+      : session.role === "lopPhoLaoDong" && teamQuery >= 1 && teamQuery <= 4
+        ? teamQuery
+        : null;
+
   const teamStudents =
-    schoolYearId && session.role === "toTruong" && session.teamNumber
+    schoolYearId && teamForRoster
       ? sortTeamStudents(
           await db
             .collection<Student>("students")
-            .find({ schoolYearId, teamNumber: session.teamNumber })
+            .find({ schoolYearId, teamNumber: teamForRoster })
             .toArray(),
         )
       : [];

@@ -187,6 +187,9 @@ export async function saveReportAction(formData: FormData) {
   for (const field of getReportFields(session.role)) {
     rawFields[field.name] = toPlainString(formData.get(field.name));
   }
+  if (session.role === "lopPhoLaoDong") {
+    rawFields.labor_assignments_json = toPlainString(formData.get("labor_assignments_json"));
+  }
   if (week?.dateRangeLabel) {
     rawFields.week_range = week.dateRangeLabel;
   }
@@ -209,12 +212,12 @@ export async function saveReportAction(formData: FormData) {
     reporterRole: session.role,
     reporterName: session.fullName,
     teamNumber: session.teamNumber ?? null,
-    summary: fields.summary || fields.campaign_name || fields.class_weekly_review || fields.study_attitude || fields.team_score || "Đã nộp báo cáo tuần",
+    summary: fields.summary || fields.campaign_name || fields.class_weekly_review || fields.study_attitude || fields.labor_review || fields.team_score || "Đã nộp báo cáo tuần",
     studyNotes: fields.study_attitude || fields.study_attitude_reason || fields.not_prepared_names || "",
     disciplineNotes: fields.class_weekly_review || fields.disorder_sdb || fields.disorder_names || "",
     activityNotes: fields.guild_bgh_notice || fields.progress || fields.social_media || "",
     financeNotes: fields.remaining || fields.fee_per_student || fields.estimated_cost || "",
-    futurePlan: fields.direction_plan || fields.future_plan || fields.feedback || fields.suggestions || "",
+    futurePlan: fields.direction_plan || fields.future_plan || fields.feedback || fields.suggestions || fields.labor_review || "",
     fields,
     source: "form" as const,
     status: "submitted" as const,

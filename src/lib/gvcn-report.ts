@@ -1,4 +1,5 @@
 import { OFFICER_SLOTS } from "@/lib/report-fields";
+import { summarizeLaborAssignments } from "@/lib/labor-duty";
 import { getTeamScoresForWeek, toCount } from "@/lib/report-schema";
 import { parseMemberRows, type TeamMemberWeekRow } from "@/lib/team-roster";
 import type { AppRole, WeeklyReport } from "@/lib/types";
@@ -330,8 +331,18 @@ export function buildGvcnWeekReport(input: {
       id: "lao-dong",
       title: "5. Lao động",
       lines: [
-        line("Tổ trực vệ sinh", text(lpld?.fields, "cleaning_team"), lpld ? ["LPLD"] : []),
-        line("Ý kiến phản hồi", text(lpld?.fields, "feedback"), lpld ? ["LPLD"] : []),
+        line("Tổ trực", text(lpld?.fields, "cleaning_team") || (lpld?.fields?.duty_team ? `Tổ ${lpld.fields.duty_team}` : ""), lpld ? ["LPLD"] : []),
+        line(
+          "Phân công",
+          text(lpld?.fields, "labor_assignments_summary", "") ||
+            summarizeLaborAssignments(lpld?.fields?.labor_assignments_json),
+          lpld ? ["LPLD"] : [],
+        ),
+        line(
+          "Nhận xét tuần qua",
+          text(lpld?.fields, "labor_review", "") || text(lpld?.fields, "feedback", ""),
+          lpld ? ["LPLD"] : [],
+        ),
       ],
     },
     {

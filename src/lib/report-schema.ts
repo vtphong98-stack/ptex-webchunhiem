@@ -1,4 +1,5 @@
 import type { AppRole, WeeklyReport } from "@/lib/types";
+import { summarizeLaborAssignments } from "@/lib/labor-duty";
 
 /**
  * Column keys stored in weeklyReports.fields.
@@ -82,6 +83,13 @@ export function enrichReportFields(
     next.total_income = String(treasury.totalIncome);
     next.total_expense = String(treasury.totalExpense);
     next.remaining = String(treasury.remaining);
+  }
+
+  if (role === "lopPhoLaoDong") {
+    next.labor_assignments_summary = summarizeLaborAssignments(next.labor_assignments_json);
+    if (next.duty_team?.trim()) {
+      next.cleaning_team = `Tổ ${next.duty_team.trim()}`;
+    }
   }
 
   return next;

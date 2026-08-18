@@ -366,6 +366,98 @@ button {
   font-weight: 400;
 }
 
+.labor-form textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  resize: vertical;
+  min-height: 88px;
+}
+
+.labor-hint {
+  margin: 6px 0 0;
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.labor-toolbar {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+
+.labor-reuse-btn {
+  width: 100%;
+}
+
+.labor-sheet {
+  overflow: auto;
+  max-height: min(62vh, 480px);
+  margin: 8px 0 12px;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.labor-sheet table {
+  width: 100%;
+  min-width: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.labor-sheet th,
+.labor-sheet td {
+  border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  padding: 8px 6px;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.labor-sheet thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+  font-weight: 700;
+  text-align: center;
+}
+
+.labor-sheet thead th.sticky-col {
+  left: 0;
+  z-index: 3;
+}
+
+.labor-sheet tbody td.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+  min-width: 108px;
+  max-width: 132px;
+}
+
+.labor-sheet select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 6px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.labor-sheet .name-cell strong {
+  display: block;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
 .team-sheet {
   overflow: auto;
   max-height: min(72vh, 560px);

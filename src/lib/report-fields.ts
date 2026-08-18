@@ -55,16 +55,13 @@ export function getReportFields(role: AppRole): ReportField[] {
 
   if (role === "lopPhoLaoDong") {
     return [
-      { name: "cleaning_team", label: "1. Tổ trực vệ sinh lớp" },
-      { name: "chair_team", label: "2. Tổ trực mang ghế ra sân" },
-      { name: "monday", label: "3. Thứ 2 (Tên HS trực)" },
-      { name: "tuesday", label: "4. Thứ 3 (Tên HS trực)" },
-      { name: "wednesday", label: "5. Thứ 4 (Tên HS trực)" },
-      { name: "thursday", label: "6. Thứ 5 (Tên HS trực)" },
-      { name: "friday", label: "7. Thứ 6 (Tên HS trực)" },
-      { name: "saturday", label: "8. Thứ 7 (Tên HS trực)" },
-      { name: "late_duty", label: "9. Trực trễ ngày nào?" },
-      { name: "feedback", label: "10. Ý kiến phản hồi" },
+      { name: "duty_team", label: "Tổ trực" },
+      { name: "labor_assignments_summary", label: "Phân công lao động" },
+      {
+        name: "labor_review",
+        label: "Nhận xét tình hình lao động tuần qua",
+        placeholder: "Ví dụ: Tổ trực nhiệt tình, lớp sạch sẽ",
+      },
     ];
   }
 

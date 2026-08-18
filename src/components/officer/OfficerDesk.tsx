@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { logoutAction, saveReportAction } from "@/app/dashboard/actions";
+import { LaborForm } from "@/components/officer/LaborForm";
 import { SubmittedReportsList } from "@/components/officer/SubmittedReportsList";
 import { TeamLeaderForm } from "@/components/officer/TeamLeaderForm";
 import { useOfficerReports } from "@/components/officer/use-officer-reports";
@@ -21,6 +22,10 @@ export function OfficerDesk({
 }) {
   if (role === "toTruong" && teamNumber) {
     return <TeamLeaderForm fullName={fullName} teamNumber={teamNumber} />;
+  }
+
+  if (role === "lopPhoLaoDong") {
+    return <LaborForm fullName={fullName} />;
   }
 
   return <GenericOfficerForm fullName={fullName} role={role} teamNumber={teamNumber} />;
