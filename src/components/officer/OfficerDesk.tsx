@@ -1,20 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { logoutAction, saveReportAction } from "@/app/dashboard/actions";
+import { SubmittedReportsList } from "@/components/officer/SubmittedReportsList";
 import { TeamLeaderForm } from "@/components/officer/TeamLeaderForm";
+import { useOfficerReports } from "@/components/officer/use-officer-reports";
 import { getOfficerTitle, getReportFields } from "@/lib/report-fields";
 import type { AppRole } from "@/lib/types";
 import { buildExcelWeeks } from "@/lib/weeks";
-
-type SavedReport = {
-  _id: string;
-  weekNumber: number;
-  weekLabel: string;
-  fields: Record<string, string>;
-  updatedAt: string;
-};
 
 export function OfficerDesk({
   fullName,
@@ -43,29 +37,20 @@ function GenericOfficerForm({
 }) {
   const weeks = useMemo(() => buildExcelWeeks(), []);
   const fields = useMemo(() => getReportFields(role), [role]);
+  const { reports, hasMore, loadingMore, loadInitial, refresh, loadMore } = useOfficerReports();
   const [schoolYearId, setSchoolYearId] = useState("");
-  const [reports, setReports] = useState<SavedReport[]>([]);
   const [weekNumber, setWeekNumber] = useState(1);
   const [pending, setPending] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const reportsRef = useRef<HTMLElement>(null);
 
-  const loadReports = useCallback(async () => {
-    const response = await fetch("/api/officer/reports");
-    if (!response.ok) return;
-    const data = await response.json();
-    const items = (data.reports ?? []) as SavedReport[];
-    setSchoolYearId(data.schoolYearId ?? "");
-    setReports(items);
-    return items;
-  }, []);
-
   useEffect(() => {
-    void loadReports().then((items) => {
-      if (items?.[0]?.weekNumber) setWeekNumber(items[0].weekNumber);
+    void loadInitial().then((data) => {
+      if (data?.schoolYearId) setSchoolYearId(data.schoolYearId);
+      if (data?.reports[0]?.weekNumber) setWeekNumber(data.reports[0].weekNumber);
     });
-  }, [loadReports]);
+  }, [loadInitial]);
 
   const current = reports.find((item) => item.weekNumber === weekNumber);
 
@@ -77,7 +62,8 @@ function GenericOfficerForm({
     try {
       const formData = new FormData(event.currentTarget);
       await saveReportAction(formData);
-      await loadReports();
+      const data = await refresh();
+      if (data?.schoolYearId) setSchoolYearId(data.schoolYearId);
       setSuccessMessage("Báo cáo thành công");
       requestAnimationFrame(() => {
         reportsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -153,23 +139,16 @@ function GenericOfficerForm({
         ) : null}
         {errorMessage ? <p className="status-note">{errorMessage}</p> : null}
 
-        {reports.length ? (
-          <section className="mt-6 space-y-3" ref={reportsRef}>
-            <p className="text-center text-sm font-semibold text-slate-600">Báo cáo đã gửi</p>
-            {reports.map((report) => (
-              <details className="rounded-xl bg-slate-50 p-4" key={report._id} open={report.weekNumber === weekNumber && Boolean(successMessage)}>
-                <summary className="cursor-pointer font-semibold">{report.weekLabel}</summary>
-                <div className="mt-3 space-y-2 text-sm">
-                  {fields.map((field) => (
-                    <p key={field.name}>
-                      <strong>{field.label}:</strong> {report.fields?.[field.name] || "—"}
-                    </p>
-                  ))}
-                </div>
-              </details>
-            ))}
-          </section>
-        ) : null}
+        <SubmittedReportsList
+          fields={fields}
+          hasMore={hasMore}
+          highlightWeekNumber={weekNumber}
+          loadingMore={loadingMore}
+          onLoadMore={loadMore}
+          reports={reports}
+          sectionRef={reportsRef}
+          showSuccessHighlight={Boolean(successMessage)}
+        />
       </div>
     </main>
   );

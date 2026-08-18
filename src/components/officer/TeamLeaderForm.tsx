@@ -1,31 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { logoutAction } from "@/app/dashboard/actions";
+import { SubmittedReportsList } from "@/components/officer/SubmittedReportsList";
+import { useOfficerReports } from "@/components/officer/use-officer-reports";
+import { getReportFields } from "@/lib/report-fields";
 import { emptyMemberRow, parseMemberRows, TEAM_ROLE_LABELS, type TeamMemberWeekRow } from "@/lib/team-roster";
-import type { ReportWriteMode, TeamRole } from "@/lib/types";
+import type { TeamRole } from "@/lib/types";
 import { buildExcelWeeks } from "@/lib/weeks";
 
 type TeamStudent = { _id: string; fullName: string; teamRole: TeamRole | null };
-type SavedReport = {
-  _id: string;
-  weekNumber: number;
-  weekLabel: string;
-  fields: Record<string, string>;
-  updatedAt: string;
-};
-
-type SubmitDone = {
-  weekLabel: string;
-  message: string;
-};
-
-const WRITE_MODES: Array<{ value: ReportWriteMode; label: string; hint: string }> = [
-  { value: "create", label: "Ghi mới", hint: "Chỉ khi tuần này chưa có báo cáo. Tránh đè dữ liệu cũ." },
-  { value: "append", label: "Bổ sung", hint: "Cộng dồn số lượt, thêm ngày/môn vào danh sách đã nộp." },
-  { value: "edit", label: "Sửa", hint: "Thay toàn bộ nội dung tuần này bằng bảng đang thấy." },
-];
 
 function TeamSheetSkeleton() {
   return (
@@ -46,24 +31,6 @@ function TeamSheetSkeleton() {
   );
 }
 
-function TeamReportSuccess({ done }: { done: SubmitDone }) {
-  return (
-    <main className="py-6">
-      <div className="officer-form tt-success-card">
-        <div aria-hidden className="tt-success-icon">
-          ✓
-        </div>
-        <h1>Báo cáo hoàn tất</h1>
-        <p className="tt-success-week">{done.weekLabel}</p>
-        <p className="tt-success-note">{done.message}</p>
-        <a className="button-primary tt-success-home" href="/">
-          Quay lại trang chủ
-        </a>
-      </div>
-    </main>
-  );
-}
-
 function roleLabel(index: number, teamRole: TeamRole | null) {
   if (index === 0 || teamRole === "toTruong") return TEAM_ROLE_LABELS.toTruong;
   if (index === 1 || teamRole === "toPho") return TEAM_ROLE_LABELS.toPho;
@@ -78,32 +45,29 @@ export function TeamLeaderForm({
   teamNumber: number;
 }) {
   const weeks = useMemo(() => buildExcelWeeks(), []);
+  const reportFields = useMemo(() => getReportFields("toTruong"), []);
+  const { reports, teamStudents, hasMore, loadingMore, loadInitial, refresh, loadMore } = useOfficerReports();
   const [loadingStudents, setLoadingStudents] = useState(true);
-  const [teamStudents, setTeamStudents] = useState<TeamStudent[]>([]);
-  const [reports, setReports] = useState<SavedReport[]>([]);
   const [weekNumber, setWeekNumber] = useState(1);
-  const [writeMode, setWriteMode] = useState<ReportWriteMode | "">("");
   const [rows, setRows] = useState<TeamMemberWeekRow[]>([]);
   const [status, setStatus] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [pending, setPending] = useState(false);
-  const [submitted, setSubmitted] = useState<SubmitDone | null>(null);
+  const reportsRef = useRef<HTMLElement>(null);
+
+  const students = teamStudents as TeamStudent[];
 
   useEffect(() => {
-    fetch("/api/officer/reports")
-      .then((response) => response.json())
+    void loadInitial()
       .then((data) => {
-        const students = (data.teamStudents ?? []) as TeamStudent[];
-        const items = (data.reports ?? []) as SavedReport[];
-        setTeamStudents(students);
-        setReports(items);
-        if (items[0]?.weekNumber) setWeekNumber(items[0].weekNumber);
+        if (data?.reports[0]?.weekNumber) setWeekNumber(data.reports[0].weekNumber);
       })
       .catch(() => setStatus("Chưa tải được danh sách tổ."))
       .finally(() => setLoadingStudents(false));
-  }, []);
+  }, [loadInitial]);
 
   useEffect(() => {
-    if (!teamStudents.length) {
+    if (!students.length) {
       setRows([]);
       return;
     }
@@ -111,16 +75,13 @@ export function TeamLeaderForm({
     const saved = parseMemberRows(current?.fields?.members_json);
     const byId = new Map(saved.map((row) => [row.studentId || row.fullName, row]));
     setRows(
-      teamStudents.map((student) => {
+      students.map((student) => {
         const blank = emptyMemberRow(student);
         return byId.get(student._id) ?? byId.get(student.fullName) ?? blank;
       }),
     );
-    setWriteMode("");
     setStatus("");
-  }, [teamStudents, reports, weekNumber]);
-
-  const weekLabel = weeks.find((week) => week.weekNumber === weekNumber)?.label ?? `Tuần ${weekNumber}`;
+  }, [students, reports, weekNumber]);
 
   function updateRow(index: number, key: string, value: string) {
     setRows((current) =>
@@ -136,16 +97,13 @@ export function TeamLeaderForm({
   }
 
   async function submit() {
-    if (!writeMode) {
-      setStatus("Hãy chọn Ghi mới, Bổ sung hoặc Sửa trước khi gửi.");
-      return;
-    }
     setPending(true);
     setStatus("");
+    setSuccessMessage("");
     const response = await fetch("/api/officer/reports", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weekNumber, writeMode, members: rows }),
+      body: JSON.stringify({ weekNumber, members: rows }),
     });
     const data = await response.json().catch(() => ({}));
     setPending(false);
@@ -153,23 +111,11 @@ export function TeamLeaderForm({
       setStatus(data.error || "Không gửi được báo cáo.");
       return;
     }
-    const message =
-      writeMode === "append"
-        ? "Đã bổ sung vào báo cáo tuần."
-        : writeMode === "edit"
-          ? "Đã sửa báo cáo tuần."
-          : "Đã ghi mới báo cáo tuần.";
-    const selectedWeek = weeks.find((week) => week.weekNumber === weekNumber);
-    setSubmitted({
-      weekLabel: selectedWeek?.dateRangeLabel
-        ? `${selectedWeek.label} · ${selectedWeek.dateRangeLabel}`
-        : weekLabel,
-      message,
+    await refresh();
+    setSuccessMessage("Báo cáo thành công");
+    requestAnimationFrame(() => {
+      reportsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
-  }
-
-  if (submitted) {
-    return <TeamReportSuccess done={submitted} />;
   }
 
   return (
@@ -190,7 +136,7 @@ export function TeamLeaderForm({
 
         {loadingStudents ? (
           <TeamSheetSkeleton />
-        ) : !teamStudents.length ? (
+        ) : !students.length ? (
           <p className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">
             Tổ chưa có danh sách học sinh. GVCN hãy tải mẫu Excel 4 tổ, gõ tên rồi import trên trang chủ nhiệm.
           </p>
@@ -200,7 +146,11 @@ export function TeamLeaderForm({
               <label htmlFor="weekNumber">TUẦN THỨ</label>
               <select
                 id="weekNumber"
-                onChange={(event) => setWeekNumber(Number(event.target.value))}
+                onChange={(event) => {
+                  setWeekNumber(Number(event.target.value));
+                  setSuccessMessage("");
+                  setStatus("");
+                }}
                 value={weekNumber}
               >
                 {weeks.map((week) => (
@@ -211,25 +161,6 @@ export function TeamLeaderForm({
                 ))}
               </select>
             </div>
-
-            <fieldset className="write-mode">
-              <legend>Cách ghi dữ liệu (bắt buộc)</legend>
-              {WRITE_MODES.map((mode) => (
-                <label className={writeMode === mode.value ? "active" : ""} key={mode.value}>
-                  <input
-                    checked={writeMode === mode.value}
-                    name="writeMode"
-                    onChange={() => setWriteMode(mode.value)}
-                    type="radio"
-                    value={mode.value}
-                  />
-                  <span>
-                    <strong>{mode.label}</strong>
-                    <em>{mode.hint}</em>
-                  </span>
-                </label>
-              ))}
-            </fieldset>
 
             <p className="tt-scroll-hint">Kéo trong bảng — dòng tiêu đề và cột học sinh luôn cố định</p>
 
@@ -366,9 +297,25 @@ export function TeamLeaderForm({
             </div>
 
             {status ? <p className="status-note">{status}</p> : null}
+            {successMessage ? (
+              <p className="success-note" role="status">
+                {successMessage}
+              </p>
+            ) : null}
             <button className="button-primary w-full tt-submit-btn" disabled={pending} onClick={() => void submit()} type="button">
-              {pending ? "Đang gửi…" : "Gửi dữ liệu tổ"}
+              {pending ? "Đang gửi…" : "Gửi dữ liệu"}
             </button>
+
+            <SubmittedReportsList
+              fields={reportFields}
+              hasMore={hasMore}
+              highlightWeekNumber={weekNumber}
+              loadingMore={loadingMore}
+              onLoadMore={loadMore}
+              reports={reports}
+              sectionRef={reportsRef}
+              showSuccessHighlight={Boolean(successMessage)}
+            />
           </>
         )}
       </div>

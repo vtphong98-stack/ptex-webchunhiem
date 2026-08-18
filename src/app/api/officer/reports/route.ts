@@ -8,18 +8,21 @@ import { getSessionUser } from "@/lib/session";
 import {
   emptyMemberRow,
   membersToReportFields,
-  mergeMemberRows,
   parseMemberRows,
   sortTeamStudents,
 } from "@/lib/team-roster";
-import type { ReportWriteMode, SchoolYear, Student, WeeklyReport } from "@/lib/types";
+import type { SchoolYear, Student, WeeklyReport } from "@/lib/types";
 import { getExcelWeek } from "@/lib/weeks";
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getSessionUser();
   if (!session || !isClassOfficer(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+
+  const { searchParams } = new URL(request.url);
+  const limit = Math.min(Math.max(Number(searchParams.get("limit")) || 5, 1), 50);
+  const skip = Math.max(Number(searchParams.get("skip")) || 0, 0);
 
   const db = await getDb();
   const schoolYear = await db.collection<SchoolYear>("schoolYears").findOne(
@@ -27,21 +30,28 @@ export async function GET() {
     { projection: { _id: 1 } },
   );
   const schoolYearId = schoolYear?._id ? String(schoolYear._id) : "";
-  const reports = schoolYearId
+  const reportFilter = {
+    schoolYearId,
+    reporterRole: session.role,
+    teamNumber: session.teamNumber ?? null,
+  };
+  const reportRows = schoolYearId
     ? await db
         .collection<WeeklyReport>("weeklyReports")
-        .find(
-          {
-            schoolYearId,
-            reporterRole: session.role,
-            teamNumber: session.teamNumber ?? null,
-          },
-          { projection: { weekNumber: 1, weekLabel: 1, fields: 1, updatedAt: 1 } },
-        )
+        .find(reportFilter, { projection: { weekNumber: 1, weekLabel: 1, fields: 1, updatedAt: 1 } })
         .sort({ weekNumber: -1, updatedAt: -1 })
-        .limit(20)
+        .skip(skip)
+        .limit(limit + 1)
         .toArray()
     : [];
+  const hasMore = reportRows.length > limit;
+  const reports = (hasMore ? reportRows.slice(0, limit) : reportRows).map((report) => ({
+    _id: String(report._id),
+    weekNumber: report.weekNumber,
+    weekLabel: report.weekLabel,
+    fields: report.fields ?? {},
+    updatedAt: report.updatedAt,
+  }));
 
   const teamStudents =
     schoolYearId && session.role === "toTruong" && session.teamNumber
@@ -55,18 +65,13 @@ export async function GET() {
 
   return NextResponse.json({
     schoolYearId,
+    hasMore,
     teamStudents: teamStudents.map((student) => ({
       _id: String(student._id),
       fullName: student.fullName,
       teamRole: student.teamRole ?? null,
     })),
-    reports: reports.map((report) => ({
-      _id: String(report._id),
-      weekNumber: report.weekNumber,
-      weekLabel: report.weekLabel,
-      fields: report.fields ?? {},
-      updatedAt: report.updatedAt,
-    })),
+    reports,
   });
 }
 
@@ -78,14 +83,9 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     weekNumber?: number;
-    writeMode?: ReportWriteMode;
     members?: unknown;
   };
-  const writeMode = body.writeMode;
   const weekNumber = Number(body.weekNumber);
-  if (!writeMode || !["create", "append", "edit"].includes(writeMode)) {
-    return NextResponse.json({ error: "Chọn Ghi mới, Bổ sung hoặc Sửa trước khi gửi." }, { status: 400 });
-  }
   if (!Number.isFinite(weekNumber) || weekNumber < 1) {
     return NextResponse.json({ error: "Thiếu tuần." }, { status: 400 });
   }
@@ -108,13 +108,6 @@ export async function POST(request: Request) {
     teamNumber: session.teamNumber ?? null,
   });
 
-  if (writeMode === "create" && existing?._id) {
-    return NextResponse.json(
-      { error: "Tuần này đã có dữ liệu. Chọn Bổ sung để cộng dồn, hoặc Sửa để thay toàn bộ." },
-      { status: 409 },
-    );
-  }
-
   const roster = sortTeamStudents(
     await db
       .collection<Student>("students")
@@ -126,15 +119,9 @@ export async function POST(request: Request) {
   const incomingById = new Map(incoming.map((row) => [row.studentId || row.fullName, row]));
   const aligned = fromRoster.map((row) => incomingById.get(row.studentId) ?? incomingById.get(row.fullName) ?? row);
 
-  let members = aligned;
-  if (writeMode === "append" && existing?.fields) {
-    members = mergeMemberRows(parseMemberRows(existing.fields.members_json), aligned);
-  }
-
   const week = getExcelWeek(weekNumber);
   const rawFields = {
-    ...membersToReportFields(members),
-    write_mode: writeMode,
+    ...membersToReportFields(aligned),
     week_range: week?.dateRangeLabel ?? "",
   };
   const fields = enrichReportFields(session.role, rawFields);
@@ -164,8 +151,8 @@ export async function POST(request: Request) {
       schoolYearId,
       entityType: "report",
       entityId: String(existing._id),
-      action: writeMode,
-      summary: `${writeMode === "append" ? "Bổ sung" : "Sửa"} báo cáo ${payload.weekLabel} tổ ${session.teamNumber}.`,
+      action: "update",
+      summary: `Cập nhật báo cáo ${payload.weekLabel} tổ ${session.teamNumber}.`,
       actorId: session.id,
       actorName: session.fullName,
       actorRole: session.role,
@@ -192,5 +179,5 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.json({ ok: true, writeMode, weekNumber });
+  return NextResponse.json({ ok: true, weekNumber });
 }
