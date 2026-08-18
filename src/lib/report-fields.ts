@@ -22,11 +22,21 @@ export const OFFICER_SLOTS = [
 export function getReportFields(role: AppRole): ReportField[] {
   if (role === "lopTruong") {
     return [
-      { name: "notice_guild", label: "1. Thông báo bên Đoàn (Ra chơi đoàn mời)", placeholder: "Ví dụ: Lấy sổ đoàn ký tên" },
-      { name: "absent_student", label: "2. Học sinh vắng (SDB)", placeholder: "Ví dụ: Phong(28/8)" },
-      { name: "late_student", label: "3. Học sinh đi trễ (Đoàn ghi)", placeholder: "Ví dụ: Phong(29/8)" },
-      { name: "violation_guild", label: "4. Vi phạm bên Đoàn (Đồng phục, thức ăn, đầu tóc)", placeholder: "Ví dụ: Phong(Đồng phục 29/8)" },
-      { name: "future_plan", label: "5. Phương hướng tuần sau", placeholder: "Ví dụ: Tham gia lao động" },
+      {
+        name: "class_weekly_review",
+        label: "1. Nhận xét lớp tuần qua",
+        placeholder: "Thái độ học tập, tình trạng vi phạm, ...",
+      },
+      {
+        name: "guild_bgh_notice",
+        label: "2. Thông báo từ đoàn trường, BGH",
+        placeholder: "Công việc đã làm, phong trào cần giao LPPT, ...",
+      },
+      {
+        name: "direction_plan",
+        label: "3. Phương hướng",
+        placeholder: "Giao nhiệm vụ cho học tập, phong trào, ...",
+      },
     ];
   }
 

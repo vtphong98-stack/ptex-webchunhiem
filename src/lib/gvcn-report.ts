@@ -247,8 +247,8 @@ export function buildGvcnWeekReport(input: {
   const violations = collectViolationsFromTeams(reports);
   const shortRange = rangeShort(dateRangeLabel);
 
-  const absent = mergeFieldAndMembers(reports, "absent_names", (m) => ({ count: m.absentCount, detail: m.absentDates }), "absent_student");
-  const late = mergeFieldAndMembers(reports, "late_names", (m) => ({ count: m.lateCount, detail: m.lateDates }), "late_student");
+  const absent = mergeFieldAndMembers(reports, "absent_names", (m) => ({ count: m.absentCount, detail: m.absentDates }));
+  const late = mergeFieldAndMembers(reports, "late_names", (m) => ({ count: m.lateCount, detail: m.lateDates }));
   const notPrepared = mergeFieldAndMembers(reports, "not_prepared_names", (m) => ({
     count: m.notPreparedCount,
     detail: m.notPreparedSubjects,
@@ -263,9 +263,6 @@ export function buildGvcnWeekReport(input: {
   const participation = mergeFieldAndMembers(reports, "participation_names", (m) => ({ count: m.participationCount, detail: "" }));
   const goodPointsTotal = sumTeamCount(reports, "good_points_count");
   const participationTotal = sumTeamCount(reports, "participation_count");
-
-  const guildViolation = text(lt?.fields, "violation_guild");
-  const guildSources = lt?.fields?.violation_guild?.trim() ? ["LT"] : [];
 
   const expenses = [1, 2, 3, 4, 5, 6]
     .map((index) => {
@@ -319,7 +316,6 @@ export function buildGvcnWeekReport(input: {
         line("Vi phạm Đoàn (tổ)", violationMembers.value, violationMembers.sources),
         line("Chưa ghi SDB (LPTT)", text(lptt?.fields, "disorder_not_sdb"), lptt ? ["LPTT"] : []),
         line("Đã ghi SDB (LPTT)", text(lptt?.fields, "disorder_sdb"), lptt ? ["LPTT"] : []),
-        line("Vi phạm bên Đoàn (LT)", guildViolation, guildSources),
       ],
     },
     {
@@ -359,10 +355,23 @@ export function buildGvcnWeekReport(input: {
     },
     {
       id: "gvcn",
-      title: "8. GVCN",
+      title: "8. Lớp trưởng",
       lines: [
-        line("Thông báo Đoàn", text(lt?.fields, "notice_guild"), lt ? ["LT"] : []),
-        line("Phương hướng tuần sau", text(lt?.fields, "future_plan"), lt ? ["LT"] : []),
+        line(
+          "Nhận xét lớp tuần qua",
+          text(lt?.fields, "class_weekly_review", ""),
+          lt ? ["LT"] : [],
+        ),
+        line(
+          "Thông báo đoàn trường, BGH",
+          text(lt?.fields, "guild_bgh_notice", "") || text(lt?.fields, "notice_guild", ""),
+          lt ? ["LT"] : [],
+        ),
+        line(
+          "Phương hướng",
+          text(lt?.fields, "direction_plan", "") || text(lt?.fields, "future_plan", ""),
+          lt ? ["LT"] : [],
+        ),
       ],
     },
   ];
