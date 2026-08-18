@@ -231,7 +231,7 @@ export function TeamLeaderForm({
               ))}
             </fieldset>
 
-            <p className="tt-scroll-hint">Kéo ngang để điền — cột học sinh luôn cố định bên trái</p>
+            <p className="tt-scroll-hint">Kéo trong bảng — dòng tiêu đề và cột học sinh luôn cố định</p>
 
             <div className="team-sheet">
               <table>

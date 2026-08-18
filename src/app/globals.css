@@ -367,11 +367,13 @@ button {
 }
 
 .team-sheet {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: min(72vh, 560px);
   margin: 16px 0;
   -webkit-overflow-scrolling: touch;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
+  background: #fff;
 }
 
 .team-sheet table {
@@ -391,24 +393,25 @@ button {
   background: #fff;
 }
 
-.team-sheet th {
+.team-sheet thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   background: #1a237e;
   color: #fff;
   font-weight: 600;
   white-space: nowrap;
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
 }
 
-.team-sheet th.sticky-col {
+.team-sheet thead th.sticky-col {
   left: 0;
-  z-index: 4;
+  z-index: 5;
   background: #1a237e;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.18);
 }
 
-.team-sheet td.sticky-col {
+.team-sheet tbody td.sticky-col {
   position: sticky;
   left: 0;
   z-index: 2;
