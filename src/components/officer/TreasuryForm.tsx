@@ -349,27 +349,45 @@ function TreasuryLineList({
     <div className="treasury-lines">
       <p className="treasury-lines-title">{title}</p>
       {lines.map((line, index) => (
-        <div className="treasury-line-row" key={line.id}>
-          <input
-            inputMode="numeric"
-            onChange={(event) => onChange(index, "amount", event.target.value)}
-            placeholder="Số tiền"
-            value={line.amount > 0 ? String(line.amount) : ""}
-          />
-          <input
-            onChange={(event) => onChange(index, "reason", event.target.value)}
-            placeholder={reasonLabel}
-            value={line.reason}
-          />
-          {lines.length > 1 ? (
-            <button className="button-secondary" onClick={() => onRemove(index)} type="button">
-              −
-            </button>
-          ) : null}
+        <div className="treasury-line-card" key={line.id}>
+          <div className="treasury-line-head">
+            <span className="treasury-line-label">
+              {title} · dòng {index + 1}
+            </span>
+            {lines.length > 1 ? (
+              <button
+                aria-label={`Xóa ${title.toLowerCase()} dòng ${index + 1}`}
+                className="treasury-remove-btn"
+                onClick={() => onRemove(index)}
+                type="button"
+              >
+                Xóa dòng
+              </button>
+            ) : null}
+          </div>
+          <div className="treasury-line-row">
+            <div>
+              <label className="treasury-field-label">Số tiền</label>
+              <input
+                inputMode="numeric"
+                onChange={(event) => onChange(index, "amount", event.target.value)}
+                placeholder="0"
+                value={line.amount > 0 ? String(line.amount) : ""}
+              />
+            </div>
+            <div>
+              <label className="treasury-field-label">{reasonLabel}</label>
+              <input
+                onChange={(event) => onChange(index, "reason", event.target.value)}
+                placeholder={reasonLabel}
+                value={line.reason}
+              />
+            </div>
+          </div>
         </div>
       ))}
-      <button className="button-secondary" onClick={onAdd} type="button">
-        + {title.toLowerCase()} khác
+      <button className="button-secondary treasury-add-btn" onClick={onAdd} type="button">
+        + Thêm {title.toLowerCase()}
       </button>
     </div>
   );

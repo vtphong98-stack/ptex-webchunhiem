@@ -196,22 +196,47 @@ export function applyTreasuryLedger(fields: Record<string, string>, ledger: Trea
 
   for (let index = 1; index <= 6; index += 1) {
     const line = expenses[index - 1];
-    next[`expense_name_${index}`] = line?.reason ?? "";
-    next[`expense_amount_${index}`] = line ? String(line.amount) : "";
+    next[`expense_name_${index}`] = line && line.amount > 0 ? line.reason : "";
+    next[`expense_amount_${index}`] = line && line.amount > 0 ? String(line.amount) : "";
   }
 
   return next;
 }
 
 export function formatTreasuryLines(lines: TreasuryLine[], fallbackLabel: string) {
-  const filled = lines.filter((line) => line.amount > 0 || line.reason);
+  const filled = lines.filter((line) => line.amount > 0);
   if (!filled.length) return "";
   return filled
     .map((line) => {
-      const label = line.reason || fallbackLabel;
-      return line.amount > 0 ? `- ${label}: ${formatVnd(line.amount)} đ` : `- ${label}`;
+      const label = line.reason.trim() || fallbackLabel;
+      return `- ${label}: ${formatVnd(line.amount)} đ`;
     })
     .join("\n");
+}
+
+export function listTreasuryRewardLines(fields: Record<string, string>) {
+  const fromJson = parseTreasuryLines(fields.treasury_rewards_json).filter((line) => line.amount > 0);
+  if (fromJson.length || fields.treasury_rewards_json) return fromJson;
+  return [];
+}
+
+export function listTreasuryExpenseLines(fields: Record<string, string>) {
+  const fromJson = parseTreasuryLines(fields.treasury_expenses_json).filter((line) => line.amount > 0);
+  if (fromJson.length || fields.treasury_expenses_json) return fromJson;
+  return [1, 2, 3, 4, 5, 6]
+    .map((index) => ({
+      id: `legacy-${index}`,
+      amount: parseVnd(fields[`expense_amount_${index}`]),
+      reason: String(fields[`expense_name_${index}`] ?? "").trim(),
+    }))
+    .filter((line) => line.amount > 0);
+}
+
+export function formatTreasuryLineItems(lines: TreasuryLine[], fallbackLabel: string) {
+  return lines
+    .filter((line) => line.amount > 0)
+    .map((line) => `${line.reason.trim() || fallbackLabel}: ${formatVnd(line.amount)} đ`)
+    .join(" · ");
 }
 
 export function formatPaidStudents(raw: unknown) {
@@ -251,18 +276,17 @@ export function formatTreasuryCopyText(input: {
   fields: Record<string, string>;
 }) {
   const ledger = computeTreasuryLedger(input.fields, parseSignedVnd(input.fields.previous_remaining));
+  const rewardItems = formatTreasuryLineItems(listTreasuryRewardLines(input.fields), "Thưởng");
+  const expenseItems = formatTreasuryLineItems(listTreasuryExpenseLines(input.fields), "Chi");
   const lines = [
     `QUỸ LỚP · ${input.weekLabel}`,
-    `Tồn tuần trước: ${formatVnd(ledger.previousRemaining)} đ`,
-    `Tổng thu: ${formatVnd(ledger.income)} đ (${ledger.paidCount} HS nộp)`,
+    `Tồn: ${formatVnd(ledger.previousRemaining)} đ · Thu: ${formatVnd(ledger.income)} đ (${ledger.paidCount} HS)`,
   ];
-  const rewards = formatTreasuryLines(parseTreasuryLines(input.fields.treasury_rewards_json), "Thưởng");
-  const expenses = formatTreasuryLines(parseTreasuryLines(input.fields.treasury_expenses_json), "Chi");
-  if (rewards) lines.push("", "Tiền thưởng:", rewards);
-  if (expenses) lines.push("", "Tiền chi:", expenses);
+  if (rewardItems) lines.push(`Thưởng: ${rewardItems}`);
+  if (expenseItems) lines.push(`Chi: ${expenseItems}`);
   if (ledger.missingStudents.length) {
-    lines.push("", `Thiếu quỹ (${ledger.missingCount}): ${ledger.missingStudents.join(", ")}`);
+    lines.push(`Thiếu (${ledger.missingCount}): ${ledger.missingStudents.join(", ")}`);
   }
-  lines.push("", `Còn lại: ${formatVnd(ledger.remaining)} đ`);
+  lines.push(`Còn lại: ${formatVnd(ledger.remaining)} đ`);
   return lines.join("\n").trim();
 }

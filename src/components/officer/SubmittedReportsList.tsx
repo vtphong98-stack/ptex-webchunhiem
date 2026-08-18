@@ -7,12 +7,12 @@ import { formatDisciplineCopyText, parseDisciplineRecords } from "@/lib/discipli
 import type { ReportField } from "@/lib/report-fields";
 import { formatLaborCopyText, groupLaborAssignmentsByDay } from "@/lib/labor-duty";
 import {
-  formatPaidStudents,
   formatTreasuryCopyText,
-  formatTreasuryLines,
+  formatTreasuryLineItems,
   formatVnd,
+  listTreasuryExpenseLines,
+  listTreasuryRewardLines,
   parseSignedVnd,
-  parseTreasuryLines,
   parseVnd,
 } from "@/lib/treasury-duty";
 
@@ -187,22 +187,9 @@ function TreasuryReportBody({ report }: { report: SavedReport }) {
   const [copied, setCopied] = useState(false);
   const previousRemaining = parseSignedVnd(report.fields.previous_remaining);
   const income = parseVnd(report.fields.total_income);
-  const rewardTotal = parseVnd(report.fields.total_rewards);
-  const expenseTotal = parseVnd(report.fields.total_expense);
   const remaining = parseSignedVnd(report.fields.remaining);
-  const paid = formatPaidStudents(report.fields.treasury_payments_json);
-  const rewards = formatTreasuryLines(parseTreasuryLines(report.fields.treasury_rewards_json), "Thưởng");
-  const expenses =
-    formatTreasuryLines(parseTreasuryLines(report.fields.treasury_expenses_json), "Chi") ||
-    [1, 2, 3, 4, 5, 6]
-      .map((index) => {
-        const name = report.fields[`expense_name_${index}`]?.trim();
-        const amount = report.fields[`expense_amount_${index}`]?.trim();
-        if (!name && !amount) return "";
-        return `- ${name || "Chi"}: ${amount || "0"}`;
-      })
-      .filter(Boolean)
-      .join("\n");
+  const rewardItems = formatTreasuryLineItems(listTreasuryRewardLines(report.fields), "Thưởng");
+  const expenseItems = formatTreasuryLineItems(listTreasuryExpenseLines(report.fields), "Chi");
   const missing = report.fields.missing_students?.trim() || "";
   const copyValue = formatTreasuryCopyText({ weekLabel: report.weekLabel, fields: report.fields });
 
@@ -215,39 +202,17 @@ function TreasuryReportBody({ report }: { report: SavedReport }) {
   return (
     <div className="labor-report-body">
       <p>
-        <strong>Tồn tuần trước:</strong> {formatVnd(previousRemaining)} đ
+        <strong>Tồn tuần trước:</strong> {formatVnd(previousRemaining)} đ · <strong>Thu:</strong> {formatVnd(income)} đ
+        {report.fields.quantity_paid ? ` (${report.fields.quantity_paid} HS)` : ""}
       </p>
-      <p>
-        <strong>Tổng thu:</strong> {formatVnd(income)} đ
-        {report.fields.quantity_paid ? ` (${report.fields.quantity_paid} HS nộp)` : ""}
-      </p>
-      {paid ? (
-        <div className="labor-day-block">
-          {paid.split("\n").map((line) => (
-            <p key={line}>{line.replace(/^- /, "")}</p>
-          ))}
-        </div>
-      ) : null}
-      {rewards ? (
+      {rewardItems ? (
         <p>
-          <strong>Thưởng:</strong>
-          {rewards.split("\n").map((line) => (
-            <span key={line}>
-              <br />
-              {line.replace(/^- /, "")}
-            </span>
-          ))}
+          <strong>Thưởng:</strong> {rewardItems}
         </p>
       ) : null}
-      {expenses ? (
+      {expenseItems ? (
         <p>
-          <strong>Chi:</strong>
-          {expenses.split("\n").map((line) => (
-            <span key={line}>
-              <br />
-              {line.replace(/^- /, "")}
-            </span>
-          ))}
+          <strong>Chi:</strong> {expenseItems}
         </p>
       ) : null}
       {missing ? (
@@ -255,9 +220,6 @@ function TreasuryReportBody({ report }: { report: SavedReport }) {
           <strong>Thiếu quỹ:</strong> {missing}
         </p>
       ) : null}
-      <p>
-        <strong>Tổng thưởng:</strong> {formatVnd(rewardTotal)} đ · <strong>Tổng chi:</strong> {formatVnd(expenseTotal)} đ
-      </p>
       <p>
         <strong>Còn lại:</strong> {formatVnd(remaining)} đ
       </p>
