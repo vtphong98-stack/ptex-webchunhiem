@@ -1,8 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { CLASS_DUTY_LABELS, TEAM_ROLE_LABELS, classDutyOptions, formatBirthDate } from "@/lib/team-roster";
+import {
+  CLASS_DUTY_LABELS,
+  TEAM_ROLE_LABELS,
+  classDutyOptions,
+  formatBirthDate,
+  studentPositionLabel,
+} from "@/lib/team-roster";
 import type { ClassDuty, TeamRole } from "@/lib/types";
 
 type DeskStudent = {
@@ -20,13 +26,69 @@ type DeskStudent = {
   absentDays: number;
 };
 
+type PatchBody = {
+  teamNumber?: number | null;
+  teamRole?: TeamRole | null;
+  classDuty?: ClassDuty | null;
+};
+
+function applyPatchLocal(list: DeskStudent[], id: string, body: PatchBody): DeskStudent[] {
+  const target = list.find((student) => student._id === id);
+  if (!target) return list;
+
+  const nextTeam = body.teamNumber !== undefined ? body.teamNumber : target.teamNumber;
+  let nextRole = body.teamRole !== undefined ? body.teamRole : target.teamRole;
+  const nextDuty = body.classDuty !== undefined ? body.classDuty : target.classDuty;
+
+  if (body.teamNumber !== undefined && body.teamNumber !== target.teamNumber && body.teamRole === undefined) {
+    nextRole = "thanhVien";
+  }
+
+  return list.map((student) => {
+    if (student._id === id) {
+      return {
+        ...student,
+        teamNumber: nextTeam,
+        teamRole: nextRole,
+        classDuty: nextDuty,
+        position: studentPositionLabel({ teamRole: nextRole, classDuty: nextDuty, position: null }),
+      };
+    }
+    if (nextTeam && nextRole === "toTruong" && student.teamNumber === nextTeam && student.teamRole === "toTruong") {
+      return {
+        ...student,
+        teamRole: "thanhVien",
+        position: studentPositionLabel({ teamRole: "thanhVien", classDuty: student.classDuty, position: null }),
+      };
+    }
+    if (nextTeam && nextRole === "toPho" && student.teamNumber === nextTeam && student.teamRole === "toPho") {
+      return {
+        ...student,
+        teamRole: "thanhVien",
+        position: studentPositionLabel({ teamRole: "thanhVien", classDuty: student.classDuty, position: null }),
+      };
+    }
+    if (nextDuty && student.classDuty === nextDuty) {
+      return {
+        ...student,
+        classDuty: null,
+        position: studentPositionLabel({ teamRole: student.teamRole, classDuty: null, position: null }),
+      };
+    }
+    return student;
+  });
+}
+
 export function TeamManager() {
   const [students, setStudents] = useState<DeskStudent[]>([]);
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
+  const studentsRef = useRef(students);
+  studentsRef.current = students;
 
   const load = useCallback(async () => {
-    const response = await fetch("/api/gvcn/students");
+    const response = await fetch("/api/gvcn/students?lite=1");
     if (!response.ok) {
       setMessage("Chưa tải được danh sách tổ.");
       return;
@@ -47,43 +109,70 @@ export function TeamManager() {
   }, [students]);
   const unassigned = students.filter((student) => !student.teamNumber);
 
-  async function patchStudent(id: string, body: Record<string, unknown>) {
-    setBusy(true);
+  function patchStudent(id: string, body: PatchBody) {
+    const snapshot = studentsRef.current;
+    setStudents((current) => applyPatchLocal(current, id, body));
     setMessage("");
-    const response = await fetch(`/api/gvcn/students/${id}`, {
+    setPendingIds((current) => new Set(current).add(id));
+
+    void fetch(`/api/gvcn/students/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-    });
-    setBusy(false);
-    if (!response.ok) {
-      setMessage("Không lưu được thay đổi.");
-      return;
-    }
-    await load();
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("patch failed");
+        const data = await response.json();
+        if (data.student || data.peers?.length) {
+          setStudents((current) => {
+            let next = current;
+            if (data.student) {
+              next = next.map((student) =>
+                student._id === data.student._id ? { ...student, ...data.student } : student,
+              );
+            }
+            for (const peer of data.peers ?? []) {
+              next = next.map((student) =>
+                student._id === peer._id ? { ...student, ...peer } : student,
+              );
+            }
+            return next;
+          });
+        }
+      })
+      .catch(() => {
+        setStudents(snapshot);
+        setMessage("Không lưu được thay đổi — đã hoàn tác.");
+      })
+      .finally(() => {
+        setPendingIds((current) => {
+          const next = new Set(current);
+          next.delete(id);
+          return next;
+        });
+      });
   }
 
   async function removeStudent(id: string, fullName: string) {
     if (!window.confirm(`Xóa ${fullName} khỏi danh sách lớp?`)) return;
-    setBusy(true);
+    const snapshot = studentsRef.current;
+    setStudents((current) => current.filter((student) => student._id !== id));
     const response = await fetch(`/api/gvcn/students/${id}`, { method: "DELETE" });
-    setBusy(false);
     if (!response.ok) {
+      setStudents(snapshot);
       setMessage("Không xóa được học sinh.");
-      return;
     }
-    await load();
   }
 
   async function importFile(file: File | undefined) {
     if (!file) return;
-    setBusy(true);
+    setImportBusy(true);
     setMessage("");
     const form = new FormData();
     form.set("file", file);
     const response = await fetch("/api/gvcn/students/import", { method: "POST", body: form });
     const data = await response.json().catch(() => ({}));
-    setBusy(false);
+    setImportBusy(false);
     if (!response.ok) {
       setMessage(data.error || "Import Excel thất bại.");
       return;
@@ -98,7 +187,7 @@ export function TeamManager() {
         <h2 className="text-lg font-semibold">Phân tổ bằng Excel</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           Tải mẫu 4 tổ, gõ học sinh trên máy (dòng 1 tổ trưởng, dòng 2 tổ phó), rồi tải file lên.
-          Trang này không gõ từng em trên web cho khỏi chậm.
+          Chuyển tổ trên web cập nhật ngay — không cần chờ từng em.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <a className="button-secondary" href="/api/gvcn/students/template">
@@ -108,11 +197,11 @@ export function TeamManager() {
             Xuất danh sách lớp
           </a>
           <label className="button-primary cursor-pointer">
-            {busy ? "Đang xử lý…" : "Tải Excel lên"}
+            {importBusy ? "Đang xử lý…" : "Tải Excel lên"}
             <input
               accept=".xlsx,.xls"
               className="hidden"
-              disabled={busy}
+              disabled={importBusy}
               onChange={(event) => {
                 importFile(event.target.files?.[0]).catch(() => setMessage("Import Excel thất bại."));
                 event.target.value = "";
@@ -135,70 +224,73 @@ export function TeamManager() {
               <p className="text-sm text-slate-400">Chưa có học sinh.</p>
             ) : (
               <ul className="space-y-2">
-                {team.members.map((student, index) => (
-                  <li className="rounded-2xl bg-slate-50 p-3" key={student._id}>
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <p className="font-semibold">
-                          {index + 1}. {student.fullName}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          NS {formatBirthDate(student) || "—"}
-                          {student.position ? ` · ${student.position}` : ""}
-                          {` · VP ${student.violationCount} · Nghỉ ${student.absentDays}`}
-                        </p>
+                {team.members.map((student, index) => {
+                  const saving = pendingIds.has(student._id);
+                  return (
+                    <li className={`rounded-2xl bg-slate-50 p-3 ${saving ? "opacity-80" : ""}`} key={student._id}>
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold">
+                            {index + 1}. {student.fullName}
+                            {saving ? <span className="ml-2 text-xs font-normal text-slate-400">đang lưu…</span> : null}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            NS {formatBirthDate(student) || "—"}
+                            {student.position ? ` · ${student.position}` : ""}
+                          </p>
+                        </div>
+                        <button
+                          className="text-xs font-semibold text-red-600"
+                          onClick={() => removeStudent(student._id, student.fullName)}
+                          type="button"
+                        >
+                          Xóa
+                        </button>
                       </div>
-                      <button
-                        className="text-xs font-semibold text-red-600"
-                        disabled={busy}
-                        onClick={() => removeStudent(student._id, student.fullName)}
-                        type="button"
-                      >
-                        Xóa
-                      </button>
-                    </div>
-                    <div className="mt-2 grid grid-cols-3 gap-2">
-                      <select
-                        disabled={busy}
-                        onChange={(event) =>
-                          patchStudent(student._id, { teamNumber: event.target.value ? Number(event.target.value) : null })
-                        }
-                        value={student.teamNumber ?? ""}
-                      >
-                        <option value="">Chưa gán</option>
-                        <option value="1">Sang tổ 1</option>
-                        <option value="2">Sang tổ 2</option>
-                        <option value="3">Sang tổ 3</option>
-                        <option value="4">Sang tổ 4</option>
-                      </select>
-                      <select
-                        disabled={busy}
-                        onChange={(event) =>
-                          patchStudent(student._id, { teamRole: (event.target.value || "thanhVien") as TeamRole })
-                        }
-                        value={student.teamRole ?? "thanhVien"}
-                      >
-                        <option value="toTruong">{TEAM_ROLE_LABELS.toTruong}</option>
-                        <option value="toPho">{TEAM_ROLE_LABELS.toPho}</option>
-                        <option value="thanhVien">{TEAM_ROLE_LABELS.thanhVien}</option>
-                      </select>
-                      <select
-                        disabled={busy}
-                        onChange={(event) =>
-                          patchStudent(student._id, { classDuty: event.target.value ? event.target.value : null })
-                        }
-                        value={student.classDuty ?? ""}
-                      >
-                        <option value="">Chức vụ lớp</option>
-                        {classDutyOptions().map((duty) => (
-                          <option key={duty.value} value={duty.value}>
-                            {duty.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </li>
-                ))}
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        <select
+                          onChange={(event) =>
+                            patchStudent(student._id, {
+                              teamNumber: event.target.value ? Number(event.target.value) : null,
+                            })
+                          }
+                          value={student.teamNumber ?? ""}
+                        >
+                          <option value="">Chưa gán</option>
+                          <option value="1">Sang tổ 1</option>
+                          <option value="2">Sang tổ 2</option>
+                          <option value="3">Sang tổ 3</option>
+                          <option value="4">Sang tổ 4</option>
+                        </select>
+                        <select
+                          onChange={(event) =>
+                            patchStudent(student._id, {
+                              teamRole: (event.target.value || "thanhVien") as TeamRole,
+                            })
+                          }
+                          value={student.teamRole ?? "thanhVien"}
+                        >
+                          <option value="toTruong">{TEAM_ROLE_LABELS.toTruong}</option>
+                          <option value="toPho">{TEAM_ROLE_LABELS.toPho}</option>
+                          <option value="thanhVien">{TEAM_ROLE_LABELS.thanhVien}</option>
+                        </select>
+                        <select
+                          onChange={(event) =>
+                            patchStudent(student._id, { classDuty: event.target.value ? (event.target.value as ClassDuty) : null })
+                          }
+                          value={student.classDuty ?? ""}
+                        >
+                          <option value="">Chức vụ lớp</option>
+                          {classDutyOptions().map((duty) => (
+                            <option key={duty.value} value={duty.value}>
+                              {duty.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </article>
@@ -213,7 +305,6 @@ export function TeamManager() {
               <li className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-slate-50 p-3" key={student._id}>
                 <span>{student.fullName}</span>
                 <select
-                  disabled={busy}
                   onChange={(event) =>
                     patchStudent(student._id, { teamNumber: event.target.value ? Number(event.target.value) : null })
                   }

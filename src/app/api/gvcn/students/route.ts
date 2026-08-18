@@ -7,12 +7,13 @@ import { attachStudentStats, getCurrentSchoolYearDoc, studentStatsById } from "@
 import { sortTeamStudents, studentPositionLabel } from "@/lib/team-roster";
 import type { Student } from "@/lib/types";
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getSessionUser();
   if (!session || !canManageStudents(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const lite = new URL(request.url).searchParams.get("lite") === "1";
   const schoolYear = await getCurrentSchoolYearDoc();
   if (!schoolYear?._id) {
     return NextResponse.json({ schoolYearId: "", students: [] });
@@ -24,23 +25,26 @@ export async function GET() {
     .collection<Student>("students")
     .find({ schoolYearId })
     .toArray();
-  const stats = await studentStatsById(schoolYearId);
+  const stats = lite ? new Map<string, { violationCount: number; absentDays: number }>() : await studentStatsById(schoolYearId);
 
-  return NextResponse.json({
-    schoolYearId,
-    students: attachStudentStats(sortTeamStudents(students), stats).map((student) => ({
-      _id: String(student._id),
-      fullName: student.fullName,
-      birthDay: student.birthDay,
-      birthMonth: student.birthMonth,
-      birthYear: student.birthYear ?? null,
-      teamNumber: student.teamNumber,
-      teamRole: student.teamRole ?? null,
-      classDuty: student.classDuty ?? null,
-      position: studentPositionLabel(student),
-      notes: student.notes ?? "",
-      violationCount: student.violationCount,
-      absentDays: student.absentDays,
-    })),
-  });
+  return NextResponse.json(
+    {
+      schoolYearId,
+      students: attachStudentStats(sortTeamStudents(students), stats).map((student) => ({
+        _id: String(student._id),
+        fullName: student.fullName,
+        birthDay: student.birthDay,
+        birthMonth: student.birthMonth,
+        birthYear: student.birthYear ?? null,
+        teamNumber: student.teamNumber,
+        teamRole: student.teamRole ?? null,
+        classDuty: student.classDuty ?? null,
+        position: studentPositionLabel(student),
+        notes: student.notes ?? "",
+        violationCount: student.violationCount,
+        absentDays: student.absentDays,
+      })),
+    },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }

@@ -19,6 +19,16 @@ async function requireGvcn() {
   return { session, error: null };
 }
 
+function deskFields(student: Pick<Student, "_id" | "teamNumber" | "teamRole" | "classDuty">) {
+  return {
+    _id: String(student._id),
+    teamNumber: student.teamNumber,
+    teamRole: student.teamRole ?? null,
+    classDuty: student.classDuty ?? null,
+    position: studentPositionLabel({ teamRole: student.teamRole, classDuty: student.classDuty, position: null }),
+  };
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -48,22 +58,39 @@ export async function PATCH(
     nextRole = "thanhVien";
   }
 
+  const demotedIds = new Set<string>();
+
   if (nextTeam && nextRole === "toTruong") {
+    const peers = await students
+      .find({ schoolYearId: student.schoolYearId, teamNumber: nextTeam, teamRole: "toTruong", _id: { $ne: id } })
+      .project({ _id: 1 })
+      .toArray();
+    for (const peer of peers) demotedIds.add(String(peer._id));
     await students.updateMany(
       { schoolYearId: student.schoolYearId, teamNumber: nextTeam, teamRole: "toTruong", _id: { $ne: id } },
-      { $set: { teamRole: "thanhVien", updatedAt: now } },
+      { $set: { teamRole: "thanhVien", position: studentPositionLabel({ teamRole: "thanhVien", classDuty: null, position: null }), updatedAt: now } },
     );
   }
   if (nextTeam && nextRole === "toPho") {
+    const peers = await students
+      .find({ schoolYearId: student.schoolYearId, teamNumber: nextTeam, teamRole: "toPho", _id: { $ne: id } })
+      .project({ _id: 1 })
+      .toArray();
+    for (const peer of peers) demotedIds.add(String(peer._id));
     await students.updateMany(
       { schoolYearId: student.schoolYearId, teamNumber: nextTeam, teamRole: "toPho", _id: { $ne: id } },
-      { $set: { teamRole: "thanhVien", updatedAt: now } },
+      { $set: { teamRole: "thanhVien", position: studentPositionLabel({ teamRole: "thanhVien", classDuty: null, position: null }), updatedAt: now } },
     );
   }
   if (nextDuty) {
+    const peers = await students
+      .find({ schoolYearId: student.schoolYearId, classDuty: nextDuty, _id: { $ne: id } })
+      .project({ _id: 1 })
+      .toArray();
+    for (const peer of peers) demotedIds.add(String(peer._id));
     await students.updateMany(
       { schoolYearId: student.schoolYearId, classDuty: nextDuty, _id: { $ne: id } },
-      { $set: { classDuty: null, updatedAt: now } },
+      { $set: { classDuty: null, position: studentPositionLabel({ teamRole: null, classDuty: null, position: null }), updatedAt: now } },
     );
     await db.collection("users").updateOne(
       { username: CLASS_DUTY_USERNAME[nextDuty] },
@@ -86,7 +113,11 @@ export async function PATCH(
   };
   await students.updateOne({ _id: id }, { $set: payload });
 
-  await createAuditLog({
+  const peers = demotedIds.size
+    ? await students.find({ _id: { $in: [...demotedIds] } }).toArray()
+    : [];
+
+  void createAuditLog({
     schoolYearId: student.schoolYearId,
     entityType: "student",
     entityId: id,
@@ -97,7 +128,11 @@ export async function PATCH(
     actorRole: auth.session.role,
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    student: deskFields({ _id: id, ...payload }),
+    peers: peers.map(deskFields),
+  });
 }
 
 export async function DELETE(
@@ -116,7 +151,7 @@ export async function DELETE(
   await db.collection<Student>("students").deleteOne({ _id: id });
   await db.collection("parents").deleteMany({ studentId: id });
 
-  await createAuditLog({
+  void createAuditLog({
     schoolYearId: student.schoolYearId,
     entityType: "student",
     entityId: id,
