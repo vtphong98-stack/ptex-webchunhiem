@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { logoutAction } from "@/app/dashboard/actions";
 import { GvcnWeekReportView } from "@/components/gvcn/GvcnWeekReport";
+import { NoticeBoard } from "@/components/gvcn/NoticeBoard";
 import { StudentLookup } from "@/components/gvcn/StudentLookup";
 import { TeamManager } from "@/components/gvcn/TeamManager";
 import { TimetableUpload } from "@/components/gvcn/TimetableUpload";
@@ -52,7 +53,7 @@ function emptyBoardRows(): BoardRow[] {
   }));
 }
 
-type DeskView = "weeks" | "teams" | "lookup" | "timetable";
+type DeskView = "weeks" | "teams" | "lookup" | "timetable" | "notices";
 
 function yearQs(yearName: string) {
   return yearName ? `?year=${encodeURIComponent(yearName)}` : "";
@@ -176,7 +177,9 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
                 ? "Tra cứu học sinh"
                 : deskView === "timetable"
                   ? "Thời khóa biểu"
-                  : "Tổng kết tuần"}{" "}
+                  : deskView === "notices"
+                    ? "Thông báo GVCN"
+                    : "Tổng kết tuần"}{" "}
             · {fullName}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -200,6 +203,13 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
           </div>
         </div>
         <div className="flex gap-2">
+          <button
+            className={deskView === "notices" ? "button-primary" : "button-secondary"}
+            onClick={() => setDeskView("notices")}
+            type="button"
+          >
+            Thông báo
+          </button>
           <button
             className={deskView === "weeks" ? "button-primary" : "button-secondary"}
             onClick={() => setDeskView("weeks")}
@@ -239,7 +249,9 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
         </div>
       </header>
 
-      {deskView === "teams" ? (
+      {deskView === "notices" ? (
+        <NoticeBoard readOnly={!isCurrentYear} yearName={yearName} />
+      ) : deskView === "teams" ? (
         <TeamManager readOnly={!isCurrentYear} yearName={yearName} />
       ) : deskView === "lookup" ? (
         <StudentLookup yearName={yearName} />

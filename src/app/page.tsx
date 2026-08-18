@@ -1,4 +1,5 @@
 import { BirthdayBanner, ExamCountdown, HomeRanking, LuckyWheel } from "@/components/home/HomeWidgets";
+import { GvcnNotices } from "@/components/home/GvcnNotices";
 import { Timetable } from "@/components/home/Timetable";
 import { YearTimeline } from "@/components/home/YearTimeline";
 import { CLASS_SITE, LEARNING_LINKS, OFFICER_LINKS } from "@/lib/class-site";
@@ -33,6 +34,8 @@ export default async function HomePage() {
             </a>
           </div>
         </header>
+
+        <GvcnNotices notices={site.notices} />
 
         <section className="site-section">
           <h2>Sơ yếu lý lịch đầu năm</h2>
@@ -108,6 +111,9 @@ export default async function HomePage() {
         <section className="site-section">
           <h2>Giáo viên chủ nhiệm</h2>
           <ul className="site-links">
+            <li>
+              <a href="/login?user=gvcn">Thông báo GVCN</a>
+            </li>
             <li>
               <a href="/login?user=gvcn">Tổng kết lớp theo tuần</a>
             </li>

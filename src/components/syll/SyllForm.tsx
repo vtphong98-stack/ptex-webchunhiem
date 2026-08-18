@@ -3,6 +3,37 @@
 import { useState, type HTMLAttributes } from "react";
 
 import { CLASS_SITE } from "@/lib/class-site";
+import { SYLL_SHEETS_WEBAPP_URL } from "@/lib/google-sheets";
+
+async function syncSheetsFromBrowser(formData: FormData) {
+  try {
+    const body = new URLSearchParams();
+    for (const [key, value] of formData.entries()) {
+      body.append(key, String(value ?? ""));
+    }
+    const response = await fetch(SYLL_SHEETS_WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+    const text = await response.text();
+    const json = JSON.parse(text) as { result?: string };
+    if (json.result === "success") return true;
+    if (json.result === "error" && /đã có dữ liệu/i.test(text)) {
+      body.set("action", "edit");
+      const retry = await fetch(SYLL_SHEETS_WEBAPP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      });
+      const retryText = await retry.text();
+      return (JSON.parse(retryText) as { result?: string }).result === "success";
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 function Field({
   label,
@@ -34,22 +65,30 @@ export function SyllForm() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setPending(true);
     setMessage("");
     setError("");
     try {
-      const response = await fetch("/api/syll", { method: "POST", body: new FormData(event.currentTarget) });
+      const formData = new FormData(form);
+      const response = await fetch("/api/syll", { method: "POST", body: formData });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         setError(data.error || "Không gửi được sơ yếu lý lịch.");
         return;
       }
+
+      let sheetsSynced = Boolean(data.sheetsSynced);
+      if (!sheetsSynced) {
+        sheetsSynced = await syncSheetsFromBrowser(formData);
+      }
+
       setMessage(
-        data.sheetsSynced
+        sheetsSynced
           ? "Đã lưu sơ yếu lý lịch vào dữ liệu lớp và Google Sheet."
-          : "Đã lưu vào dữ liệu lớp. Google Sheet tạm chưa đồng bộ — GVCN sẽ kiểm tra lại.",
+          : "Đã lưu vào dữ liệu lớp. Google Sheet chưa ghi được — GVCN cần mở lại quyền web app (Anyone).",
       );
-      event.currentTarget.reset();
+      form.reset();
     } catch {
       setError("Không gửi được. Thử lại sau.");
     } finally {
@@ -177,7 +216,7 @@ export function SyllForm() {
       </label>
 
       <p className="syll-hint">
-        Lớp {CLASS_SITE.fullName}. Dữ liệu lưu MongoDB (toàn web) và Google Sheet LyLich đã có.
+        {CLASS_SITE.fullName}. Hồ sơ lưu trên web lớp và đồng bộ Google Sheet LyLich.
       </p>
       {message ? <p className="syll-ok">{message}</p> : null}
       {error ? <p className="syll-err">{error}</p> : null}

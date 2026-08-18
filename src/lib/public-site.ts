@@ -1,8 +1,9 @@
 import { emptyTimetableGrid, parseStoredTimetable, timetableDisplayFromGrid } from "@/lib/excel-timetable";
 import { getDb } from "@/lib/db";
+import { sortNotices, toPublicNotice } from "@/lib/notices";
 import type { ContactCard } from "@/lib/phone";
 import { resolveClassConfig, resolveSchoolYear } from "@/lib/school-year-scope";
-import type { Student } from "@/lib/types";
+import type { GvcnNotice, Student } from "@/lib/types";
 
 export async function getPublicSiteData() {
   const year = await resolveSchoolYear();
@@ -18,10 +19,17 @@ export async function getPublicSiteData() {
   const config = schoolYearId ? await resolveClassConfig(schoolYearId) : null;
   const stored = parseStoredTimetable(config?.timetableJson);
   const display = timetableDisplayFromGrid(stored ?? emptyTimetableGrid());
+  const noticeDocs = schoolYearId
+    ? await db.collection<GvcnNotice>("notices").find({ schoolYearId }).toArray()
+    : [];
+  const notices = sortNotices(noticeDocs).slice(0, 8);
+  const newest = [...noticeDocs].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+  const newestId = newest?._id ? String(newest._id) : "";
 
   return {
     yearName: year?.name ?? "2026-2027",
     hasTimetable: Boolean(stored),
+    notices: notices.map((notice) => toPublicNotice(notice, newestId)),
     students: students.map((item) => ({
       fullName: item.fullName,
       birthDay: item.birthDay,

@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
 
 import { getDb } from "@/lib/db";
-import { syncSyllToGoogleSheets } from "@/lib/google-sheets";
+import { shouldRetrySheetsAsEdit, syncSyllToGoogleSheets } from "@/lib/google-sheets";
 import { resolveClassConfig, resolveSchoolYear } from "@/lib/school-year-scope";
 import { normalizePersonName } from "@/lib/team-roster";
 import type { ParentContact, Student } from "@/lib/types";
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
     sheetFields[key] = String(value ?? "");
   }
   let sheets = await syncSyllToGoogleSheets(sheetFields);
-  if (!sheets.ok && sheetFields.action !== "edit") {
+  if (!sheets.ok && shouldRetrySheetsAsEdit(sheets) && sheetFields.action !== "edit") {
     sheets = await syncSyllToGoogleSheets({ ...sheetFields, action: "edit" });
   }
 
@@ -130,6 +130,7 @@ export async function POST(request: Request) {
     ok: true,
     studentId,
     sheetsSynced: sheets.ok,
+    sheetsMessage: sheets.message || sheets.error || "",
     className: (await resolveClassConfig(schoolYearId))?.fullName ?? "",
   });
 }

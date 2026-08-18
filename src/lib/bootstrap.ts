@@ -276,6 +276,7 @@ async function ensureIndexes() {
     db.collection("schoolYears").createIndex({ isCurrent: 1 }),
     db.collection("students").createIndex({ schoolYearId: 1, fullName: 1 }),
     db.collection("weekLocks").createIndex({ schoolYearId: 1, weekNumber: 1 }, { unique: true }),
+    db.collection("notices").createIndex({ schoolYearId: 1, pinned: -1, createdAt: -1 }),
   ]);
 }
 

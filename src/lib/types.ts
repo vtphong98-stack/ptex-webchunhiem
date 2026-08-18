@@ -60,6 +60,18 @@ export type ClassConfig = {
   updatedAt: string;
 };
 
+export type GvcnNotice = {
+  _id?: string;
+  schoolYearId: string;
+  title: string;
+  body: string;
+  pinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  createdByName: string;
+};
+
 export const TEAM_ROLES = ["toTruong", "toPho", "thanhVien"] as const;
 export type TeamRole = (typeof TEAM_ROLES)[number];
 
