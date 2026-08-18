@@ -394,10 +394,7 @@ button {
 }
 
 .labor-sheet {
-  overflow: auto;
-  max-height: min(62vh, 480px);
   margin: 8px 0 12px;
-  -webkit-overflow-scrolling: touch;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
   background: #fff;
