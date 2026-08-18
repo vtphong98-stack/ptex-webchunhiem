@@ -1,5 +1,5 @@
 import { OFFICER_SLOTS } from "@/lib/report-fields";
-import { getTeamScoresForWeek } from "@/lib/report-schema";
+import { getTeamScoresForWeek, toCount } from "@/lib/report-schema";
 import { parseMemberRows, type TeamMemberWeekRow } from "@/lib/team-roster";
 import type { AppRole, WeeklyReport } from "@/lib/types";
 
@@ -185,6 +185,19 @@ function isEmptyReportValue(value: string) {
   return !trimmed || trimmed === "Không có" || trimmed === "Chưa có" || trimmed === "Chưa đủ điểm";
 }
 
+function sumTeamCount(reports: WeeklyReport[], field: string) {
+  return reports
+    .filter((item) => item.reporterRole === "toTruong")
+    .reduce((total, report) => total + toCount(report.fields?.[field]), 0);
+}
+
+function formatTeamTotalLine(total: number, names: string) {
+  if (total > 0) {
+    return names ? `${total} lượt (${names})` : `${total} lượt`;
+  }
+  return names || "";
+}
+
 function formatRankingText(ranking: GvcnWeekReport["ranking"]) {
   if (!ranking.firstPlace) return "";
   const topScore = ranking.scores[0]?.score;
@@ -248,6 +261,8 @@ export function buildGvcnWeekReport(input: {
   }));
   const goodPoints = mergeFieldAndMembers(reports, "good_points_names", (m) => ({ count: m.goodPointsCount, detail: "" }));
   const participation = mergeFieldAndMembers(reports, "participation_names", (m) => ({ count: m.participationCount, detail: "" }));
+  const goodPointsTotal = sumTeamCount(reports, "good_points_count");
+  const participationTotal = sumTeamCount(reports, "participation_count");
 
   const guildViolation = text(lt?.fields, "violation_guild");
   const guildSources = lt?.fields?.violation_guild?.trim() ? ["LT"] : [];
@@ -278,11 +293,20 @@ export function buildGvcnWeekReport(input: {
       id: "hoc-tap",
       title: "2. Học tập",
       lines: [
-        line("Điểm tốt (tổ)", goodPoints.value, goodPoints.sources),
-        line("Phát biểu (tổ)", participation.value, participation.sources),
-        line("Số điểm tốt (LPHT)", text(lpht?.fields, "good_points"), lpht ? ["LPHT"] : []),
-        line("Số lượt phát biểu (LPHT)", text(lpht?.fields, "speaking"), lpht ? ["LPHT"] : []),
-        line("Môn bị GV nhắc", text(lpht?.fields, "teacher_reminded"), lpht ? ["LPHT"] : []),
+        line(
+          "Tổng điểm tốt",
+          formatTeamTotalLine(goodPointsTotal, goodPoints.value),
+          goodPoints.sources.length ? goodPoints.sources : teams.map((t) => slotLabel("toTruong", t.teamNumber)).filter(Boolean) as string[],
+        ),
+        line(
+          "Tổng phát biểu",
+          formatTeamTotalLine(participationTotal, participation.value),
+          participation.sources.length ? participation.sources : teams.map((t) => slotLabel("toTruong", t.teamNumber)).filter(Boolean) as string[],
+        ),
+        line("Thái độ học tập tuần qua", text(lpht?.fields, "study_attitude", ""), lpht ? ["LPHT"] : []),
+        line("Lý do", text(lpht?.fields, "study_attitude_reason", ""), lpht ? ["LPHT"] : []),
+        line("Phương hướng tuần sau", text(lpht?.fields, "future_plan", ""), lpht ? ["LPHT"] : []),
+        line("Đề xuất tuần sau", text(lpht?.fields, "suggestions", ""), lpht ? ["LPHT"] : []),
         line("Không thuộc bài", notPrepared.value, notPrepared.sources),
         line("Không BTVN", noHomework.value, noHomework.sources),
       ],

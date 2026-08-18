@@ -32,11 +32,14 @@ export function getReportFields(role: AppRole): ReportField[] {
 
   if (role === "lopPhoHocTap") {
     return [
-      { name: "good_points", label: "1. Điểm tốt (Tổng lớp)" },
-      { name: "speaking", label: "2. Phát biểu (Tổng lớp)" },
-      { name: "teacher_reminded", label: "3. Môn học bị giáo viên nhắc (Lý do)" },
-      { name: "future_plan", label: "4. Phương hướng tuần sau" },
-      { name: "suggestions", label: "5. Ý kiến đề xuất" },
+      {
+        name: "study_attitude",
+        label: "1. Thái độ học tập tuần qua",
+        placeholder: "Tốt, Trì trệ, Không tốt, ...",
+      },
+      { name: "study_attitude_reason", label: "2. Lý do", placeholder: "Ví dụ: Lớp tích cực phát biểu" },
+      { name: "future_plan", label: "3. Phương hướng tuần sau", placeholder: "Ví dụ: Ôn tập giữa kỳ" },
+      { name: "suggestions", label: "4. Đề xuất tuần sau", placeholder: "Ví dụ: Tăng cường kiểm tra bài" },
     ];
   }
 
