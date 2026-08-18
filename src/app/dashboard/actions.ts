@@ -167,7 +167,11 @@ export async function saveReportAction(formData: FormData) {
 
   const db = await getDb();
   const reportsCollection = db.collection<any>("weeklyReports");
-  const schoolYearId = toPlainString(formData.get("schoolYearId"));
+  let schoolYearId = toPlainString(formData.get("schoolYearId"));
+  if (!schoolYearId) {
+    const currentYear = await db.collection("schoolYears").findOne({ isCurrent: true }, { projection: { _id: 1 } });
+    schoolYearId = currentYear?._id ? String(currentYear._id) : "";
+  }
   const weekNumber = Number(toPlainString(formData.get("weekNumber")) || "1");
   const week = getExcelWeek(weekNumber);
   const weekLabel = week?.label ?? `Tuần ${weekNumber}`;

@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { BirthdayBanner, ExamCountdown, HomeRanking, LuckyWheel } from "@/components/home/HomeWidgets";
 import { Timetable } from "@/components/home/Timetable";
 import { CLASS_SITE, CLASS_STUDENTS, LEARNING_LINKS, OFFICER_LINKS } from "@/lib/class-site";
@@ -81,9 +79,7 @@ export default function HomePage() {
           <ul className="site-links">
             {OFFICER_LINKS.map((link) => (
               <li key={link.code}>
-                <Link href={{ pathname: "/login", query: { user: link.code } }} prefetch>
-                  {link.label}
-                </Link>
+                <a href={`/login?user=${link.code}`}>{link.label}</a>
               </li>
             ))}
           </ul>
@@ -93,14 +89,10 @@ export default function HomePage() {
           <h2>Giáo viên chủ nhiệm</h2>
           <ul className="site-links">
             <li>
-              <Link href={{ pathname: "/login", query: { user: "gvcn" } }} prefetch>
-                Tổng kết lớp theo tuần
-              </Link>
+              <a href="/login?user=gvcn">Tổng kết lớp theo tuần</a>
             </li>
             <li>
-              <Link href={{ pathname: "/login", query: { user: "gvcn" } }} prefetch>
-                Dữ liệu lớp
-              </Link>
+              <a href="/login?user=gvcn">Dữ liệu lớp</a>
             </li>
             <li>
               <a href={CLASS_SITE.parents} rel="noreferrer" target="_blank">

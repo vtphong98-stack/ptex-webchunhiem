@@ -8,7 +8,6 @@ import type {
   NavView,
   ParentContact,
   SchoolYear,
-  SessionUser,
   Student,
   UserAccount,
   WeeklyReport,
@@ -20,39 +19,8 @@ export async function getCurrentSchoolYear() {
   return db.collection<SchoolYear>("schoolYears").findOne({ isCurrent: true });
 }
 
-export async function getOfficerDashboardData(session: SessionUser) {
-  const db = await getDb();
-  const weeks = buildExcelWeeks();
-  const schoolYear = await db.collection<SchoolYear>("schoolYears").findOne(
-    { isCurrent: true },
-    { projection: { _id: 1 } },
-  );
-  const reports = schoolYear?._id
-    ? await db
-        .collection<WeeklyReport>("weeklyReports")
-        .find({
-          schoolYearId: schoolYear._id,
-          reporterRole: session.role,
-          teamNumber: session.teamNumber ?? null,
-        })
-        .sort({ weekNumber: -1, updatedAt: -1 })
-        .limit(20)
-        .toArray()
-    : [];
-
-  return {
-    schoolYear: {
-      _id: schoolYear?._id,
-      weekCount: EXCEL_WEEK_COUNT,
-      weeks,
-    },
-    reports,
-  };
-}
-
 /**
  * Dashboard data for admin views (overview, students, parents, accounts, audit).
- * GVCN reports view now uses client-side API routes — no board/weekReports here.
  */
 export async function getDashboardData(
   selectedYearId?: string | null,

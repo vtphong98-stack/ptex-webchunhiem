@@ -1,28 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  ArrowUpRight,
-  CalendarDays,
-  GraduationCap,
-  Phone,
-  Shield,
-  Users,
-  Wallet,
-} from "lucide-react";
 
 import { SubmitButton } from "@/components/SubmitButton";
-import { GvcnDashboard } from "@/components/gvcn/GvcnDashboard";
+import { GvcnDesk } from "@/components/gvcn/GvcnDesk";
+import { OfficerDesk } from "@/components/officer/OfficerDesk";
 
 import {
   logoutAction,
   saveParentAction,
-  saveReportAction,
   saveSchoolYearAction,
   saveStudentAction,
   saveUserAction,
   setCurrentSchoolYearAction,
 } from "@/app/dashboard/actions";
-import { getDashboardData, getOfficerDashboardData } from "@/lib/data";
+import { getDashboardData } from "@/lib/data";
 import {
   canManageAccounts,
   canManageParents,
@@ -31,9 +22,8 @@ import {
   getAllowedViews,
   isClassOfficer,
 } from "@/lib/permissions";
-import { OFFICER_SLOTS, getOfficerTitle, getReportFields } from "@/lib/report-fields";
 import { getSessionUser } from "@/lib/session";
-import type { AppRole, NavView, SchoolWeek, WeeklyReport } from "@/lib/types";
+import type { AppRole, NavView } from "@/lib/types";
 import { APP_ROLES } from "@/lib/types";
 import { formatDate, formatRoleLabel } from "@/lib/utils";
 
@@ -62,18 +52,13 @@ export default async function DashboardPage({
   const currentView = (allowedViews.includes(params.view as NavView) ? params.view : allowedViews[0]) as NavView;
 
   if (isClassOfficer(session.role)) {
-    const data = await getOfficerDashboardData(session);
+    return <OfficerDesk fullName={session.fullName} role={session.role} teamNumber={session.teamNumber} />;
+  }
+
+  if (session.role === "gvcn") {
     return (
-      <main className="py-6">
-        <OfficerReportView
-          reports={data.reports}
-          role={session.role}
-          schoolYearId={data.schoolYear?._id ?? ""}
-          sessionName={session.fullName}
-          teamNumber={session.teamNumber}
-          weekCount={data.schoolYear?.weekCount ?? 35}
-          weeks={data.schoolYear?.weeks ?? []}
-        />
+      <main>
+        <GvcnDesk fullName={session.fullName} />
       </main>
     );
   }
@@ -157,11 +142,11 @@ export default async function DashboardPage({
           </header>
 
           <section className="grid-cards">
-            <OverviewCard icon={<Users size={18} />} label="Học sinh" value={`${data.studentCount} em`} />
-            <OverviewCard icon={<Phone size={18} />} label="Phụ huynh" value={`${data.parentCount} liên hệ`} />
-            <OverviewCard icon={<CalendarDays size={18} />} label="Số tuần" value={`${data.currentSchoolYear?.weekCount ?? 0} tuần`} />
+            <OverviewCard icon="👥" label="Học sinh" value={`${data.studentCount} em`} />
+            <OverviewCard icon="📞" label="Phụ huynh" value={`${data.parentCount} liên hệ`} />
+            <OverviewCard icon="📅" label="Số tuần" value={`${data.currentSchoolYear?.weekCount ?? 0} tuần`} />
             <OverviewCard
-              icon={<GraduationCap size={18} />}
+              icon="🎓"
               label="GVCN"
               value={data.classConfig?.gvcnDisplayName ?? "Chưa có"}
               helper={data.classConfig?.gvcnPhone}
@@ -172,7 +157,6 @@ export default async function DashboardPage({
             <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
               <section className="card p-5">
                 <div className="mb-4 flex items-center gap-2 text-slate-900">
-                  <Shield size={18} />
                   <h3 className="text-lg font-semibold">Chức năng theo vai trò</h3>
                 </div>
                 <div className="space-y-4 text-sm leading-7 text-slate-700">
@@ -193,7 +177,6 @@ export default async function DashboardPage({
 
               <section className="card p-5">
                 <div className="mb-4 flex items-center gap-2 text-slate-900">
-                  <Wallet size={18} />
                   <h3 className="text-lg font-semibold">Trạng thái năm học</h3>
                 </div>
                 <dl className="space-y-3 text-sm">
@@ -252,7 +235,7 @@ export default async function DashboardPage({
                           </p>
                         </div>
                         <div className="text-sm text-slate-500">
-                          PH: {student.parentPhone || "Chưa có"} <ArrowUpRight className="ml-1 inline" size={14} />
+                          PH: {student.parentPhone || "Chưa có"}
                         </div>
                       </div>
                     </summary>
@@ -290,7 +273,7 @@ export default async function DashboardPage({
           ) : null}
 
           {currentView === "reports" ? (
-            <GvcnDashboard yearId={data.currentSchoolYear?._id ?? ""} />
+            <GvcnDesk fullName={session.fullName} />
           ) : null}
 
           {currentView === "school-years" && canManageSchoolYears(session.role) ? (
@@ -536,114 +519,6 @@ function ParentForm({
     </form>
   );
 }
-
-function OfficerReportView({
-  schoolYearId,
-  role,
-  teamNumber,
-  sessionName,
-  weekCount,
-  weeks,
-  reports,
-}: {
-  schoolYearId: string;
-  role: AppRole;
-  teamNumber: number | null;
-  sessionName: string;
-  weekCount: number;
-  weeks: SchoolWeek[];
-  reports: WeeklyReport[];
-}) {
-  const fields = getReportFields(role);
-  const latest = reports[0];
-
-  return (
-    <div className="officer-form">
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <Link className="button-secondary" href="/">
-          ← Trang chủ
-        </Link>
-        <form action={logoutAction}>
-          <button className="button-secondary" type="submit">
-            Đăng xuất
-          </button>
-        </form>
-      </div>
-      <h1>{getOfficerTitle(role, teamNumber)}</h1>
-      <h2>
-        {sessionName}
-        {teamNumber ? ` · Tổ ${teamNumber}` : ""}
-      </h2>
-      <form action={saveReportAction} className="space-y-4">
-        <input name="schoolYearId" type="hidden" value={schoolYearId} />
-        <div>
-          <label htmlFor="weekNumber">TUẦN THỨ (phải nhập chính xác)</label>
-          <select defaultValue={String(latest?.weekNumber ?? 1)} id="weekNumber" name="weekNumber" required>
-            {Array.from({ length: weekCount }, (_, index) => {
-              const week = weeks.find((item) => item.weekNumber === index + 1);
-              const range = week?.dateRangeLabel ? ` · ${week.dateRangeLabel}` : "";
-              return (
-                <option key={index + 1} value={index + 1}>
-                  Tuần {index + 1}
-                  {range}
-                </option>
-              );
-            })}
-          </select>
-        </div>
-        {fields.map((field) => (
-          <div key={field.name}>
-            <label htmlFor={field.name}>{field.label}</label>
-            <input
-              defaultValue={latest?.fields?.[field.name] ?? ""}
-              id={field.name}
-              name={field.name}
-              placeholder={field.placeholder}
-            />
-          </div>
-        ))}
-        <SubmitButton className="button-primary w-full" pendingText="Đang gửi…">
-          Gửi dữ liệu
-        </SubmitButton>
-      </form>
-
-      {reports.length ? (
-        <section className="mt-6 space-y-3">
-          <p className="text-center text-sm font-semibold text-slate-600">Báo cáo đã gửi</p>
-          {reports.slice(0, 8).map((report) => (
-            <details className="rounded-xl bg-slate-50 p-4" key={report._id}>
-              <summary className="cursor-pointer font-semibold">
-                {report.weekLabel} · {formatDate(report.updatedAt)}
-              </summary>
-              <div className="mt-3 space-y-2 text-sm">
-                {getReportFields(role).map((field) => (
-                  <p key={field.name}>
-                    <strong>{field.label}:</strong> {report.fields?.[field.name] || "—"}
-                  </p>
-                ))}
-                {report.fields?.team_score ? (
-                  <p>
-                    <strong>Điểm tổ:</strong> {report.fields.team_score}
-                  </p>
-                ) : null}
-                {report.fields?.remaining ? (
-                  <p>
-                    <strong>Quỹ còn lại:</strong> {report.fields.remaining}
-                  </p>
-                ) : null}
-              </div>
-            </details>
-          ))}
-        </section>
-      ) : null}
-    </div>
-  );
-}
-
-
-
-
-
 
 function SchoolYearForm({
   current,

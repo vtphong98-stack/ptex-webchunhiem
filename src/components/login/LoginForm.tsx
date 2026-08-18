@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { loginAction } from "@/app/login/actions";
@@ -42,9 +41,9 @@ export function LoginForm() {
     <main className="py-8">
       <div className="officer-form">
         <div style={{ textAlign: "center", marginBottom: 16 }}>
-          <Link className="button-primary" href="/">
+          <a className="button-primary" href="/">
             ← Trở về trang chủ
-          </Link>
+          </a>
         </div>
         <h1>{CLASS_SITE.fullName}</h1>
         <h2>{role.title}</h2>
@@ -52,9 +51,9 @@ export function LoginForm() {
         {userKey === "tt" && !role.username ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 20 }}>
             {[1, 2, 3, 4].map((team) => (
-              <Link className="button-secondary" href={{ pathname: "/login", query: { user: `tt${team}` } }} key={team}>
+              <a className="button-secondary" href={`/login?user=tt${team}`} key={team}>
                 Tổ {team}
-              </Link>
+              </a>
             ))}
           </div>
         ) : (
