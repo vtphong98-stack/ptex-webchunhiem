@@ -11,8 +11,9 @@ import {
   canManageParents,
   canManageSchoolYears,
   canManageStudents,
-  canReviewReports,
+  canSubmitReport,
 } from "@/lib/permissions";
+import { getReportFields } from "@/lib/report-fields";
 import { clearSession, requireSessionUser } from "@/lib/session";
 import type { AppRole } from "@/lib/types";
 import { APP_ROLES } from "@/lib/types";
@@ -26,7 +27,7 @@ function requirePermission(condition: boolean) {
 
 export async function logoutAction() {
   await clearSession();
-  redirect("/login");
+  redirect("/");
 }
 
 export async function saveStudentAction(formData: FormData) {
@@ -160,38 +161,52 @@ export async function saveParentAction(formData: FormData) {
 
 export async function saveReportAction(formData: FormData) {
   const session = await requireSessionUser();
+  requirePermission(canSubmitReport(session.role));
+
   const db = await getDb();
   const reportsCollection = db.collection<any>("weeklyReports");
   const schoolYearId = toPlainString(formData.get("schoolYearId"));
-  const reportId = toPlainString(formData.get("reportId"));
+  const weekNumber = Number(toPlainString(formData.get("weekNumber")) || "1");
+  const weekLabel = `Tuần ${weekNumber}`;
+  const fields: Record<string, string> = {};
+  for (const field of getReportFields(session.role)) {
+    fields[field.name] = toPlainString(formData.get(field.name));
+  }
+
   const payload = {
-    weekNumber: Number(toPlainString(formData.get("weekNumber")) || "1"),
-    weekLabel: toPlainString(formData.get("weekLabel")) || "Tuần mới",
+    weekNumber,
+    weekLabel,
     reporterRole: session.role,
     reporterName: session.fullName,
     teamNumber: session.teamNumber,
-    summary: toPlainString(formData.get("summary")),
-    studyNotes: toPlainString(formData.get("studyNotes")),
-    disciplineNotes: toPlainString(formData.get("disciplineNotes")),
-    activityNotes: toPlainString(formData.get("activityNotes")),
-    financeNotes: toPlainString(formData.get("financeNotes")),
-    futurePlan: toPlainString(formData.get("futurePlan")),
-    status: (toPlainString(formData.get("status")) || "submitted") as "draft" | "submitted" | "reviewed",
+    summary: fields.summary || fields.campaign_name || fields.notice_guild || fields.good_points || "Đã nộp báo cáo tuần",
+    studyNotes: fields.good_points || fields.not_prepared_names || fields.speaking || "",
+    disciplineNotes: fields.absent_student || fields.disorder_sdb || fields.disorder_names || "",
+    activityNotes: fields.notice_guild || fields.progress || fields.social_media || "",
+    financeNotes: fields.fee_per_student || fields.estimated_cost || "",
+    futurePlan: fields.future_plan || fields.feedback || fields.suggestions || "",
+    fields,
+    status: "submitted" as const,
     updatedBy: session.id,
     updatedAt: new Date().toISOString(),
   };
 
-  if (reportId) {
-    const existing = await reportsCollection.findOne({ _id: reportId });
-    const isOwner = existing?.createdBy === session.id;
-    requirePermission(isOwner || canReviewReports(session.role));
-    await reportsCollection.updateOne({ _id: reportId }, { $set: payload });
+  const existing = await reportsCollection.findOne({
+    schoolYearId,
+    weekNumber,
+    reporterRole: session.role,
+    teamNumber: session.teamNumber,
+    createdBy: session.id,
+  });
+
+  if (existing?._id) {
+    await reportsCollection.updateOne({ _id: existing._id }, { $set: payload });
     await createAuditLog({
       schoolYearId,
       entityType: "report",
-      entityId: reportId,
+      entityId: existing._id,
       action: "update",
-      summary: `Cap nhat bao cao ${payload.weekLabel}.`,
+      summary: `Cập nhật báo cáo ${payload.weekLabel}.`,
       actorId: session.id,
       actorName: session.fullName,
       actorRole: session.role,
@@ -211,7 +226,7 @@ export async function saveReportAction(formData: FormData) {
       entityType: "report",
       entityId: newReport._id,
       action: "create",
-      summary: `Them bao cao ${payload.weekLabel}.`,
+      summary: `Nộp báo cáo ${payload.weekLabel}.`,
       actorId: session.id,
       actorName: session.fullName,
       actorRole: session.role,

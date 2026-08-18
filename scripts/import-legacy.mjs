@@ -142,16 +142,16 @@ await db.collection("parents").insertMany(
 const accounts = [
   ["admin", process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe123!", "Quản trị hệ thống", "admin", null, "all"],
   ["gvcn", process.env.SEED_GVCN_PASSWORD ?? "ChangeMe123!", "Giáo viên chủ nhiệm", "gvcn", null, "current"],
-  ["loptruong", "Loptruong@2026", "Tài khoản lớp trưởng", "lopTruong", null, "current"],
-  ["lpht", "Lpht@2026", "Tài khoản lớp phó học tập", "lopPhoHocTap", null, "current"],
-  ["lpld", "Lpld@2026", "Tài khoản lớp phó lao động", "lopPhoLaoDong", null, "current"],
-  ["lppt", "Lppt@2026", "Tài khoản lớp phó phong trào", "lopPhoPhongTrao", null, "current"],
-  ["lptt", "Lptt@2026", "Tài khoản lớp phó trật tự", "lopPhoTratTu", null, "current"],
-  ["thuquy", "Thuquy@2026", "Tài khoản thủ quỹ", "thuQuy", null, "current"],
-  ["tt1", "Tt1@2026", "Tài khoản tổ trưởng tổ 1", "toTruong", 1, "current"],
-  ["tt2", "Tt2@2026", "Tài khoản tổ trưởng tổ 2", "toTruong", 2, "current"],
-  ["tt3", "Tt3@2026", "Tài khoản tổ trưởng tổ 3", "toTruong", 3, "current"],
-  ["tt4", "Tt4@2026", "Tài khoản tổ trưởng tổ 4", "toTruong", 4, "current"],
+  ["lt", "lt", "Lớp trưởng", "lopTruong", null, "current"],
+  ["lpht", "lpht", "Lớp phó học tập", "lopPhoHocTap", null, "current"],
+  ["lpld", "lpld", "Lớp phó lao động", "lopPhoLaoDong", null, "current"],
+  ["lppt", "lppt", "Lớp phó phong trào", "lopPhoPhongTrao", null, "current"],
+  ["lptt", "lptt", "Lớp phó trật tự", "lopPhoTratTu", null, "current"],
+  ["thuquy", "thuquy123", "Thủ quỹ", "thuQuy", null, "current"],
+  ["tt1", "tt1", "Tổ trưởng tổ 1", "toTruong", 1, "current"],
+  ["tt2", "tt2", "Tổ trưởng tổ 2", "toTruong", 2, "current"],
+  ["tt3", "tt3", "Tổ trưởng tổ 3", "toTruong", 3, "current"],
+  ["tt4", "tt4", "Tổ trưởng tổ 4", "toTruong", 4, "current"],
 ];
 
 await db.collection("users").insertMany(

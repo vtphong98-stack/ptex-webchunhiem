@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { ensureSeedData } from "@/lib/bootstrap";
 import { getDb } from "@/lib/db";
 import type {
+  AppRole,
   AuditLog,
   ClassConfig,
   ParentContact,
@@ -58,6 +59,29 @@ export async function getDashboardData(selectedYearId?: string | null) {
     accounts,
     auditLogs,
   };
+}
+
+export async function getHomePageData() {
+  await ensureSeedData();
+  const db = await getDb();
+  const schoolYear = await db.collection<SchoolYear>("schoolYears").findOne({ isCurrent: true });
+  const classConfig = schoolYear?._id
+    ? await db.collection<ClassConfig>("classConfigs").findOne({ schoolYearId: schoolYear._id })
+    : null;
+  const students = schoolYear?._id
+    ? await db.collection<Student>("students").find({ schoolYearId: schoolYear._id }).sort({ fullName: 1 }).toArray()
+    : [];
+
+  return { schoolYear, classConfig, students };
+}
+
+export function reportMatchesSlot(
+  report: WeeklyReport,
+  slot: { role: AppRole; teamNumber: number | null },
+) {
+  if (report.reporterRole !== slot.role) return false;
+  if (slot.teamNumber == null) return report.teamNumber == null;
+  return report.teamNumber === slot.teamNumber;
 }
 
 export async function createAuditLog(input: Omit<AuditLog, "_id" | "createdAt">) {

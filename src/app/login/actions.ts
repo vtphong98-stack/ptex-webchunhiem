@@ -12,20 +12,21 @@ export async function loginAction(formData: FormData) {
 
   const username = toPlainString(formData.get("username")).toLowerCase();
   const password = toPlainString(formData.get("password"));
+  const userQuery = username ? `&user=${encodeURIComponent(username)}` : "";
 
   if (!username || !password) {
-    redirect("/login?error=missing");
+    redirect(`/login?error=missing${userQuery}`);
   }
 
   const user = await getUserByUsername(username);
 
   if (!user || !user.active) {
-    redirect("/login?error=invalid");
+    redirect(`/login?error=invalid${userQuery}`);
   }
 
   const valid = await compare(password, user.passwordHash);
   if (!valid) {
-    redirect("/login?error=invalid");
+    redirect(`/login?error=invalid${userQuery}`);
   }
 
   await createSession({

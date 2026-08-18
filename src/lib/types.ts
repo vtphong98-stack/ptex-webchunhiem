@@ -114,6 +114,7 @@ export type WeeklyReport = {
   activityNotes: string;
   financeNotes: string;
   futurePlan: string;
+  fields?: Record<string, string>;
   status: "draft" | "submitted" | "reviewed";
   createdBy: string;
   updatedBy: string;

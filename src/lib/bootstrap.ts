@@ -3,15 +3,14 @@ import { ObjectId } from "mongodb";
 
 import { getDb } from "@/lib/db";
 import { loadLegacySeedData } from "@/lib/legacy-loader";
+import { getSeedUsers } from "@/lib/seed-users";
 import type {
-  AppRole,
   AuditLog,
   ClassConfig,
   ParentContact,
   SchoolYear,
   Student,
   UserAccount,
-  WeeklyReport,
 } from "@/lib/types";
 import { buildWeeks, schoolYearLabelFromName } from "@/lib/utils";
 
@@ -19,107 +18,57 @@ function timestamp() {
   return new Date().toISOString();
 }
 
-type SeedUser = {
-  username: string;
-  password: string;
-  fullName: string;
-  role: AppRole;
-  teamNumber: number | null;
-};
+export async function ensureSeedUsers() {
+  const db = await getDb();
+  const users = db.collection<UserAccount>("users");
+  const now = timestamp();
 
-function getSeedUsers(): SeedUser[] {
-  return [
-    {
-      username: process.env.SEED_ADMIN_USERNAME ?? "admin",
-      password: process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe123!",
-      fullName: "Quản trị hệ thống",
-      role: "admin",
-      teamNumber: null,
-    },
-    {
-      username: process.env.SEED_GVCN_USERNAME ?? "gvcn",
-      password: process.env.SEED_GVCN_PASSWORD ?? "ChangeMe123!",
-      fullName: "Giáo viên chủ nhiệm",
-      role: "gvcn",
-      teamNumber: null,
-    },
-    {
-      username: "loptruong",
-      password: "Loptruong@2026",
-      fullName: "Tài khoản lớp trưởng",
-      role: "lopTruong",
-      teamNumber: null,
-    },
-    {
-      username: "lpht",
-      password: "Lpht@2026",
-      fullName: "Tài khoản lớp phó học tập",
-      role: "lopPhoHocTap",
-      teamNumber: null,
-    },
-    {
-      username: "lpld",
-      password: "Lpld@2026",
-      fullName: "Tài khoản lớp phó lao động",
-      role: "lopPhoLaoDong",
-      teamNumber: null,
-    },
-    {
-      username: "lppt",
-      password: "Lppt@2026",
-      fullName: "Tài khoản lớp phó phong trào",
-      role: "lopPhoPhongTrao",
-      teamNumber: null,
-    },
-    {
-      username: "lptt",
-      password: "Lptt@2026",
-      fullName: "Tài khoản lớp phó trật tự",
-      role: "lopPhoTratTu",
-      teamNumber: null,
-    },
-    {
-      username: "thuquy",
-      password: "Thuquy@2026",
-      fullName: "Tài khoản thủ quỹ",
-      role: "thuQuy",
-      teamNumber: null,
-    },
-    {
-      username: "tt1",
-      password: "Tt1@2026",
-      fullName: "Tài khoản tổ trưởng tổ 1",
-      role: "toTruong",
-      teamNumber: 1,
-    },
-    {
-      username: "tt2",
-      password: "Tt2@2026",
-      fullName: "Tài khoản tổ trưởng tổ 2",
-      role: "toTruong",
-      teamNumber: 2,
-    },
-    {
-      username: "tt3",
-      password: "Tt3@2026",
-      fullName: "Tài khoản tổ trưởng tổ 3",
-      role: "toTruong",
-      teamNumber: 3,
-    },
-    {
-      username: "tt4",
-      password: "Tt4@2026",
-      fullName: "Tài khoản tổ trưởng tổ 4",
-      role: "toTruong",
-      teamNumber: 4,
-    },
-  ];
+  for (const account of getSeedUsers()) {
+    const existing = await users.findOne({
+      username: { $in: [account.username, ...(account.aliases ?? [])] } as never,
+    });
+
+    if (!existing) {
+      await users.insertOne({
+        _id: new ObjectId().toHexString(),
+        username: account.username,
+        passwordHash: await hash(account.password, 10),
+        fullName: account.fullName,
+        role: account.role,
+        teamNumber: account.teamNumber,
+        schoolYearScope: account.role === "admin" ? "all" : "current",
+        active: true,
+        mustChangePassword: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+      continue;
+    }
+
+    const update: Partial<UserAccount> = {
+      username: account.username,
+      fullName: account.fullName,
+      role: account.role,
+      teamNumber: account.teamNumber,
+      active: true,
+      updatedAt: now,
+    };
+
+    if (account.resetPassword) {
+      update.passwordHash = await hash(account.password, 10);
+    }
+
+    await users.updateOne({ _id: existing._id }, { $set: update });
+  }
 }
 
 export async function ensureSeedData() {
   const db = await getDb();
   const hasSchoolYear = await db.collection<SchoolYear>("schoolYears").countDocuments();
-  if (hasSchoolYear > 0) return;
+  if (hasSchoolYear > 0) {
+    await ensureSeedUsers();
+    return;
+  }
 
   const legacy = await loadLegacySeedData();
   const now = timestamp();
@@ -195,32 +144,11 @@ export async function ensureSeedData() {
       teamNumber: account.teamNumber,
       schoolYearScope: account.role === "admin" ? "all" : "current",
       active: true,
-      mustChangePassword: true,
+      mustChangePassword: false,
       createdAt: now,
       updatedAt: now,
     });
   }
-
-  const seedReport: WeeklyReport = {
-    _id: new ObjectId().toHexString(),
-    schoolYearId: currentYearId,
-    weekNumber: 1,
-    weekLabel: "Tuần 1",
-    reporterRole: "gvcn",
-    reporterName: legacy.gvcnInfo.displayName,
-    teamNumber: null,
-    summary: "Du lieu mau sau khi chuyen he thong sang Next.js + MongoDB.",
-    studyNotes: "Co the cap nhat theo tuan va phan quyen theo chuc vu.",
-    disciplineNotes: "Lich su chinh sua se duoc luu trong audit logs.",
-    activityNotes: "Dashboard da tach rieng cho GVCN, can su va to truong.",
-    financeNotes: "Thu quy co the bao cao tai chinh theo tuan trong module bao cao.",
-    futurePlan: "Cap nhat du lieu thuc te va bo sung tai khoan nguoi dung.",
-    status: "reviewed",
-    createdBy: users[1]?._id ?? "",
-    updatedBy: users[1]?._id ?? "",
-    createdAt: now,
-    updatedAt: now,
-  };
 
   const auditLog: AuditLog = {
     _id: new ObjectId().toHexString(),
@@ -240,6 +168,5 @@ export async function ensureSeedData() {
   await db.collection<Student>("students").insertMany(students);
   await db.collection<ParentContact>("parents").insertMany(parents);
   await db.collection<UserAccount>("users").insertMany(users);
-  await db.collection<WeeklyReport>("weeklyReports").insertOne(seedReport);
   await db.collection<AuditLog>("auditLogs").insertOne(auditLog);
 }

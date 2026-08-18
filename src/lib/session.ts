@@ -3,6 +3,7 @@ import { SignJWT, jwtVerify } from "jose";
 
 import { getDb } from "@/lib/db";
 import type { SessionUser, UserAccount } from "@/lib/types";
+import { USERNAME_ALIASES } from "@/lib/seed-users";
 
 const SESSION_COOKIE = "ptex_session";
 
@@ -61,5 +62,9 @@ export async function requireSessionUser() {
 
 export async function getUserByUsername(username: string) {
   const db = await getDb();
-  return db.collection<UserAccount>("users").findOne({ username });
+  const normalized = username.toLowerCase();
+  const canonical = USERNAME_ALIASES[normalized] ?? normalized;
+  return db.collection<UserAccount>("users").findOne({
+    username: { $in: [normalized, canonical] } as never,
+  });
 }

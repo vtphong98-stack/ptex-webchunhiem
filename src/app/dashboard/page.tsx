@@ -19,17 +19,18 @@ import {
   saveUserAction,
   setCurrentSchoolYearAction,
 } from "@/app/dashboard/actions";
-import { getDashboardData } from "@/lib/data";
+import { getDashboardData, reportMatchesSlot } from "@/lib/data";
 import {
   canManageAccounts,
   canManageParents,
   canManageSchoolYears,
   canManageStudents,
-  canReviewReports,
   getAllowedViews,
+  isClassOfficer,
 } from "@/lib/permissions";
+import { OFFICER_SLOTS, getOfficerTitle, getReportFields } from "@/lib/report-fields";
 import { getSessionUser } from "@/lib/session";
-import type { AppRole, NavView } from "@/lib/types";
+import type { AppRole, NavView, WeeklyReport } from "@/lib/types";
 import { APP_ROLES } from "@/lib/types";
 import { formatDate, formatRoleLabel } from "@/lib/utils";
 
@@ -37,7 +38,7 @@ const navLabels: Record<NavView, string> = {
   overview: "Tổng quan",
   students: "Học sinh",
   parents: "Phụ huynh",
-  reports: "Báo cáo",
+  reports: "Tổng kết tuần",
   "school-years": "Năm học",
   accounts: "Tài khoản",
   audit: "Lịch sử",
@@ -58,10 +59,24 @@ export default async function DashboardPage({
   const allowedViews = getAllowedViews(session.role);
   const currentView = (allowedViews.includes(params.view as NavView) ? params.view : allowedViews[0]) as NavView;
 
-  const reportItems =
-    session.role === "toTruong" && session.teamNumber
-      ? data.reports.filter((report) => report.teamNumber === session.teamNumber || report.reporterRole === "gvcn")
-      : data.reports;
+  if (isClassOfficer(session.role)) {
+    const myReports = data.reports.filter(
+      (report) => report.createdBy === session.id || (report.reporterRole === session.role && report.teamNumber === session.teamNumber),
+    );
+    return (
+      <main className="py-6">
+        <OfficerReportView
+          reports={myReports}
+          role={session.role}
+          schoolYearId={data.currentSchoolYear?._id ?? ""}
+          sessionName={session.fullName}
+          teamNumber={session.teamNumber}
+          weekCount={data.currentSchoolYear?.weekCount ?? 35}
+          weeks={data.currentSchoolYear?.weeks ?? []}
+        />
+      </main>
+    );
+  }
 
   const groupedStudents = new Map<number | null, typeof data.students>();
   for (const student of data.students) {
@@ -113,8 +128,8 @@ export default async function DashboardPage({
                   {data.classConfig?.fullName ?? "Dashboard chủ nhiệm"}
                 </h2>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 md:text-base">
-                  Web luôn ưu tiên năm học hiện hành, nhưng bạn có thể chuyển năm để xem lại dữ liệu
-                  quá khứ, báo cáo, phụ huynh và lịch sử chỉnh sửa.
+                  Ban cán sự nộp báo cáo theo tuần. GVCN chỉ xem tổng kết tuần nào đã có báo cáo
+                  của từng chức vụ, không nhập thay cán sự.
                 </p>
               </div>
 
@@ -160,16 +175,16 @@ export default async function DashboardPage({
                 </div>
                 <div className="space-y-4 text-sm leading-7 text-slate-700">
                   <RoleBox
-                    title="GVCN và Admin"
-                    body="Quản lý học sinh, phân tổ, phụ huynh, tài khoản, năm học, lịch sử chỉnh sửa và rà soát báo cáo toàn lớp."
+                    title="Ban cán sự"
+                    body="Lớp trưởng, lớp phó, tổ trưởng và thủ quỹ mỗi người một form báo cáo tuần riêng, giống web gốc."
                   />
                   <RoleBox
-                    title="Lớp trưởng và lớp phó"
-                    body="Nhập báo cáo tuần, theo dõi hoạt động chung, hỗ trợ GVCN tổng hợp và xem lại các báo cáo đã gửi."
+                    title="Giáo viên chủ nhiệm"
+                    body="Không nhập báo cáo tuần. Chỉ tổng kết tuần đó đã có báo cáo của chức vụ nào, còn thiếu chức vụ nào."
                   />
                   <RoleBox
-                    title="Tổ trưởng và tổ phó"
-                    body="Theo dõi thành viên tổ, cập nhật báo cáo tổ và nắm phần việc rõ ràng theo từng tuần học."
+                    title="Năm học"
+                    body="Web luôn bám năm hiện hành. Có thể chuyển năm để xem lại lịch sử báo cáo các năm trước."
                   />
                 </div>
               </section>
@@ -273,55 +288,11 @@ export default async function DashboardPage({
           ) : null}
 
           {currentView === "reports" ? (
-            <section className="space-y-4">
-              <section className="card p-5">
-                <h3 className="text-lg font-semibold text-slate-900">Nhập báo cáo tuần</h3>
-                <p className="mt-2 text-sm text-slate-600">
-                  Lớp trưởng, lớp phó, tổ trưởng, thủ quỹ và GVCN có thể nhập báo cáo rồi xem lại,
-                  chỉnh sửa sau đó. GVCN và admin còn có thể rà soát trạng thái các báo cáo đã nộp.
-                </p>
-                <ReportForm schoolYearId={data.currentSchoolYear?._id ?? ""} role={session.role} teamNumber={session.teamNumber} />
-              </section>
-
-              <section className="grid gap-3">
-                {reportItems.map((report) => (
-                  <details className="card p-5" key={report._id}>
-                    <summary className="cursor-pointer list-none">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <p className="text-lg font-semibold text-slate-900">
-                            {report.weekLabel} - {formatRoleLabel(report.reporterRole)}
-                          </p>
-                          <p className="text-sm text-slate-600">
-                            {report.reporterName}
-                            {report.teamNumber ? ` | Tổ ${report.teamNumber}` : ""}
-                          </p>
-                        </div>
-                        <span className="badge">{report.status}</span>
-                      </div>
-                    </summary>
-                    <div className="mt-4 grid gap-4 border-t border-slate-100 pt-4 lg:grid-cols-[1.1fr_0.9fr]">
-                      <div className="space-y-3 text-sm leading-7 text-slate-700">
-                        <InfoBlock label="Tổng hợp" value={report.summary} />
-                        <InfoBlock label="Học tập" value={report.studyNotes} />
-                        <InfoBlock label="Nề nếp" value={report.disciplineNotes} />
-                        <InfoBlock label="Phong trào" value={report.activityNotes} />
-                        <InfoBlock label="Tài chính" value={report.financeNotes} />
-                        <InfoBlock label="Kế hoạch" value={report.futurePlan} />
-                      </div>
-                      <div>
-                        <ReportForm
-                          schoolYearId={data.currentSchoolYear?._id ?? ""}
-                          report={report}
-                          role={session.role}
-                          teamNumber={session.teamNumber}
-                        />
-                      </div>
-                    </div>
-                  </details>
-                ))}
-              </section>
-            </section>
+            <GvcnWeekBoard
+              reports={data.reports}
+              weekCount={data.currentSchoolYear?.weekCount ?? 35}
+              weeks={data.currentSchoolYear?.weeks ?? []}
+            />
           ) : null}
 
           {currentView === "school-years" && canManageSchoolYears(session.role) ? (
@@ -568,86 +539,137 @@ function ParentForm({
   );
 }
 
-function ReportForm({
+function OfficerReportView({
   schoolYearId,
   role,
   teamNumber,
-  report,
+  sessionName,
+  weekCount,
+  weeks,
+  reports,
 }: {
   schoolYearId: string;
   role: AppRole;
   teamNumber: number | null;
-  report?: {
-    _id?: string;
-    weekNumber: number;
-    weekLabel: string;
-    summary: string;
-    studyNotes: string;
-    disciplineNotes: string;
-    activityNotes: string;
-    financeNotes: string;
-    futurePlan: string;
-    status: "draft" | "submitted" | "reviewed";
-  };
+  sessionName: string;
+  weekCount: number;
+  weeks: Array<{ weekNumber: number; label: string; startDate: string; endDate: string }>;
+  reports: WeeklyReport[];
+}) {
+  const fields = getReportFields(role);
+  const latest = reports[0];
+
+  return (
+    <div className="officer-form">
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        <Link className="button-secondary" href="/">
+          ← Trang chủ
+        </Link>
+        <form action={logoutAction}>
+          <button className="button-secondary" type="submit">
+            Đăng xuất
+          </button>
+        </form>
+      </div>
+      <h1>{getOfficerTitle(role, teamNumber)}</h1>
+      <h2>
+        {sessionName}
+        {teamNumber ? ` · Tổ ${teamNumber}` : ""}
+      </h2>
+      <form action={saveReportAction} className="space-y-4">
+        <input name="schoolYearId" type="hidden" value={schoolYearId} />
+        <div>
+          <label htmlFor="weekNumber">TUẦN THỨ (phải nhập chính xác)</label>
+          <input defaultValue={latest?.weekNumber ?? 1} id="weekNumber" max={weekCount} min={1} name="weekNumber" required type="number" />
+          <input name="weekLabel" type="hidden" value={latest?.weekLabel ?? "Tuần 1"} />
+          <p className="mt-2 text-center text-sm text-slate-500">
+            {weeks[0] ? `${weeks[0].label}: ${formatDate(weeks[0].startDate)} - ${formatDate(weeks[0].endDate)}` : `${weekCount} tuần trong năm học`}
+          </p>
+        </div>
+        {fields.map((field) => (
+          <div key={field.name}>
+            <label htmlFor={field.name}>{field.label}</label>
+            <input
+              defaultValue={latest?.fields?.[field.name] ?? ""}
+              id={field.name}
+              name={field.name}
+              placeholder={field.placeholder}
+            />
+          </div>
+        ))}
+        <button className="button-primary w-full" type="submit">
+          Gửi dữ liệu
+        </button>
+      </form>
+
+      {reports.length ? (
+        <section className="mt-6 space-y-3">
+          <p className="text-center text-sm font-semibold text-slate-600">Báo cáo đã gửi</p>
+          {reports.slice(0, 8).map((report) => (
+            <details className="rounded-xl bg-slate-50 p-4" key={report._id}>
+              <summary className="cursor-pointer font-semibold">
+                {report.weekLabel} · {formatDate(report.updatedAt)}
+              </summary>
+              <div className="mt-3 space-y-2 text-sm">
+                {Object.entries(report.fields ?? {}).map(([key, value]) => (
+                  <p key={key}>
+                    <strong>{key}:</strong> {value || "—"}
+                  </p>
+                ))}
+              </div>
+            </details>
+          ))}
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function GvcnWeekBoard({
+  weekCount,
+  weeks,
+  reports,
+}: {
+  weekCount: number;
+  weeks: Array<{ weekNumber: number; label: string }>;
+  reports: WeeklyReport[];
 }) {
   return (
-    <form action={saveReportAction} className="mt-5 space-y-4">
-      <input name="schoolYearId" type="hidden" value={schoolYearId} />
-      <input name="reportId" type="hidden" value={report?._id ?? ""} />
-      <div className="form-grid">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">Vai trò gửi</label>
-          <input disabled value={`${formatRoleLabel(role)}${teamNumber ? ` - Tổ ${teamNumber}` : ""}`} />
-        </div>
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">Số tuần</label>
-          <input defaultValue={report?.weekNumber ?? 1} name="weekNumber" type="number" />
-        </div>
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">Nhãn tuần</label>
-          <input defaultValue={report?.weekLabel ?? "Tuần 1"} name="weekLabel" />
-        </div>
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">Trạng thái</label>
-          <select defaultValue={report?.status ?? "submitted"} name="status">
-            <option value="draft">Nháp</option>
-            <option value="submitted">Đã nộp</option>
-            <option value="reviewed">Đã rà soát</option>
-          </select>
-        </div>
+    <section className="card p-5">
+      <h3 className="text-lg font-semibold text-slate-900">Tổng kết báo cáo theo tuần</h3>
+      <p className="mt-2 text-sm text-slate-600">
+        GVCN không nhập báo cáo. Cột xanh là chức vụ đã nộp tuần đó, cột xám là còn thiếu.
+      </p>
+      <div className="week-board mt-4">
+        <table>
+          <thead>
+            <tr>
+              <th>Tuần</th>
+              {OFFICER_SLOTS.map((slot) => (
+                <th key={slot.key}>{slot.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: weekCount }, (_, index) => index + 1).map((weekNumber) => (
+              <tr key={weekNumber}>
+                <td>{weeks.find((week) => week.weekNumber === weekNumber)?.label ?? `Tuần ${weekNumber}`}</td>
+                {OFFICER_SLOTS.map((slot) => {
+                  const submitted = reports.some(
+                    (report) => report.weekNumber === weekNumber && reportMatchesSlot(report, slot),
+                  );
+                  return (
+                    <td className={submitted ? "week-ok" : "week-missing"} key={`${weekNumber}-${slot.key}`}>
+                      {submitted ? "Có" : "—"}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-      <div>
-        <label className="mb-2 block text-sm font-medium text-slate-700">Tổng hợp tuần</label>
-        <textarea defaultValue={report?.summary ?? ""} name="summary" />
-      </div>
-      <div className="form-grid">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">Học tập</label>
-          <textarea defaultValue={report?.studyNotes ?? ""} name="studyNotes" />
-        </div>
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">Nề nếp</label>
-          <textarea defaultValue={report?.disciplineNotes ?? ""} name="disciplineNotes" />
-        </div>
-      </div>
-      <div className="form-grid">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">Phong trào</label>
-          <textarea defaultValue={report?.activityNotes ?? ""} name="activityNotes" />
-        </div>
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">Tài chính / quỹ</label>
-          <textarea defaultValue={report?.financeNotes ?? ""} name="financeNotes" />
-        </div>
-      </div>
-      <div>
-        <label className="mb-2 block text-sm font-medium text-slate-700">Kế hoạch tuần tới</label>
-        <textarea defaultValue={report?.futurePlan ?? ""} name="futurePlan" />
-      </div>
-      <button className="button-primary" type="submit">
-        {report ? "Cập nhật báo cáo" : "Lưu báo cáo"}
-      </button>
-    </form>
+    </section>
   );
 }
 

@@ -21,15 +21,23 @@ export function canViewAudit(role: AppRole) {
 }
 
 export function canSubmitReport(role: AppRole) {
-  return role !== "admin";
+  return role !== "admin" && role !== "gvcn";
+}
+
+export function isClassOfficer(role: AppRole) {
+  return canSubmitReport(role);
 }
 
 export function canReviewReports(role: AppRole) {
-  return role === "admin" || role === "gvcn" || role === "lopTruong";
+  return role === "admin" || role === "gvcn";
 }
 
 export function getAllowedViews(role: AppRole): NavView[] {
-  const views: NavView[] = ["overview", "reports"];
+  if (isClassOfficer(role)) {
+    return ["reports"];
+  }
+
+  const views: NavView[] = ["reports", "overview"];
 
   if (canManageStudents(role)) views.push("students");
   if (canManageParents(role)) views.push("parents");
