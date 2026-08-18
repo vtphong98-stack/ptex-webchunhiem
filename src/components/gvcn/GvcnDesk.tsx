@@ -6,6 +6,7 @@ import { logoutAction } from "@/app/dashboard/actions";
 import { CLASS_SITE } from "@/lib/class-site";
 import { OFFICER_SLOTS } from "@/lib/report-fields";
 import { formatDate, formatRoleLabel } from "@/lib/utils";
+import { buildExcelWeeks } from "@/lib/weeks";
 
 interface BoardRow {
   weekNumber: number;
@@ -33,19 +34,37 @@ interface WeekDetailData {
   weekMeta: { label?: string; dateRangeLabel?: string } | null;
 }
 
+function emptyBoardRows(): BoardRow[] {
+  return buildExcelWeeks().map((week) => ({
+    weekNumber: week.weekNumber,
+    label: week.label,
+    dateRange: week.dateRangeLabel ?? "",
+    cells: {},
+    firstPlace: "",
+    submitted: 0,
+    total: OFFICER_SLOTS.length,
+  }));
+}
+
 export function GvcnDesk({ fullName }: { fullName: string }) {
-  const [board, setBoard] = useState<{ rows: BoardRow[] } | null>(null);
+  const [board, setBoard] = useState<{ rows: BoardRow[] }>({ rows: emptyBoardRows() });
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [weekDetail, setWeekDetail] = useState<WeekDetailData | null>(null);
-  const [loadingBoard, setLoadingBoard] = useState(true);
   const [loadingWeek, setLoadingWeek] = useState(false);
+  const [boardError, setBoardError] = useState("");
 
   useEffect(() => {
     fetch("/api/gvcn/board")
-      .then((response) => response.json())
-      .then((data) => setBoard(data))
-      .catch(() => setBoard({ rows: [] }))
-      .finally(() => setLoadingBoard(false));
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data.rows) && data.rows.length) {
+          setBoard({ rows: data.rows });
+        }
+      })
+      .catch(() => setBoardError("Chưa tải được trạng thái nộp. Vẫn chọn tuần bình thường."));
   }, []);
 
   const openWeek = useCallback((weekNumber: number) => {
@@ -53,7 +72,10 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
     setWeekDetail(null);
     setLoadingWeek(true);
     fetch(`/api/gvcn/week/${weekNumber}`)
-      .then((response) => response.json())
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
       .then((data) => setWeekDetail(data))
       .catch(() => setWeekDetail({ reports: [], summary: "", ranking: null, weekMeta: null }))
       .finally(() => setLoadingWeek(false));
@@ -78,20 +100,12 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
         </div>
       </header>
 
-      {loadingBoard ? (
-        <section className="card p-5">
-          <p className="text-sm text-slate-500">Đang tải bảng tuần…</p>
-          <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-7 lg:grid-cols-10">
-            {Array.from({ length: 20 }, (_, index) => (
-              <div className="h-14 rounded-xl bg-slate-100" key={index} />
-            ))}
-          </div>
-        </section>
-      ) : (
-        <section className="card p-5">
-          <h2 className="mb-4 text-lg font-semibold">Chọn tuần</h2>
-          <div className="grid grid-cols-5 gap-2 sm:grid-cols-7 lg:grid-cols-10">
-            {(board?.rows ?? []).map((row) => {
+      {boardError ? <p className="mb-3 text-sm text-amber-700">{boardError}</p> : null}
+
+      <section className="card p-5">
+        <h2 className="mb-4 text-lg font-semibold">Chọn tuần</h2>
+        <div className="grid grid-cols-5 gap-2 sm:grid-cols-7 lg:grid-cols-10">
+          {board.rows.map((row) => {
               const hasData = row.submitted > 0;
               const active = row.weekNumber === selectedWeek;
               return (
@@ -116,7 +130,6 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
             })}
           </div>
         </section>
-      )}
 
       {selectedWeek ? (
         <section className="card mt-4 overflow-hidden">
@@ -184,11 +197,11 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
             )}
           </div>
         </section>
-      ) : !loadingBoard ? (
+      ) : (
         <section className="card mt-4 p-8 text-center text-sm text-slate-500">Chọn một tuần để xem tổng kết.</section>
-      ) : null}
+      )}
 
-      {!loadingBoard && board?.rows?.length ? (
+      {board.rows.length ? (
         <details className="card mt-4">
           <summary className="cursor-pointer px-5 py-3 text-sm font-medium text-blue-600">Bảng đủ/thiếu theo chức vụ</summary>
           <div className="week-board px-5 pb-5">

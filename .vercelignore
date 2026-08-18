@@ -1,4 +1,7 @@
-api/
+# Only the legacy Vercel functions folder at repo root — do not match src/app/api
+/api/parents.js
+/api/verify-password.js
+/api/taomatkhau.html
 *.html
 config.js
 data.js
