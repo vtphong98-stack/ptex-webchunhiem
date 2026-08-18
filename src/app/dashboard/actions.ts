@@ -45,6 +45,7 @@ export async function saveStudentAction(formData: FormData) {
     fullName: toPlainString(formData.get("fullName")),
     birthDay: Number(toPlainString(formData.get("birthDay")) || "1"),
     birthMonth: Number(toPlainString(formData.get("birthMonth")) || "1"),
+    birthYear: toNumberOrNull(formData.get("birthYear")),
     teamNumber: toNumberOrNull(formData.get("teamNumber")),
     position: toPlainString(formData.get("position")) || null,
     parentPhone: toPlainString(formData.get("parentPhone")),
@@ -78,7 +79,14 @@ export async function saveStudentAction(formData: FormData) {
     });
   } else {
     const createdAt = new Date().toISOString();
-    const newStudent = { _id: crypto.randomUUID(), schoolYearId, ...payload, createdAt };
+    const newStudent = {
+      _id: crypto.randomUUID(),
+      schoolYearId,
+      teamRole: null,
+      classDuty: null,
+      ...payload,
+      createdAt,
+    };
     await studentsCollection.insertOne(newStudent);
     await parentsCollection.insertOne({
       _id: crypto.randomUUID(),

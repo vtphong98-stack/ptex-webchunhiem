@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { logoutAction, saveReportAction } from "@/app/dashboard/actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { TeamLeaderForm } from "@/components/officer/TeamLeaderForm";
 import { getOfficerTitle, getReportFields } from "@/lib/report-fields";
 import type { AppRole } from "@/lib/types";
 import { buildExcelWeeks } from "@/lib/weeks";
@@ -17,6 +18,22 @@ type SavedReport = {
 };
 
 export function OfficerDesk({
+  fullName,
+  role,
+  teamNumber,
+}: {
+  fullName: string;
+  role: AppRole;
+  teamNumber: number | null;
+}) {
+  if (role === "toTruong" && teamNumber) {
+    return <TeamLeaderForm fullName={fullName} teamNumber={teamNumber} />;
+  }
+
+  return <GenericOfficerForm fullName={fullName} role={role} teamNumber={teamNumber} />;
+}
+
+function GenericOfficerForm({
   fullName,
   role,
   teamNumber,

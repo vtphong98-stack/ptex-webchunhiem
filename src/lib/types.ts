@@ -59,13 +59,31 @@ export type ClassConfig = {
   updatedAt: string;
 };
 
+export const TEAM_ROLES = ["toTruong", "toPho", "thanhVien"] as const;
+export type TeamRole = (typeof TEAM_ROLES)[number];
+
+export const CLASS_DUTIES = [
+  "lopTruong",
+  "lopPhoHocTap",
+  "lopPhoLaoDong",
+  "lopPhoPhongTrao",
+  "lopPhoTratTu",
+  "thuQuy",
+] as const;
+export type ClassDuty = (typeof CLASS_DUTIES)[number];
+
+export type ReportWriteMode = "create" | "append" | "edit";
+
 export type Student = {
   _id?: string;
   schoolYearId: string;
   fullName: string;
   birthDay: number;
   birthMonth: number;
+  birthYear: number | null;
   teamNumber: number | null;
+  teamRole: TeamRole | null;
+  classDuty: ClassDuty | null;
   position: string | null;
   parentPhone: string;
   parentName: string;

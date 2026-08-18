@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { logoutAction } from "@/app/dashboard/actions";
+import { TeamManager } from "@/components/gvcn/TeamManager";
 import { CLASS_SITE } from "@/lib/class-site";
 import { OFFICER_SLOTS } from "@/lib/report-fields";
 import { formatDate, formatRoleLabel } from "@/lib/utils";
@@ -52,6 +53,7 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
   const [weekDetail, setWeekDetail] = useState<WeekDetailData | null>(null);
   const [loadingWeek, setLoadingWeek] = useState(false);
   const [boardError, setBoardError] = useState("");
+  const [deskView, setDeskView] = useState<"weeks" | "teams">("weeks");
 
   useEffect(() => {
     fetch("/api/gvcn/board")
@@ -86,9 +88,25 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
       <header className="card mb-4 flex flex-wrap items-center justify-between gap-3 p-4">
         <div>
           <p className="text-sm text-slate-500">{CLASS_SITE.fullName}</p>
-          <h1 className="text-xl font-bold text-slate-950">Tổng kết tuần · {fullName}</h1>
+          <h1 className="text-xl font-bold text-slate-950">
+            {deskView === "teams" ? "Quản lý tổ" : "Tổng kết tuần"} · {fullName}
+          </h1>
         </div>
         <div className="flex gap-2">
+          <button
+            className={deskView === "weeks" ? "button-primary" : "button-secondary"}
+            onClick={() => setDeskView("weeks")}
+            type="button"
+          >
+            Tổng kết tuần
+          </button>
+          <button
+            className={deskView === "teams" ? "button-primary" : "button-secondary"}
+            onClick={() => setDeskView("teams")}
+            type="button"
+          >
+            Quản lý tổ
+          </button>
           <a className="button-secondary" href="/">
             Trang chủ
           </a>
@@ -100,6 +118,10 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
         </div>
       </header>
 
+      {deskView === "teams" ? (
+        <TeamManager />
+      ) : (
+        <>
       {boardError ? <p className="mb-3 text-sm text-amber-700">{boardError}</p> : null}
 
       <section className="card p-5">
@@ -179,7 +201,7 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
                         <div className="mt-2 space-y-1 text-sm">
                           {report.fieldDefs.map((field) => {
                             const value = report.fields[field.name];
-                            if (!value) return null;
+                            if (!value || field.name === "members_json" || field.name === "write_mode" || field.name === "week_range") return null;
                             return (
                               <p key={field.name}>
                                 <strong>{field.label}:</strong> {value}
@@ -235,6 +257,8 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
           </div>
         </details>
       ) : null}
+        </>
+      )}
     </div>
   );
 }

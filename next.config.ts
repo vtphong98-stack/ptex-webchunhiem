@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
   compress: true,
-  serverExternalPackages: ["mongodb", "bcryptjs"],
+  serverExternalPackages: ["mongodb", "bcryptjs", "xlsx"],
   experimental: {
     optimizePackageImports: ["lucide-react"],
     staleTimes: {

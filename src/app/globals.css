@@ -322,6 +322,102 @@ button {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
 }
 
+.officer-form-wide {
+  max-width: 1180px;
+}
+
+.write-mode {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 12px;
+  margin: 16px 0;
+}
+
+.write-mode legend {
+  font-weight: 700;
+  color: #c62828;
+  padding: 0 6px;
+}
+
+.write-mode label {
+  display: flex;
+  gap: 10px;
+  text-align: left;
+  align-items: flex-start;
+  margin: 8px 0;
+  padding: 8px;
+  border-radius: 12px;
+}
+
+.write-mode label.active {
+  background: #fff7ed;
+}
+
+.write-mode input {
+  width: auto;
+  margin-top: 4px;
+}
+
+.write-mode em {
+  display: block;
+  font-style: normal;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.team-sheet {
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.team-sheet table {
+  width: 100%;
+  min-width: 1100px;
+  border-collapse: collapse;
+}
+
+.team-sheet th,
+.team-sheet td {
+  border: 1px solid #e5e7eb;
+  padding: 6px;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.team-sheet th {
+  background: #1a237e;
+  color: #fff;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.team-sheet input {
+  width: 100%;
+  min-width: 3.2rem;
+  padding: 0.4rem 0.45rem;
+  border-radius: 0.6rem;
+}
+
+.team-sheet .name-cell {
+  min-width: 140px;
+  text-align: left;
+}
+
+.team-sheet .name-cell span {
+  display: block;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.status-note {
+  text-align: center;
+  color: #b45309;
+  font-size: 14px;
+  margin: 8px 0 12px;
+}
+
 .officer-form h1,
 .officer-form h2,
 .officer-form label {
@@ -345,6 +441,13 @@ button {
   color: #d81b60;
   font-weight: 500;
   margin-bottom: 8px;
+}
+
+.officer-form .write-mode label {
+  display: flex;
+  text-align: left;
+  color: inherit;
+  margin-bottom: 0;
 }
 
 .week-board {
