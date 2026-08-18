@@ -1,21 +1,37 @@
 {
-  "name": "lien-he-phu-huynh",
-  "version": "1.0.0",
-  "description": "Hệ thống quản lý liên hệ phụ huynh",
-  "type": "module",
-  "main": "index.html",
+  "name": "ptex-webchunhiem",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Web chủ nhiệm React/Next.js với MongoDB, phân quyền và lưu trữ theo năm học.",
   "scripts": {
-    "dev": "vercel dev"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "import:legacy": "node --env-file=.env.local scripts/import-legacy.mjs"
   },
   "dependencies": {
-    "@vercel/kv": "^0.2.1"
+    "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
+    "jose": "^6.2.9",
+    "lucide-react": "^1.31.0",
+    "mongodb": "^7.5.0",
+    "next": "^16.3.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
   },
-  "devDependencies": {},
-  "keywords": [
-    "phu-huynh",
-    "contact",
-    "vercel"
-  ],
-  "author": "",
-  "license": "ISC"
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^24.3.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "eslint": "^9.35.0",
+    "eslint-config-next": "^16.3.1",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.12",
+    "typescript": "^5.9.2"
+  }
 }
