@@ -576,6 +576,18 @@ button {
   margin: 8px 0 12px;
 }
 
+.success-note {
+  text-align: center;
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 16px 0 12px;
+  padding: 12px 16px;
+}
+
 .officer-form h1,
 .officer-form h2,
 .officer-form label {
