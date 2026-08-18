@@ -1,3 +1,4 @@
+import { CLASS_SITE } from "@/lib/class-site";
 import type { GvcnNotice } from "@/lib/types";
 
 export const NOTICE_NEW_DAYS = 7;
@@ -10,6 +11,7 @@ export type PublicNotice = {
   pinned: boolean;
   isNew: boolean;
   dateLabel: string;
+  authorName: string;
 };
 
 export function isNoticeNew(createdAt: string, now = Date.now()) {
@@ -21,15 +23,17 @@ export function isNoticeNew(createdAt: string, now = Date.now()) {
 export function formatNoticeDate(iso: string) {
   const date = new Date(iso);
   if (!Number.isFinite(date.getTime())) return "";
-  return new Intl.DateTimeFormat("vi-VN", {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Ho_Chi_Minh",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: "Asia/Ho_Chi_Minh",
-  }).format(date);
+  }).formatToParts(date);
+  const pick = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${pick("hour")}:${pick("minute")} ${pick("day")}/${pick("month")}/${pick("year")}`;
 }
 
 export function toPublicNotice(notice: GvcnNotice, newestId?: string): PublicNotice {
@@ -40,6 +44,7 @@ export function toPublicNotice(notice: GvcnNotice, newestId?: string): PublicNot
     pinned: Boolean(notice.pinned),
     isNew: isNoticeNew(notice.createdAt) || String(notice._id) === newestId,
     dateLabel: formatNoticeDate(notice.createdAt),
+    authorName: notice.createdByName || CLASS_SITE.gvcnName,
   };
 }
 

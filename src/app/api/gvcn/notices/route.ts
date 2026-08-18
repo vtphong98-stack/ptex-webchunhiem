@@ -18,6 +18,7 @@ function serialize(notice: GvcnNotice, newestId: string) {
     isNew: isNoticeNew(notice.createdAt) || String(notice._id) === newestId,
     createdAt: notice.createdAt,
     dateLabel: formatNoticeDate(notice.createdAt),
+    authorName: notice.createdByName || "",
   };
 }
 

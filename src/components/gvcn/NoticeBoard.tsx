@@ -10,6 +10,7 @@ type NoticeRow = {
   isNew: boolean;
   createdAt: string;
   dateLabel: string;
+  authorName?: string;
 };
 
 export function NoticeBoard({ readOnly, yearName }: { readOnly: boolean; yearName: string }) {
@@ -143,6 +144,7 @@ export function NoticeBoard({ readOnly, yearName }: { readOnly: boolean; yearNam
                       {notice.title}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
+                      {notice.authorName ? `${notice.authorName} · ` : ""}
                       {notice.dateLabel}
                       {notice.pinned ? " · Đã ghim" : ""}
                     </p>
