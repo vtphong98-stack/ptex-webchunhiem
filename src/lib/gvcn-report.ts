@@ -1,4 +1,3 @@
-import { CLASS_SITE } from "@/lib/class-site";
 import { OFFICER_SLOTS } from "@/lib/report-fields";
 import { getTeamScoresForWeek } from "@/lib/report-schema";
 import { parseMemberRows, type TeamMemberWeekRow } from "@/lib/team-roster";
@@ -181,9 +180,41 @@ function line(label: string, value: string, sources: string[]): ReportLine {
   return { label, value: value || "Không có", sources };
 }
 
+function isEmptyReportValue(value: string) {
+  const trimmed = value.trim();
+  return !trimmed || trimmed === "Không có" || trimmed === "Chưa có" || trimmed === "Chưa đủ điểm";
+}
+
+function formatRankingText(ranking: GvcnWeekReport["ranking"]) {
+  if (!ranking.firstPlace) return "";
+  const topScore = ranking.scores[0]?.score;
+  return topScore != null ? `${ranking.firstPlace} (${topScore} đ)` : ranking.firstPlace;
+}
+
 function formatViolationRow(entry: ViolationEntry) {
-  const detail = entry.detail ? ` — ${entry.detail}` : "";
-  return `   · ${entry.studentName} (Tổ ${entry.teamNumber}): ${entry.kindLabel} ${entry.count} lượt${detail}`;
+  const detail = entry.detail ? `, ${entry.detail}` : "";
+  return `   · ${entry.studentName}: ${entry.kindLabel} ${entry.count} lượt${detail}`;
+}
+
+function buildCleanReportText(
+  weekNumber: number,
+  shortRange: string,
+  sections: ReportSection[],
+  violations: ViolationEntry[],
+) {
+  const textLines = [`BÁO CÁO SINH HOẠT TUẦN ${weekNumber}${shortRange ? ` (${shortRange})` : ""}`, "", "I. TÌNH HÌNH HỌC SINH", ""];
+
+  for (const section of sections) {
+    const lines = section.lines.filter((item) => !isEmptyReportValue(item.value));
+    if (!lines.length) continue;
+    textLines.push(section.title, ...lines.map((item) => `   - ${item.label}: ${item.value}`), "");
+  }
+
+  if (violations.length) {
+    textLines.push("II. CHI TIẾT VI PHẠM THEO HỌC SINH", "", ...violations.map(formatViolationRow));
+  }
+
+  return textLines.join("\n").trim();
 }
 
 export function buildGvcnWeekReport(input: {
@@ -238,7 +269,7 @@ export function buildGvcnWeekReport(input: {
       lines: [
         line(
           "Hạng nhất",
-          ranking.firstPlace ? `${ranking.firstPlace} (${ranking.scores.map((s) => `Tổ ${s.teamNumber}: ${s.score}đ`).join(", ")})` : "Chưa đủ điểm",
+          formatRankingText(ranking) || "Chưa đủ điểm",
           teams.map((t) => slotLabel("toTruong", t.teamNumber)).filter(Boolean) as string[],
         ),
       ],
@@ -322,43 +353,10 @@ export function buildGvcnWeekReport(input: {
     ),
   }));
 
-  const submittedLabels = officerSources.filter((item) => item.submitted).map((item) => item.label);
-
-  const textLines = [
-    `BÁO CÁO SINH HOẠT TUẦN ${weekNumber}${shortRange ? ` (${shortRange})` : ""}`,
-    `Lớp ${CLASS_SITE.className} · Báo cáo chung tổng hợp từ ban cán sự`,
-    submittedLabels.length ? `Nguồn đã nộp: ${submittedLabels.join(", ")}` : "Nguồn: Chưa có báo cáo chức vụ",
-    "",
-    "I. TÌNH HÌNH HỌC SINH",
-    "",
-    ...sections.flatMap((section) => [
-      section.title,
-      ...section.lines.map((item) => {
-        const src = item.sources.length ? ` [${item.sources.join(", ")}]` : "";
-        return `   - ${item.label}: ${item.value}${src}`;
-      }),
-      "",
-    ]),
-  ];
-
-  if (violations.length) {
-    textLines.push(
-      "II. CHI TIẾT VI PHẠM THEO HỌC SINH (ánh xạ từ báo cáo tổ trưởng)",
-      "",
-      ...violations.map(formatViolationRow),
-      "",
-    );
-  }
-
-  textLines.push(
-    "---",
-    "Báo cáo này tổng hợp tự động từ báo cáo tuần của LT, LPHT, LPTT, LPLD, LPPT, TT1–TT4 và Thủ quỹ.",
-  );
-
   return {
     title: `Báo cáo sinh hoạt tuần ${weekNumber}`,
     dateRange: dateRangeLabel ?? "",
-    text: textLines.join("\n"),
+    text: buildCleanReportText(weekNumber, shortRange, sections, violations),
     sections,
     violations,
     officerSources,

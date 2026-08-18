@@ -111,7 +111,7 @@ export function GvcnWeekReportView({
       {report.violations.length ? (
         <section className="gvcn-violations">
           <h4>Chi tiết vi phạm theo học sinh</h4>
-          <p className="gvcn-violations-note">Ánh xạ trực tiếp từ báo cáo tổ trưởng (TT1–TT4)</p>
+          <p className="gvcn-violations-note">Theo báo cáo tổ trưởng</p>
           <div className="gvcn-violations-table-wrap">
             <table className="gvcn-violations-table">
               <thead>
