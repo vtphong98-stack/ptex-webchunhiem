@@ -190,6 +190,12 @@ export async function saveReportAction(formData: FormData) {
   if (session.role === "lopPhoLaoDong") {
     rawFields.labor_assignments_json = toPlainString(formData.get("labor_assignments_json"));
   }
+  if (session.role === "lopPhoTratTu") {
+    rawFields.discipline_records_json = toPlainString(formData.get("discipline_records_json"));
+  }
+  if (session.role === "lopPhoPhongTrao") {
+    rawFields.campaign_assignments_json = toPlainString(formData.get("campaign_assignments_json"));
+  }
   if (week?.dateRangeLabel) {
     rawFields.week_range = week.dateRangeLabel;
   }

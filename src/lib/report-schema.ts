@@ -1,4 +1,6 @@
 import type { AppRole, WeeklyReport } from "@/lib/types";
+import { summarizeCampaignAssignments } from "@/lib/campaign-duty";
+import { summarizeDisciplineRecords } from "@/lib/discipline-duty";
 import { summarizeLaborAssignments } from "@/lib/labor-duty";
 
 /**
@@ -90,6 +92,14 @@ export function enrichReportFields(
     if (next.duty_team?.trim()) {
       next.cleaning_team = `Tổ ${next.duty_team.trim()}`;
     }
+  }
+
+  if (role === "lopPhoTratTu") {
+    next.discipline_records_summary = summarizeDisciplineRecords(next.discipline_records_json);
+  }
+
+  if (role === "lopPhoPhongTrao") {
+    next.campaign_assignments_summary = summarizeCampaignAssignments(next.campaign_assignments_json);
   }
 
   return next;

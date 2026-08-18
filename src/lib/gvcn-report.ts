@@ -1,3 +1,5 @@
+import { formatCampaignAssignments } from "@/lib/campaign-duty";
+import { formatDisciplineRecords } from "@/lib/discipline-duty";
 import { OFFICER_SLOTS } from "@/lib/report-fields";
 import { summarizeLaborAssignments } from "@/lib/labor-duty";
 import { getTeamScoresForWeek, toCount } from "@/lib/report-schema";
@@ -322,8 +324,19 @@ export function buildGvcnWeekReport(input: {
       lines: [
         line("Mất trật tự (tổ)", disorderMembers.value, disorderMembers.sources),
         line("Vi phạm Đoàn (tổ)", violationMembers.value, violationMembers.sources),
-        line("Chưa ghi SDB (LPTT)", text(lptt?.fields, "disorder_not_sdb"), lptt ? ["LPTT"] : []),
-        line("Đã ghi SDB (LPTT)", text(lptt?.fields, "disorder_sdb"), lptt ? ["LPTT"] : []),
+        line(
+          "Tổ theo dõi (LPTT)",
+          lptt?.fields?.duty_team ? `Tổ ${lptt.fields.duty_team}` : "",
+          lptt ? ["LPTT"] : [],
+        ),
+        line(
+          "Theo dõi trật tự (LPTT)",
+          text(lptt?.fields, "discipline_records_summary", "") ||
+            formatDisciplineRecords(lptt?.fields?.discipline_records_json) ||
+            [text(lptt?.fields, "disorder_not_sdb"), text(lptt?.fields, "disorder_sdb")].filter(Boolean).join("; "),
+          lptt ? ["LPTT"] : [],
+        ),
+        line("Theo dõi mạng (LPTT)", text(lptt?.fields, "social_media"), lptt ? ["LPTT"] : []),
       ],
     },
     {
@@ -359,7 +372,13 @@ export function buildGvcnWeekReport(input: {
         line("Tên phong trào", text(lppt?.fields, "campaign_name"), lppt ? ["LPPT"] : []),
         line("Thời gian", text(lppt?.fields, "implementation_time"), lppt ? ["LPPT"] : []),
         line("Tiến độ", text(lppt?.fields, "progress"), lppt ? ["LPPT"] : []),
-        line("HS phụ trách", text(lppt?.fields, "assigned_students"), lppt ? ["LPPT"] : []),
+        line(
+          "Phân công HS",
+          text(lppt?.fields, "campaign_assignments_summary", "") ||
+            formatCampaignAssignments(lppt?.fields?.campaign_assignments_json) ||
+            text(lppt?.fields, "assigned_students"),
+          lppt ? ["LPPT"] : [],
+        ),
       ],
     },
     {

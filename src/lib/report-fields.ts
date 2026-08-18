@@ -67,22 +67,18 @@ export function getReportFields(role: AppRole): ReportField[] {
 
   if (role === "lopPhoPhongTrao") {
     return [
-      { name: "campaign_name", label: "1. Tên phong trào" },
-      { name: "implementation_time", label: "2. Thời gian thực hiện" },
-      { name: "progress", label: "3. Tiến độ thực hiện" },
-      { name: "assigned_students", label: "4. Phân công học sinh phụ trách" },
-      { name: "competition_date", label: "5. Ngày thi" },
-      { name: "estimated_cost", label: "6. Dự kiến kinh phí" },
+      { name: "campaign_name", label: "Tên phong trào" },
+      { name: "implementation_time", label: "Thời gian thực hiện" },
+      { name: "progress", label: "Tiến độ" },
+      { name: "campaign_assignments_summary", label: "Phân công học sinh" },
     ];
   }
 
   if (role === "lopPhoTratTu") {
     return [
-      { name: "disorder_not_sdb", label: "1. Học sinh mất trật tự (chưa ghi SDB)" },
-      { name: "disorder_not_sdb_count", label: "2. Tổng số lượt (chưa ghi SDB)" },
-      { name: "disorder_sdb", label: "3. Học sinh mất trật tự (đã ghi SDB)" },
-      { name: "disorder_sdb_count", label: "4. Tổng số lượt (đã ghi SDB)" },
-      { name: "social_media", label: "5. Theo dõi các bài đăng trên mạng" },
+      { name: "duty_team", label: "Tổ theo dõi" },
+      { name: "discipline_records_summary", label: "Theo dõi trật tự" },
+      { name: "social_media", label: "Theo dõi các bài đăng trên mạng" },
     ];
   }
 

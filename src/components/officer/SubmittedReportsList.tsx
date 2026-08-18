@@ -2,6 +2,8 @@
 
 import { useState, type RefObject } from "react";
 
+import { formatCampaignCopyText, parseCampaignAssignments } from "@/lib/campaign-duty";
+import { formatDisciplineCopyText, parseDisciplineRecords } from "@/lib/discipline-duty";
 import type { ReportField } from "@/lib/report-fields";
 import { formatLaborCopyText, groupLaborAssignmentsByDay } from "@/lib/labor-duty";
 
@@ -69,6 +71,109 @@ function LaborReportBody({ report }: { report: SavedReport }) {
   );
 }
 
+function DisciplineReportBody({ report }: { report: SavedReport }) {
+  const [copied, setCopied] = useState(false);
+  const dutyTeam = report.fields.duty_team || "";
+  const socialMedia = report.fields.social_media || "";
+  const rows = parseDisciplineRecords(report.fields.discipline_records_json).filter(
+    (row) => row.incidentCount > 0 || row.subject.trim(),
+  );
+  const copyValue = formatDisciplineCopyText({
+    weekLabel: report.weekLabel,
+    dutyTeam,
+    recordsRaw: report.fields.discipline_records_json,
+    socialMedia,
+  });
+
+  async function handleCopy() {
+    await copyText(copyValue);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="labor-report-body">
+      {dutyTeam ? (
+        <p>
+          <strong>Tổ theo dõi:</strong> Tổ {dutyTeam.replace(/^Tổ\s*/i, "")}
+        </p>
+      ) : null}
+      {rows.length ? (
+        rows.map((row) => (
+          <p key={`${row.studentId}-${row.fullName}`}>
+            {row.fullName}
+            {row.incidentCount > 0 ? `: ${row.incidentCount} lần` : ""}
+            {row.subject.trim() ? ` · ${row.subject.trim()}` : ""}
+          </p>
+        ))
+      ) : (
+        <p>Chưa ghi nhận vi phạm.</p>
+      )}
+      {socialMedia.trim() ? (
+        <p>
+          <strong>Theo dõi mạng:</strong> {socialMedia.trim()}
+        </p>
+      ) : null}
+      <button className="button-secondary labor-copy-btn" onClick={() => void handleCopy()} type="button">
+        {copied ? "✓ Đã copy" : "Copy gửi Zalo"}
+      </button>
+    </div>
+  );
+}
+
+function CampaignReportBody({ report }: { report: SavedReport }) {
+  const [copied, setCopied] = useState(false);
+  const campaignName = report.fields.campaign_name || "";
+  const implementationTime = report.fields.implementation_time || "";
+  const progress = report.fields.progress || "";
+  const rows = parseCampaignAssignments(report.fields.campaign_assignments_json).filter((row) => row.assignment.trim());
+  const copyValue = formatCampaignCopyText({
+    weekLabel: report.weekLabel,
+    campaignName,
+    implementationTime,
+    progress,
+    assignmentsRaw: report.fields.campaign_assignments_json,
+  });
+
+  async function handleCopy() {
+    await copyText(copyValue);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="labor-report-body">
+      {campaignName.trim() ? (
+        <p>
+          <strong>Tên phong trào:</strong> {campaignName.trim()}
+        </p>
+      ) : null}
+      {implementationTime.trim() ? (
+        <p>
+          <strong>Thời gian:</strong> {implementationTime.trim()}
+        </p>
+      ) : null}
+      {progress.trim() ? (
+        <p>
+          <strong>Tiến độ:</strong> {progress.trim()}
+        </p>
+      ) : null}
+      {rows.length ? (
+        rows.map((row) => (
+          <p key={`${row.studentId}-${row.fullName}`}>
+            {row.fullName}: {row.assignment.trim()}
+          </p>
+        ))
+      ) : (
+        <p>Chưa phân công.</p>
+      )}
+      <button className="button-secondary labor-copy-btn" onClick={() => void handleCopy()} type="button">
+        {copied ? "✓ Đã copy" : "Copy gửi Zalo"}
+      </button>
+    </div>
+  );
+}
+
 export function SubmittedReportsList({
   reports,
   fields,
@@ -88,9 +193,29 @@ export function SubmittedReportsList({
   highlightWeekNumber?: number;
   showSuccessHighlight?: boolean;
   sectionRef?: RefObject<HTMLElement | null>;
-  variant?: "default" | "labor";
+  variant?: "default" | "labor" | "discipline" | "campaign";
 }) {
   if (!reports.length) return null;
+
+  function renderBody(report: SavedReport, lines: ReturnType<typeof reportFieldLines>) {
+    if (variant === "labor" || report.fields.labor_assignments_json) {
+      return <LaborReportBody report={report} />;
+    }
+    if (variant === "discipline" || report.fields.discipline_records_json) {
+      return <DisciplineReportBody report={report} />;
+    }
+    if (variant === "campaign" || report.fields.campaign_assignments_json) {
+      return <CampaignReportBody report={report} />;
+    }
+    if (lines.length) {
+      return lines.map((line) => (
+        <p key={line.key}>
+          <strong>{line.label}:</strong> {line.value}
+        </p>
+      ));
+    }
+    return <p>Chưa có nội dung.</p>;
+  }
 
   return (
     <section className="mt-6 space-y-3" ref={sectionRef}>
@@ -104,19 +229,7 @@ export function SubmittedReportsList({
             open={showSuccessHighlight && report.weekNumber === highlightWeekNumber}
           >
             <summary className="cursor-pointer font-semibold">{report.weekLabel}</summary>
-            <div className="mt-3 space-y-2 text-sm">
-              {variant === "labor" || report.fields.labor_assignments_json ? (
-                <LaborReportBody report={report} />
-              ) : lines.length ? (
-                lines.map((line) => (
-                  <p key={line.key}>
-                    <strong>{line.label}:</strong> {line.value}
-                  </p>
-                ))
-              ) : (
-                <p>Chưa có nội dung.</p>
-              )}
-            </div>
+            <div className="mt-3 space-y-2 text-sm">{renderBody(report, lines)}</div>
           </details>
         );
       })}
