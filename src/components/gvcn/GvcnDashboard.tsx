@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 
+import { fetchBoardData, fetchWeekDetail } from "@/lib/gvcn-actions";
 import { OFFICER_SLOTS } from "@/lib/report-fields";
 import { formatDate, formatRoleLabel } from "@/lib/utils";
 
@@ -26,11 +27,11 @@ interface WeekReport {
   fieldDefs: Array<{ name: string; label: string }>;
 }
 
-interface WeekDetail {
+interface WeekDetailData {
   reports: WeekReport[];
   summary: string;
   ranking: { firstPlace: string; scores: Array<{ teamNumber: number; score: number }> } | null;
-  weekMeta: { label: string; dateRangeLabel: string } | null;
+  weekMeta: { label?: string; dateRangeLabel?: string } | null;
 }
 
 // ─── Component ────────────────────────────────────────────
@@ -38,34 +39,41 @@ interface WeekDetail {
 export function GvcnDashboard({ yearId }: { yearId: string }) {
   const [board, setBoard] = useState<{ rows: BoardRow[]; weeksWithReports: number[] } | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
-  const [weekDetail, setWeekDetail] = useState<WeekDetail | null>(null);
+  const [weekDetail, setWeekDetail] = useState<WeekDetailData | null>(null);
   const [loadingBoard, setLoadingBoard] = useState(true);
-  const [loadingWeek, setLoadingWeek] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  // Fetch board data on mount
+  // Fetch board data on mount via server action
   useEffect(() => {
     setLoadingBoard(true);
-    fetch(`/api/gvcn/board?yearId=${yearId}`)
-      .then((r) => r.json())
-      .then((data) => { setBoard(data); setLoadingBoard(false); })
-      .catch(() => setLoadingBoard(false));
+    startTransition(async () => {
+      try {
+        const data = await fetchBoardData(yearId);
+        setBoard(data);
+      } finally {
+        setLoadingBoard(false);
+      }
+    });
   }, [yearId]);
 
-  // Fetch week detail
+  // Fetch week detail via server action
   const openWeek = useCallback((wn: number) => {
     setSelectedWeek(wn);
-    setLoadingWeek(true);
     setWeekDetail(null);
-    fetch(`/api/gvcn/week/${wn}?yearId=${yearId}`)
-      .then((r) => r.json())
-      .then((data) => { setWeekDetail(data); setLoadingWeek(false); })
-      .catch(() => setLoadingWeek(false));
+    startTransition(async () => {
+      try {
+        const data = await fetchWeekDetail(wn, yearId);
+        setWeekDetail(data);
+      } catch { /* ignore */ }
+    });
   }, [yearId]);
 
   const closeWeek = useCallback(() => {
     setSelectedWeek(null);
     setWeekDetail(null);
   }, []);
+
+  const loadingWeek = isPending && selectedWeek !== null && weekDetail === null;
 
   return (
     <div className="space-y-4">
@@ -282,11 +290,11 @@ export function GvcnDashboard({ yearId }: { yearId: string }) {
                   </div>
                 </details>
               </>
-            ) : (
+            ) : weekDetail ? (
               <p className="py-8 text-center text-sm text-slate-500">
                 Tuần {selectedWeek} chưa có báo cáo nào.
               </p>
-            )}
+            ) : null}
           </div>
         </section>
       ) : board && !loadingBoard ? (
