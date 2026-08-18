@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { loginAction } from "@/app/login/actions";
+import { SubmitButton } from "@/components/SubmitButton";
 import { CLASS_SITE } from "@/lib/class-site";
 
 const errorMessages: Record<string, string> = {
@@ -77,9 +78,9 @@ export function LoginForm() {
             ) : (
               <p className="text-center text-sm text-slate-500">{role.hint}</p>
             )}
-            <button className="button-primary w-full" type="submit">
+            <SubmitButton className="button-primary w-full" pendingText="Đang đăng nhập…">
               Đăng nhập và vào form báo cáo
-            </button>
+            </SubmitButton>
           </form>
         )}
       </div>

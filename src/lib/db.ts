@@ -14,11 +14,13 @@ function getClientPromise() {
 
   if (!global.__mongoClientPromise) {
     const client = new MongoClient(uri, {
-      maxPoolSize: 5,
-      minPoolSize: 0,
-      maxIdleTimeMS: 10000,
-      serverSelectionTimeoutMS: 8000,
-      connectTimeoutMS: 8000,
+      maxPoolSize: 3,
+      minPoolSize: 1,
+      maxIdleTimeMS: 30000,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      socketTimeoutMS: 10000,
+      compressors: ["snappy", "zstd"],
     });
     global.__mongoClientPromise = client.connect();
   }

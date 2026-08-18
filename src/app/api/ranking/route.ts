@@ -4,12 +4,16 @@ import type { WeeklyReport } from "@/lib/types";
 
 export const revalidate = 60;
 
+const CACHE_HEADERS = {
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+};
+
 export async function GET() {
   try {
     const db = await getDb();
     const schoolYear = await db.collection("schoolYears").findOne({ isCurrent: true }, { projection: { _id: 1 } });
     if (!schoolYear?._id) {
-      return Response.json({ rankingWeek: 0, ranking: { scores: [], firstPlace: "" } });
+      return Response.json({ rankingWeek: 0, ranking: { scores: [], firstPlace: "" } }, { headers: CACHE_HEADERS });
     }
 
     const schoolYearId = String(schoolYear._id);
@@ -28,11 +32,15 @@ export async function GET() {
           .toArray()
       : [];
 
-    return Response.json({
-      rankingWeek,
-      ranking: rankingWeek ? getTeamScoresForWeek(teamReports, rankingWeek) : { scores: [], firstPlace: "" },
-    });
+    return Response.json(
+      {
+        rankingWeek,
+        ranking: rankingWeek ? getTeamScoresForWeek(teamReports, rankingWeek) : { scores: [], firstPlace: "" },
+      },
+      { headers: CACHE_HEADERS },
+    );
   } catch {
     return Response.json({ rankingWeek: 0, ranking: { scores: [], firstPlace: "" } });
   }
 }
+

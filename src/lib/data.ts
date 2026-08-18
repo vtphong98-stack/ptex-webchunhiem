@@ -50,7 +50,14 @@ export async function getOfficerDashboardData(session: SessionUser) {
   };
 }
 
-export async function getDashboardData(selectedYearId?: string | null, view: NavView = "reports") {
+/**
+ * Dashboard data for admin views (overview, students, parents, accounts, audit).
+ * GVCN reports view now uses client-side API routes — no board/weekReports here.
+ */
+export async function getDashboardData(
+  selectedYearId?: string | null,
+  view: NavView = "reports",
+) {
   const db = await getDb();
 
   const schoolYears = await db
@@ -76,9 +83,8 @@ export async function getDashboardData(selectedYearId?: string | null, view: Nav
   const loadParents = view === "parents";
   const loadAccounts = view === "accounts";
   const loadAudit = view === "audit";
-  const loadReports = view === "reports";
 
-  const [classConfig, studentCount, parentCount, students, parents, reports, accounts, auditLogs] = await Promise.all([
+  const [classConfig, studentCount, parentCount, students, parents, accounts, auditLogs] = await Promise.all([
     db.collection<ClassConfig>("classConfigs").findOne({ schoolYearId }),
     db.collection<Student>("students").countDocuments({ schoolYearId }),
     db.collection<ParentContact>("parents").countDocuments({ schoolYearId }),
@@ -87,9 +93,6 @@ export async function getDashboardData(selectedYearId?: string | null, view: Nav
       : Promise.resolve([]),
     loadParents
       ? db.collection<ParentContact>("parents").find({ schoolYearId }).sort({ studentName: 1 }).toArray()
-      : Promise.resolve([]),
-    loadReports
-      ? db.collection<WeeklyReport>("weeklyReports").find({ schoolYearId }).sort({ weekNumber: -1, updatedAt: -1 }).toArray()
       : Promise.resolve([]),
     loadAccounts ? db.collection<UserAccount>("users").find({}).sort({ role: 1, username: 1 }).toArray() : Promise.resolve([]),
     loadAudit
@@ -105,7 +108,6 @@ export async function getDashboardData(selectedYearId?: string | null, view: Nav
     parentCount,
     students,
     parents,
-    reports,
     accounts,
     auditLogs,
   };

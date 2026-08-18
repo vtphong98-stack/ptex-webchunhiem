@@ -10,6 +10,9 @@ import {
   Wallet,
 } from "lucide-react";
 
+import { SubmitButton } from "@/components/SubmitButton";
+import { GvcnDashboard } from "@/components/gvcn/GvcnDashboard";
+
 import {
   logoutAction,
   saveParentAction,
@@ -19,7 +22,7 @@ import {
   saveUserAction,
   setCurrentSchoolYearAction,
 } from "@/app/dashboard/actions";
-import { getDashboardData, getOfficerDashboardData, reportMatchesSlot } from "@/lib/data";
+import { getDashboardData, getOfficerDashboardData } from "@/lib/data";
 import {
   canManageAccounts,
   canManageParents,
@@ -29,7 +32,6 @@ import {
   isClassOfficer,
 } from "@/lib/permissions";
 import { OFFICER_SLOTS, getOfficerTitle, getReportFields } from "@/lib/report-fields";
-import { assembleGvcnSummary, getTeamScoresForWeek } from "@/lib/report-schema";
 import { getSessionUser } from "@/lib/session";
 import type { AppRole, NavView, SchoolWeek, WeeklyReport } from "@/lib/types";
 import { APP_ROLES } from "@/lib/types";
@@ -48,7 +50,7 @@ const navLabels: Record<NavView, string> = {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; year?: string }>;
+  searchParams: Promise<{ view?: string; year?: string; week?: string }>;
 }) {
   const session = await getSessionUser();
   if (!session) {
@@ -288,11 +290,7 @@ export default async function DashboardPage({
           ) : null}
 
           {currentView === "reports" ? (
-            <GvcnWeekBoard
-              reports={data.reports}
-              weekCount={data.currentSchoolYear?.weekCount ?? 35}
-              weeks={data.currentSchoolYear?.weeks ?? []}
-            />
+            <GvcnDashboard yearId={data.currentSchoolYear?._id ?? ""} />
           ) : null}
 
           {currentView === "school-years" && canManageSchoolYears(session.role) ? (
@@ -315,9 +313,9 @@ export default async function DashboardPage({
                         {schoolYear.isCurrent ? <span className="badge">Hiện hành</span> : null}
                         <form action={setCurrentSchoolYearAction}>
                           <input name="schoolYearId" type="hidden" value={schoolYear._id} />
-                          <button className="button-secondary" type="submit">
+                          <SubmitButton className="button-secondary" pendingText="Đang đặt…">
                             Đặt làm hiện hành
-                          </button>
+                          </SubmitButton>
                         </form>
                       </div>
                     </div>
@@ -485,9 +483,9 @@ function StudentForm({
         <label className="mb-2 block text-sm font-medium text-slate-700">Ghi chú</label>
         <textarea defaultValue={student?.notes ?? ""} name="notes" />
       </div>
-      <button className="button-primary" type="submit">
+      <SubmitButton pendingText="Đang lưu…">
         {student ? "Lưu chỉnh sửa" : "Thêm học sinh"}
-      </button>
+      </SubmitButton>
     </form>
   );
 }
@@ -532,9 +530,9 @@ function ParentForm({
         <label className="mb-2 block text-sm font-medium text-slate-700">Ghi chú</label>
         <textarea defaultValue={parent?.note ?? ""} name="note" />
       </div>
-      <button className="button-primary" type="submit">
+      <SubmitButton pendingText="Đang lưu…">
         {parent ? "Lưu liên hệ" : "Thêm liên hệ"}
-      </button>
+      </SubmitButton>
     </form>
   );
 }
@@ -604,9 +602,9 @@ function OfficerReportView({
             />
           </div>
         ))}
-        <button className="button-primary w-full" type="submit">
+        <SubmitButton className="button-primary w-full" pendingText="Đang gửi…">
           Gửi dữ liệu
-        </button>
+        </SubmitButton>
       </form>
 
       {reports.length ? (
@@ -642,91 +640,10 @@ function OfficerReportView({
   );
 }
 
-function GvcnWeekBoard({
-  weekCount,
-  weeks,
-  reports,
-}: {
-  weekCount: number;
-  weeks: SchoolWeek[];
-  reports: WeeklyReport[];
-}) {
-  return (
-    <section className="space-y-4">
-      <section className="card p-5">
-        <h3 className="text-lg font-semibold text-slate-900">Tổng kết báo cáo theo tuần</h3>
-        <p className="mt-2 text-sm text-slate-600">
-          Cột xanh là chức vụ đã nộp. Điểm tổ lấy đúng công thức sheet TT / ThiDua.
-        </p>
-        <div className="week-board mt-4">
-          <table>
-            <thead>
-              <tr>
-                <th>Tuần</th>
-                {OFFICER_SLOTS.map((slot) => (
-                  <th key={slot.key}>{slot.label}</th>
-                ))}
-                <th>Hạng nhất</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from({ length: weekCount }, (_, index) => index + 1).map((weekNumber) => {
-                const ranking = getTeamScoresForWeek(reports, weekNumber);
-                return (
-                  <tr key={weekNumber}>
-                    <td>
-                      {weeks.find((week) => week.weekNumber === weekNumber)?.label ?? `Tuần ${weekNumber}`}
-                    </td>
-                    {OFFICER_SLOTS.map((slot) => {
-                      const submitted = reports.some(
-                        (report) => report.weekNumber === weekNumber && reportMatchesSlot(report, slot),
-                      );
-                      return (
-                        <td className={submitted ? "week-ok" : "week-missing"} key={`${weekNumber}-${slot.key}`}>
-                          {submitted ? "Có" : "—"}
-                        </td>
-                      );
-                    })}
-                    <td>{ranking.firstPlace || "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
 
-      {Array.from({ length: weekCount }, (_, index) => index + 1).map((weekNumber) => {
-        const weekReports = reports.filter((report) => report.weekNumber === weekNumber);
-        if (!weekReports.length) return null;
-        const week = weeks.find((item) => item.weekNumber === weekNumber);
-        const imported = weekReports.find((report) => report.reporterRole === "gvcn");
-        const summary = imported?.fields?.summary || imported?.summary || assembleGvcnSummary({
-          weekNumber,
-          dateRangeLabel: week?.dateRangeLabel,
-          reports: weekReports,
-        });
-        const ranking = getTeamScoresForWeek(weekReports, weekNumber);
-        return (
-          <details className="card p-5" key={`summary-${weekNumber}`}>
-            <summary className="cursor-pointer list-none">
-              <p className="text-lg font-semibold text-slate-900">
-                Tuần {weekNumber}
-                {week?.dateRangeLabel ? ` · ${week.dateRangeLabel}` : ""}
-              </p>
-              <p className="mt-1 text-sm text-slate-600">
-                {ranking.firstPlace ? `${ranking.firstPlace} hạng nhất` : "Chưa xếp hạng"} · {weekReports.length} báo cáo
-              </p>
-            </summary>
-            <pre className="mt-4 whitespace-pre-wrap rounded-3xl bg-slate-50 p-4 text-sm leading-6 text-slate-800">
-              {summary}
-            </pre>
-          </details>
-        );
-      })}
-    </section>
-  );
-}
+
+
+
 
 function SchoolYearForm({
   current,
@@ -760,9 +677,9 @@ function SchoolYearForm({
           <input defaultValue={current?.weekCount ?? 35} min={1} name="weekCount" type="number" />
         </div>
       </div>
-      <button className="button-primary" type="submit">
+      <SubmitButton pendingText="Đang lưu…">
         Lưu năm học đang xem
-      </button>
+      </SubmitButton>
     </form>
   );
 }
@@ -833,9 +750,9 @@ function UserForm({
         </label>
         <input name="password" type="password" />
       </div>
-      <button className="button-primary" type="submit">
+      <SubmitButton pendingText="Đang lưu…">
         {user ? "Cập nhật tài khoản" : "Tạo tài khoản"}
-      </button>
+      </SubmitButton>
     </form>
   );
 }

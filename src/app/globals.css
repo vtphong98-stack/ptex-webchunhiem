@@ -17,7 +17,7 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -30,19 +30,26 @@ body {
 a {
   color: inherit;
   text-decoration: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 button,
 .button-primary,
 .button-secondary {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition: background 0.15s ease;
+  will-change: auto;
 }
 
 .button-primary:hover,
 .button-secondary:hover,
 a.site-link:hover {
-  transform: translateY(-1px);
+  transform: translate3d(0, -1px, 0);
+}
+
+button:disabled,
+.button-primary:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
 }
 
 input,
@@ -83,6 +90,7 @@ button {
   border: 1px solid rgba(219, 228, 240, 0.9);
   border-radius: 1.25rem;
   box-shadow: 0 10px 30px rgba(37, 99, 235, 0.08);
+  contain: layout style;
 }
 
 .badge {
@@ -136,6 +144,7 @@ button {
   padding: 30px;
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  contain: layout style;
 }
 
 .site-header {
@@ -192,6 +201,11 @@ button {
 .site-contact a {
   background: #fff;
   color: #2c3e50;
+}
+
+.site-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 200px;
 }
 
 .site-section h2 {
