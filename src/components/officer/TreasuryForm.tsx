@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { logoutAction, saveReportAction } from "@/app/dashboard/actions";
 import { SubmittedReportsList } from "@/components/officer/SubmittedReportsList";
+import { WeekLockBanner, weekOptionLabel } from "@/components/officer/WeekLockBanner";
 import { useOfficerReports } from "@/components/officer/use-officer-reports";
 import { flattenTeamRosters, type RosterStudent } from "@/lib/officer-roster";
 import { getReportFields } from "@/lib/report-fields";
@@ -20,6 +21,7 @@ import {
   type TreasuryPaymentRow,
 } from "@/lib/treasury-duty";
 import { buildExcelWeeks } from "@/lib/weeks";
+import { findLock, pickDefaultOfficerWeek } from "@/lib/week-lock";
 
 function paidRowsFromStudents(students: RosterStudent[], saved?: TreasuryPaymentRow[]) {
   return alignPaymentRows(students, saved ?? emptyPaymentRows(students)).map((row) => ({
@@ -36,7 +38,7 @@ function linesOrBlank(raw: unknown): TreasuryLine[] {
 export function TreasuryForm({ fullName }: { fullName: string }) {
   const weeks = useMemo(() => buildExcelWeeks(), []);
   const reportFields = useMemo(() => getReportFields("thuQuy"), []);
-  const { reports, hasMore, loadingMore, loadInitial, refresh, loadMore, treasuryPreviousByWeek } = useOfficerReports();
+  const { reports, hasMore, loadingMore, loadInitial, refresh, loadMore, treasuryPreviousByWeek, weekLocks } = useOfficerReports();
   const [schoolYearId, setSchoolYearId] = useState("");
   const [weekNumber, setWeekNumber] = useState(1);
   const [students, setStudents] = useState<RosterStudent[]>([]);
@@ -49,6 +51,7 @@ export function TreasuryForm({ fullName }: { fullName: string }) {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const reportsRef = useRef<HTMLElement>(null);
+  const weekLock = findLock(weekLocks, weekNumber);
 
   const loadTeamRosters = useCallback(async () => {
     setLoadingRoster(true);
@@ -68,7 +71,7 @@ export function TreasuryForm({ fullName }: { fullName: string }) {
   useEffect(() => {
     void Promise.all([loadInitial(), loadTeamRosters()]).then(([reportData]) => {
       if (reportData?.schoolYearId) setSchoolYearId(reportData.schoolYearId);
-      if (reportData?.reports[0]?.weekNumber) setWeekNumber(reportData.reports[0].weekNumber);
+      setWeekNumber(pickDefaultOfficerWeek(reportData?.weekLocks ?? [], reportData?.reports[0]?.weekNumber ?? 1));
     });
   }, [loadInitial, loadTeamRosters]);
 
@@ -132,7 +135,11 @@ export function TreasuryForm({ fullName }: { fullName: string }) {
     setSuccessMessage("");
     setErrorMessage("");
     try {
-      await saveReportAction(new FormData(event.currentTarget));
+      const result = await saveReportAction(new FormData(event.currentTarget));
+      if (result && result.ok === false) {
+        setErrorMessage(result.error);
+        return;
+      }
       const data = await refresh();
       if (data?.schoolYearId) setSchoolYearId(data.schoolYearId);
       setSuccessMessage("Báo cáo thành công");
@@ -182,12 +189,13 @@ export function TreasuryForm({ fullName }: { fullName: string }) {
             >
               {weeks.map((week) => (
                 <option key={week.weekNumber} value={week.weekNumber}>
-                  {week.label}
-                  {week.dateRangeLabel ? ` · ${week.dateRangeLabel}` : ""}
+                  {weekOptionLabel(week, findLock(weekLocks, week.weekNumber))}
                 </option>
               ))}
             </select>
           </div>
+          <WeekLockBanner lock={weekLock} />
+          <fieldset className="space-y-4" disabled={weekLock.locked}>
 
           <div className="treasury-apply">
             <div>
@@ -302,9 +310,10 @@ export function TreasuryForm({ fullName }: { fullName: string }) {
             </p>
           </div>
 
-          <button className="button-primary w-full" disabled={pending || loadingRoster} type="submit">
-            {pending ? "Đang gửi…" : "Gửi dữ liệu"}
+          <button className="button-primary w-full" disabled={pending || loadingRoster || weekLock.locked} type="submit">
+            {pending ? "Đang gửi…" : weekLock.locked ? "Tuần đã khóa" : "Gửi dữ liệu"}
           </button>
+          </fieldset>
         </form>
 
         {successMessage ? (

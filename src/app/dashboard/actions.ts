@@ -21,6 +21,7 @@ import type { AppRole } from "@/lib/types";
 import { APP_ROLES } from "@/lib/types";
 import { buildWeeks, toNumberOrNull, toPlainString } from "@/lib/utils";
 import { getExcelWeek } from "@/lib/weeks";
+import { assertWeekWritable } from "@/lib/week-lock-store";
 
 function requirePermission(condition: boolean) {
   if (!condition) {
@@ -182,6 +183,10 @@ export async function saveReportAction(formData: FormData) {
     schoolYearId = currentYear?._id ? String(currentYear._id) : "";
   }
   const weekNumber = Number(toPlainString(formData.get("weekNumber")) || "1");
+  const lockedMessage = await assertWeekWritable(schoolYearId, weekNumber);
+  if (lockedMessage) {
+    return { ok: false as const, error: lockedMessage };
+  }
   const week = getExcelWeek(weekNumber);
   const weekLabel = week?.label ?? `Tuần ${weekNumber}`;
   const rawFields: Record<string, string> = {};
@@ -302,6 +307,7 @@ export async function saveReportAction(formData: FormData) {
   revalidateTag("home", "max");
   revalidatePath("/");
   revalidatePath("/dashboard");
+  return { ok: true as const };
 }
 
 export async function saveSchoolYearAction(formData: FormData) {

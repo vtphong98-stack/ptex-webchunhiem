@@ -9,10 +9,12 @@ import { LaborForm } from "@/components/officer/LaborForm";
 import { TreasuryForm } from "@/components/officer/TreasuryForm";
 import { SubmittedReportsList } from "@/components/officer/SubmittedReportsList";
 import { TeamLeaderForm } from "@/components/officer/TeamLeaderForm";
+import { WeekLockBanner, weekOptionLabel } from "@/components/officer/WeekLockBanner";
 import { useOfficerReports } from "@/components/officer/use-officer-reports";
 import { getOfficerTitle, getReportFields } from "@/lib/report-fields";
 import type { AppRole } from "@/lib/types";
 import { buildExcelWeeks } from "@/lib/weeks";
+import { findLock, pickDefaultOfficerWeek } from "@/lib/week-lock";
 
 export function OfficerDesk({
   fullName,
@@ -57,18 +59,19 @@ function GenericOfficerForm({
 }) {
   const weeks = useMemo(() => buildExcelWeeks(), []);
   const fields = useMemo(() => getReportFields(role), [role]);
-  const { reports, hasMore, loadingMore, loadInitial, refresh, loadMore } = useOfficerReports();
+  const { reports, hasMore, loadingMore, loadInitial, refresh, loadMore, weekLocks } = useOfficerReports();
   const [schoolYearId, setSchoolYearId] = useState("");
   const [weekNumber, setWeekNumber] = useState(1);
   const [pending, setPending] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const reportsRef = useRef<HTMLElement>(null);
+  const weekLock = findLock(weekLocks, weekNumber);
 
   useEffect(() => {
     void loadInitial().then((data) => {
       if (data?.schoolYearId) setSchoolYearId(data.schoolYearId);
-      if (data?.reports[0]?.weekNumber) setWeekNumber(data.reports[0].weekNumber);
+      setWeekNumber(pickDefaultOfficerWeek(data?.weekLocks ?? [], data?.reports[0]?.weekNumber ?? 1));
     });
   }, [loadInitial]);
 
@@ -81,7 +84,11 @@ function GenericOfficerForm({
     setErrorMessage("");
     try {
       const formData = new FormData(event.currentTarget);
-      await saveReportAction(formData);
+      const result = await saveReportAction(formData);
+      if (result && result.ok === false) {
+        setErrorMessage(result.error);
+        return;
+      }
       const data = await refresh();
       if (data?.schoolYearId) setSchoolYearId(data.schoolYearId);
       setSuccessMessage("Báo cáo thành công");
@@ -130,12 +137,13 @@ function GenericOfficerForm({
             >
               {weeks.map((week) => (
                 <option key={week.weekNumber} value={week.weekNumber}>
-                  {week.label}
-                  {week.dateRangeLabel ? ` · ${week.dateRangeLabel}` : ""}
+                  {weekOptionLabel(week, findLock(weekLocks, week.weekNumber))}
                 </option>
               ))}
             </select>
           </div>
+          <WeekLockBanner lock={weekLock} />
+          <fieldset className="space-y-4" disabled={weekLock.locked}>
           {fields.map((field) => (
             <div key={field.name}>
               <label htmlFor={field.name}>{field.label}</label>
@@ -147,9 +155,10 @@ function GenericOfficerForm({
               />
             </div>
           ))}
-          <button className="button-primary w-full" disabled={pending} type="submit">
-            {pending ? "Đang gửi…" : "Gửi dữ liệu"}
+          <button className="button-primary w-full" disabled={pending || weekLock.locked} type="submit">
+            {pending ? "Đang gửi…" : weekLock.locked ? "Tuần đã khóa" : "Gửi dữ liệu"}
           </button>
+          </fieldset>
         </form>
 
         {successMessage ? (

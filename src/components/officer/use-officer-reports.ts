@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 
 import type { ReportField } from "@/lib/report-fields";
+import type { WeekLockState } from "@/lib/week-lock";
 
 export type SavedReport = {
   _id: string;
@@ -23,6 +24,7 @@ export function useOfficerReports() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [treasuryPreviousByWeek, setTreasuryPreviousByWeek] = useState<Record<string, number>>({});
+  const [weekLocks, setWeekLocks] = useState<WeekLockState[]>([]);
 
   const fetchPage = useCallback(async (skip: number, limit: number) => {
     const response = await fetch(`/api/officer/reports?limit=${limit}&skip=${skip}`);
@@ -36,6 +38,7 @@ export function useOfficerReports() {
       teamStudents: (data.teamStudents ?? []) as TeamStudent[],
       hasMore: Boolean(data.hasMore),
       treasuryPreviousByWeek: (data.treasuryPreviousByWeek ?? {}) as Record<string, number>,
+      weekLocks: (data.weekLocks ?? []) as WeekLockState[],
     };
   }, []);
 
@@ -46,6 +49,7 @@ export function useOfficerReports() {
     setTeamStudents(data.teamStudents);
     setHasMore(data.hasMore);
     setTreasuryPreviousByWeek(data.treasuryPreviousByWeek);
+    setWeekLocks(data.weekLocks);
     return data;
   }, [fetchPage]);
 
@@ -57,6 +61,7 @@ export function useOfficerReports() {
     setTeamStudents(data.teamStudents);
     setHasMore(data.hasMore);
     setTreasuryPreviousByWeek(data.treasuryPreviousByWeek);
+    setWeekLocks(data.weekLocks);
     return data;
   }, [fetchPage, reports.length]);
 
@@ -82,6 +87,7 @@ export function useOfficerReports() {
     refresh,
     loadMore,
     treasuryPreviousByWeek,
+    weekLocks,
   };
 }
 

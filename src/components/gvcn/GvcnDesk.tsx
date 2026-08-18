@@ -9,6 +9,7 @@ import { CLASS_SITE } from "@/lib/class-site";
 import type { GvcnWeekReport } from "@/lib/gvcn-report";
 import { OFFICER_SLOTS } from "@/lib/report-fields";
 import { buildExcelWeeks } from "@/lib/weeks";
+import { findLock, type WeekLockState } from "@/lib/week-lock";
 
 interface BoardRow {
   weekNumber: number;
@@ -56,6 +57,9 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
   const [loadingWeek, setLoadingWeek] = useState(false);
   const [boardError, setBoardError] = useState("");
   const [deskView, setDeskView] = useState<"weeks" | "teams">("weeks");
+  const [locks, setLocks] = useState<WeekLockState[]>([]);
+  const [lockPending, setLockPending] = useState(false);
+  const [lockError, setLockError] = useState("");
   const weekCache = useRef(new Map<number, WeekDetailData>());
 
   useEffect(() => {
@@ -70,6 +74,13 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
         }
       })
       .catch(() => setBoardError("Chưa tải được trạng thái nộp. Vẫn chọn tuần bình thường."));
+
+    fetch("/api/gvcn/week-locks")
+      .then(async (response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (Array.isArray(data?.locks)) setLocks(data.locks);
+      })
+      .catch(() => undefined);
   }, []);
 
   const fetchWeek = useCallback(async (weekNumber: number) => {
@@ -109,6 +120,31 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
     },
     [fetchWeek],
   );
+
+  async function setWeekLock(action: "lock" | "unlock" | "auto") {
+    if (!selectedWeek) return;
+    setLockPending(true);
+    setLockError("");
+    try {
+      const response = await fetch("/api/gvcn/week-locks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekNumber: selectedWeek, action }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setLockError(data.error || "Không đổi được khóa tuần.");
+        return;
+      }
+      if (Array.isArray(data.locks)) setLocks(data.locks);
+    } catch {
+      setLockError("Không đổi được khóa tuần.");
+    } finally {
+      setLockPending(false);
+    }
+  }
+
+  const selectedLock = selectedWeek ? findLock(locks, selectedWeek) : null;
 
   return (
     <div className="container py-4 md:py-6">
@@ -153,15 +189,21 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
 
       <section className="card p-5">
         <h2 className="mb-4 text-lg font-semibold">Chọn tuần</h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Khóa tự động lúc <strong>0h thứ 7</strong> (giờ Việt Nam) theo lịch tuần. Chỉ GVCN mới mở khóa được.
+        </p>
         <div className="grid grid-cols-5 gap-2 sm:grid-cols-7 lg:grid-cols-10">
           {board.rows.map((row) => {
               const hasData = row.submitted > 0;
               const active = row.weekNumber === selectedWeek;
+              const lock = findLock(locks, row.weekNumber);
               return (
                 <button
                   className={`rounded-xl border-2 px-2 py-2 text-center text-xs font-bold ${
                     active
                       ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : lock.locked
+                        ? "border-rose-200 bg-rose-50 text-rose-700"
                       : hasData
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                         : "border-slate-200 bg-slate-50 text-slate-400"
@@ -173,7 +215,7 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
                 >
                   T{row.weekNumber}
                   <span className="mt-1 block text-[10px] font-medium">
-                    {hasData ? `${row.submitted}/${row.total}` : "—"}
+                    {lock.locked ? "Khóa" : hasData ? `${row.submitted}/${row.total}` : "—"}
                   </span>
                 </button>
               );
@@ -183,19 +225,46 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
 
       {selectedWeek ? (
         <section className="card mt-4 overflow-hidden">
-          <div className="flex items-center justify-between bg-slate-900 px-5 py-4 text-white">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 px-5 py-4 text-white">
             <div>
               <h3 className="text-lg font-bold">
                 {weekDetail?.weekMeta?.label ?? `Tuần ${selectedWeek}`}
                 {weekDetail?.weekMeta?.dateRangeLabel ? ` · ${weekDetail.weekMeta.dateRangeLabel}` : ""}
               </h3>
               <p className="mt-1 text-sm text-slate-300">
-                {weekDetail?.ranking?.firstPlace ? `${weekDetail.ranking.firstPlace} hạng nhất` : "Chi tiết báo cáo tuần"}
+                {selectedLock?.locked
+                  ? selectedLock.source === "auto"
+                    ? `Đã khóa tự động (${selectedLock.lockAtLabel})`
+                    : "GVCN đã khóa tuần này"
+                  : selectedLock?.source === "unlocked"
+                    ? "GVCN đã mở khóa — ban cán sự có thể sửa"
+                    : selectedLock?.lockAtLabel
+                      ? `Đang mở · tự khóa ${selectedLock.lockAtLabel}`
+                      : weekDetail?.ranking?.firstPlace
+                        ? `${weekDetail.ranking.firstPlace} hạng nhất`
+                        : "Chi tiết báo cáo tuần"}
               </p>
+              {lockError ? <p className="mt-1 text-sm text-rose-300">{lockError}</p> : null}
             </div>
-            <button className="button-secondary" onClick={() => setSelectedWeek(null)} type="button">
-              Đóng
-            </button>
+            <div className="flex flex-wrap gap-2">
+              {selectedLock?.locked ? (
+                <button className="button-primary" disabled={lockPending} onClick={() => void setWeekLock("unlock")} type="button">
+                  {lockPending ? "Đang mở…" : "Mở khóa tuần"}
+                </button>
+              ) : (
+                <button className="button-secondary" disabled={lockPending} onClick={() => void setWeekLock("lock")} type="button">
+                  {lockPending ? "Đang khóa…" : "Khóa tuần"}
+                </button>
+              )}
+              {selectedLock?.override ? (
+                <button className="button-secondary" disabled={lockPending} onClick={() => void setWeekLock("auto")} type="button">
+                  Theo lịch thứ 7 0h
+                </button>
+              ) : null}
+              <button className="button-secondary" onClick={() => setSelectedWeek(null)} type="button">
+                Đóng
+              </button>
+            </div>
           </div>
           <div className="p-5">
             {weekDetail?.reports?.length || loadingWeek ? (

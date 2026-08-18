@@ -4,11 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { logoutAction } from "@/app/dashboard/actions";
 import { SubmittedReportsList } from "@/components/officer/SubmittedReportsList";
+import { WeekLockBanner, weekOptionLabel } from "@/components/officer/WeekLockBanner";
 import { useOfficerReports } from "@/components/officer/use-officer-reports";
 import { getReportFields } from "@/lib/report-fields";
 import { emptyMemberRow, parseMemberRows, TEAM_ROLE_LABELS, type TeamMemberWeekRow } from "@/lib/team-roster";
 import type { TeamRole } from "@/lib/types";
 import { buildExcelWeeks } from "@/lib/weeks";
+import { findLock, pickDefaultOfficerWeek } from "@/lib/week-lock";
 
 type TeamStudent = { _id: string; fullName: string; teamRole: TeamRole | null };
 
@@ -46,7 +48,7 @@ export function TeamLeaderForm({
 }) {
   const weeks = useMemo(() => buildExcelWeeks(), []);
   const reportFields = useMemo(() => getReportFields("toTruong"), []);
-  const { reports, teamStudents, hasMore, loadingMore, loadInitial, refresh, loadMore } = useOfficerReports();
+  const { reports, teamStudents, hasMore, loadingMore, loadInitial, refresh, loadMore, weekLocks } = useOfficerReports();
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [weekNumber, setWeekNumber] = useState(1);
   const [rows, setRows] = useState<TeamMemberWeekRow[]>([]);
@@ -54,13 +56,18 @@ export function TeamLeaderForm({
   const [successMessage, setSuccessMessage] = useState("");
   const [pending, setPending] = useState(false);
   const reportsRef = useRef<HTMLElement>(null);
+  const weekLock = findLock(weekLocks, weekNumber);
 
   const students = teamStudents as TeamStudent[];
 
   useEffect(() => {
     void loadInitial()
       .then((data) => {
-        if (data?.reports[0]?.weekNumber) setWeekNumber(data.reports[0].weekNumber);
+        if (data?.reports[0]?.weekNumber) {
+          setWeekNumber(pickDefaultOfficerWeek(data.weekLocks ?? [], data.reports[0].weekNumber));
+        } else {
+          setWeekNumber(pickDefaultOfficerWeek(data?.weekLocks ?? [], 1));
+        }
       })
       .catch(() => setStatus("Chưa tải được danh sách tổ."))
       .finally(() => setLoadingStudents(false));
@@ -97,6 +104,10 @@ export function TeamLeaderForm({
   }
 
   async function submit() {
+    if (weekLock.locked) {
+      setStatus(weekLock.message);
+      return;
+    }
     setPending(true);
     setStatus("");
     setSuccessMessage("");
@@ -155,12 +166,13 @@ export function TeamLeaderForm({
               >
                 {weeks.map((week) => (
                   <option key={week.weekNumber} value={week.weekNumber}>
-                    {week.label}
-                    {week.dateRangeLabel ? ` · ${week.dateRangeLabel}` : ""}
+                    {weekOptionLabel(week, findLock(weekLocks, week.weekNumber))}
                   </option>
                 ))}
               </select>
             </div>
+            <WeekLockBanner lock={weekLock} />
+            <fieldset className="space-y-4" disabled={weekLock.locked}>
 
             <p className="tt-scroll-hint">Kéo trong bảng — dòng tiêu đề và cột học sinh luôn cố định</p>
 
@@ -302,9 +314,10 @@ export function TeamLeaderForm({
                 {successMessage}
               </p>
             ) : null}
-            <button className="button-primary w-full tt-submit-btn" disabled={pending} onClick={() => void submit()} type="button">
-              {pending ? "Đang gửi…" : "Gửi dữ liệu"}
+            <button className="button-primary w-full tt-submit-btn" disabled={pending || weekLock.locked} onClick={() => void submit()} type="button">
+              {pending ? "Đang gửi…" : weekLock.locked ? "Tuần đã khóa" : "Gửi dữ liệu"}
             </button>
+            </fieldset>
 
             <SubmittedReportsList
               fields={reportFields}

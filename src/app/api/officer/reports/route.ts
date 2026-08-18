@@ -14,6 +14,7 @@ import {
 } from "@/lib/team-roster";
 import type { WeeklyReport } from "@/lib/types";
 import { getExcelWeek } from "@/lib/weeks";
+import { assertWeekWritable, getWeekLockStates } from "@/lib/week-lock-store";
 
 export async function GET(request: Request) {
   const session = await getSessionUser();
@@ -116,12 +117,15 @@ export async function GET(request: Request) {
     }
   }
 
+  const weekLocks = schoolYearId ? await getWeekLockStates(schoolYearId) : [];
+
   return NextResponse.json({
     schoolYearId,
     hasMore,
     teamStudents,
     reports,
     treasuryPreviousByWeek,
+    weekLocks,
   });
 }
 
@@ -145,6 +149,11 @@ export async function POST(request: Request) {
   const schoolYearId = schoolYear?._id ? String(schoolYear._id) : "";
   if (!schoolYearId) {
     return NextResponse.json({ error: "Không có năm học hiện hành." }, { status: 400 });
+  }
+
+  const lockedMessage = await assertWeekWritable(schoolYearId, weekNumber);
+  if (lockedMessage) {
+    return NextResponse.json({ error: lockedMessage }, { status: 423 });
   }
 
   const reports = db.collection<WeeklyReport>("weeklyReports");
