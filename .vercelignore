@@ -1,0 +1,7 @@
+api/
+*.html
+config.js
+data.js
+phong.js
+pass.txt
+*.gs
