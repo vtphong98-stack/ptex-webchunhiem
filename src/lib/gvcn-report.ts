@@ -221,7 +221,14 @@ function buildCleanReportText(
   for (const section of sections) {
     const lines = section.lines.filter((item) => !isEmptyReportValue(item.value));
     if (!lines.length) continue;
-    textLines.push(section.title, ...lines.map((item) => `   - ${item.label}: ${item.value}`), "");
+    textLines.push(
+      section.title,
+      ...lines.flatMap((item) => {
+        const [first, ...rest] = item.value.split("\n");
+        return [`   - ${item.label}: ${first}`, ...rest.map((row) => `      ${row}`)];
+      }),
+      "",
+    );
   }
 
   if (violations.length) {

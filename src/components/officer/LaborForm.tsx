@@ -298,6 +298,7 @@ export function LaborForm({ fullName }: { fullName: string }) {
           reports={reports}
           sectionRef={reportsRef}
           showSuccessHighlight={Boolean(successMessage)}
+          variant="labor"
         />
       </div>
     </main>
