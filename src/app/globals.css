@@ -369,20 +369,26 @@ button {
 .team-sheet {
   overflow-x: auto;
   margin: 16px 0;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
 }
 
 .team-sheet table {
   width: 100%;
   min-width: 1100px;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .team-sheet th,
 .team-sheet td {
-  border: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
   padding: 6px;
   font-size: 12px;
   vertical-align: middle;
+  background: #fff;
 }
 
 .team-sheet th {
@@ -390,6 +396,28 @@ button {
   color: #fff;
   font-weight: 600;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.team-sheet th.sticky-col {
+  left: 0;
+  z-index: 4;
+  background: #1a237e;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.12);
+}
+
+.team-sheet td.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #fff;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
+}
+
+.team-sheet tbody tr:nth-child(even) td.sticky-col {
+  background: #f8fafc;
 }
 
 .team-sheet input {
@@ -400,15 +428,142 @@ button {
 }
 
 .team-sheet .name-cell {
-  min-width: 140px;
+  min-width: 132px;
+  max-width: 132px;
   text-align: left;
+}
+
+.team-sheet .name-cell strong {
+  display: block;
+  font-size: 12px;
+  line-height: 1.3;
 }
 
 .team-sheet .name-cell span {
   display: block;
   color: #64748b;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
+}
+
+.tt-form-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.tt-scroll-hint {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.tt-loading {
+  padding: 8px 0 16px;
+}
+
+.tt-loading-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  color: #1a237e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tt-loading-spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid #dbeafe;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: tt-spin 0.8s linear infinite;
+}
+
+@keyframes tt-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tt-skeleton-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.6fr 0.8fr 0.6fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tt-skeleton {
+  height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+  background-size: 200% 100%;
+  animation: tt-shimmer 1.3s ease-in-out infinite;
+}
+
+.tt-skeleton-name {
+  height: 48px;
+}
+
+@keyframes tt-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.tt-submit-btn:disabled {
+  opacity: 0.75;
+}
+
+.tt-success-card {
+  max-width: 420px;
+  text-align: center;
+  padding: 36px 28px;
+}
+
+.tt-success-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 72px;
+  box-shadow: 0 10px 30px rgba(34, 197, 94, 0.35);
+}
+
+.tt-success-card h1 {
+  color: #166534;
+  margin-bottom: 8px;
+}
+
+.tt-success-week {
+  color: #1e293b;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.tt-success-note {
+  color: #64748b;
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+
+.tt-success-home {
+  display: block;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
 }
 
 .status-note {
