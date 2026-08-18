@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 
 import { getDb } from "@/lib/db";
+import { weeksOfYear } from "@/lib/school-year-scope";
 import type {
   AppRole,
   AuditLog,
@@ -12,7 +13,6 @@ import type {
   UserAccount,
   WeeklyReport,
 } from "@/lib/types";
-import { buildExcelWeeks, EXCEL_WEEK_COUNT } from "@/lib/weeks";
 
 export async function getCurrentSchoolYear() {
   const db = await getDb();
@@ -43,8 +43,9 @@ export async function getDashboardData(
     throw new Error("No school year available.");
   }
 
-  currentSchoolYear.weeks = buildExcelWeeks();
-  currentSchoolYear.weekCount = EXCEL_WEEK_COUNT;
+  const yearDoc = await db.collection<SchoolYear>("schoolYears").findOne({ _id: currentSchoolYear._id });
+  currentSchoolYear.weeks = weeksOfYear(yearDoc ?? currentSchoolYear);
+  currentSchoolYear.weekCount = currentSchoolYear.weeks.length;
 
   const schoolYearId = currentSchoolYear._id;
   const loadStudents = view === "students";

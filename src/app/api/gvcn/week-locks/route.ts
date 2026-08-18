@@ -3,21 +3,21 @@ import { NextResponse } from "next/server";
 import { createAuditLog } from "@/lib/data";
 import { getDb } from "@/lib/db";
 import { canReviewReports } from "@/lib/permissions";
+import { resolveSchoolYearFromRequest } from "@/lib/school-year-scope";
 import { getSessionUser } from "@/lib/session";
-import { getCurrentSchoolYearDoc } from "@/lib/student-store";
 import { EXCEL_WEEK_COUNT } from "@/lib/weeks";
 import { findLock, type WeekLockOverride } from "@/lib/week-lock";
 import { getWeekLockStates, type WeekLockDoc } from "@/lib/week-lock-store";
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getSessionUser();
   if (!session || !canReviewReports(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const schoolYear = await getCurrentSchoolYearDoc();
+  const schoolYear = await resolveSchoolYearFromRequest(request);
   const schoolYearId = schoolYear?._id ? String(schoolYear._id) : "";
   const locks = schoolYearId ? await getWeekLockStates(schoolYearId) : [];
-  return NextResponse.json({ schoolYearId, locks });
+  return NextResponse.json({ schoolYearId, yearName: schoolYear?.name ?? "", isCurrent: Boolean(schoolYear?.isCurrent), locks });
 }
 
 export async function POST(request: Request) {
@@ -32,10 +32,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Tuần không hợp lệ." }, { status: 400 });
   }
 
-  const schoolYear = await getCurrentSchoolYearDoc();
+  const schoolYear = await resolveSchoolYearFromRequest(request);
   const schoolYearId = schoolYear?._id ? String(schoolYear._id) : "";
   if (!schoolYearId) {
     return NextResponse.json({ error: "Không có năm học hiện hành." }, { status: 400 });
+  }
+  if (!schoolYear?.isCurrent) {
+    return NextResponse.json({ error: "Năm cũ chỉ xem. Không đổi khóa tuần." }, { status: 400 });
   }
 
   const db = await getDb();

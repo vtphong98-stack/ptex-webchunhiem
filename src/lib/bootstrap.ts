@@ -4,6 +4,12 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/db";
 import { loadLegacySeedData } from "@/lib/legacy-loader";
 import { getSeedUsers } from "@/lib/seed-users";
+import {
+  ARCHIVE_SCHOOL_YEAR,
+  CURRENT_CLASS_NAME,
+  CURRENT_SCHOOL_YEAR,
+  buildWeeks2026,
+} from "@/lib/academic-calendar";
 import type {
   AuditLog,
   ClassConfig,
@@ -13,7 +19,7 @@ import type {
   UserAccount,
 } from "@/lib/types";
 import { schoolYearLabelFromName } from "@/lib/utils";
-import { buildExcelWeeks, EXCEL_WEEK_COUNT } from "@/lib/weeks";
+import { buildWeeks2025, EXCEL_WEEK_COUNT } from "@/lib/weeks";
 
 let bootstrapPromise: Promise<void> | null = null;
 
@@ -55,33 +61,98 @@ async function insertMissingUsers() {
 
 export async function ensureSchoolYearWeeks() {
   const db = await getDb();
-  const weeks = buildExcelWeeks();
-  const firstWeek = weeks.find((week) => week.startDate);
-  const lastWeek = [...weeks].reverse().find((week) => week.endDate);
   const now = timestamp();
-  await db.collection<SchoolYear>("schoolYears").updateMany(
-    { isCurrent: true },
-    {
-      $set: {
-        name: "2025-2026",
-        label: schoolYearLabelFromName("2025-2026"),
-        weekCount: EXCEL_WEEK_COUNT,
-        weeks,
-        startDate: firstWeek?.startDate,
-        endDate: lastWeek?.endDate,
-        updatedAt: now,
-      },
-    },
-  );
-  const current = await db.collection<SchoolYear>("schoolYears").findOne({ isCurrent: true });
-  if (current?._id) {
-    await db.collection<ClassConfig>("classConfigs").updateMany(
-      { schoolYearId: current._id },
+  const years = db.collection<SchoolYear>("schoolYears");
+  const configs = db.collection<ClassConfig>("classConfigs");
+
+  const archiveWeeks = buildWeeks2025();
+  const currentWeeks = buildWeeks2026();
+  const archiveFirst = archiveWeeks.find((week) => week.startDate);
+  const archiveLast = [...archiveWeeks].reverse().find((week) => week.endDate);
+  const currentFirst = currentWeeks.find((week) => week.startDate);
+  const currentLast = [...currentWeeks].reverse().find((week) => week.endDate);
+
+  let archive = await years.findOne({ name: ARCHIVE_SCHOOL_YEAR });
+  let current = await years.findOne({ name: CURRENT_SCHOOL_YEAR });
+  const legacyCurrent = await years.findOne({ isCurrent: true });
+
+  if (!archive && legacyCurrent?.name !== CURRENT_SCHOOL_YEAR && legacyCurrent?._id) {
+    await years.updateOne(
+      { _id: legacyCurrent._id },
       {
         $set: {
-          fullName: "Lớp 12C1 - 2025-2026",
+          name: ARCHIVE_SCHOOL_YEAR,
+          label: schoolYearLabelFromName(ARCHIVE_SCHOOL_YEAR),
+          weekCount: EXCEL_WEEK_COUNT,
+          weeks: archiveWeeks,
+          startDate: archiveFirst?.startDate || legacyCurrent.startDate,
+          endDate: archiveLast?.endDate || legacyCurrent.endDate,
+          isCurrent: false,
+          updatedAt: now,
+        },
+      },
+    );
+    archive = await years.findOne({ _id: legacyCurrent._id });
+  }
+
+  if (!current) {
+    const currentYearId = new ObjectId().toHexString();
+    await years.insertOne({
+      _id: currentYearId,
+      name: CURRENT_SCHOOL_YEAR,
+      label: schoolYearLabelFromName(CURRENT_SCHOOL_YEAR),
+      startDate: currentFirst?.startDate || new Date("2026-09-07").toISOString(),
+      endDate: currentLast?.endDate || new Date("2027-05-23").toISOString(),
+      weekCount: EXCEL_WEEK_COUNT,
+      weeks: currentWeeks,
+      isCurrent: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await configs.insertOne({
+      _id: new ObjectId().toHexString(),
+      schoolYearId: currentYearId,
+      className: CURRENT_CLASS_NAME,
+      fullName: `Lớp ${CURRENT_CLASS_NAME} - ${CURRENT_SCHOOL_YEAR}`,
+      gvcnName: "Võ Thanh Phong",
+      gvcnDisplayName: "Thầy Võ Thanh Phong",
+      gvcnPhone: "0382311919",
+      gvcnZalo: "0382311919",
+      examTitle: "Thi học kỳ 1",
+      examDate: "2027-01-04",
+      note: "Năm học mới 2026-2027 — danh sách học sinh lấy từ sơ yếu lý lịch.",
+      createdAt: now,
+      updatedAt: now,
+    });
+  } else {
+    await years.updateOne(
+      { _id: current._id },
+      {
+        $set: {
+          weekCount: EXCEL_WEEK_COUNT,
+          weeks: currentWeeks,
+          startDate: currentFirst?.startDate,
+          endDate: currentLast?.endDate,
+          isCurrent: true,
+          updatedAt: now,
+        },
+      },
+    );
+  }
+
+  await years.updateMany({ name: { $ne: CURRENT_SCHOOL_YEAR } }, { $set: { isCurrent: false, updatedAt: now } });
+  await years.updateOne({ name: CURRENT_SCHOOL_YEAR }, { $set: { isCurrent: true } });
+
+  const live = await years.findOne({ name: CURRENT_SCHOOL_YEAR });
+  if (live?._id) {
+    await configs.updateMany(
+      { schoolYearId: String(live._id) },
+      {
+        $set: {
+          className: CURRENT_CLASS_NAME,
+          fullName: `Lớp ${CURRENT_CLASS_NAME} - ${CURRENT_SCHOOL_YEAR}`,
           examTitle: "Thi học kỳ 1",
-          examDate: "2025-12-29",
+          examDate: "2027-01-04",
           updatedAt: now,
         },
       },
@@ -93,7 +164,7 @@ async function seedFromLegacy() {
   const db = await getDb();
   const legacy = await loadLegacySeedData();
   const now = timestamp();
-  const weeks = buildExcelWeeks();
+  const weeks = buildWeeks2025();
   const firstWeek = weeks.find((week) => week.startDate);
   const lastWeek = [...weeks].reverse().find((week) => week.endDate);
   const currentYearId = new ObjectId().toHexString();
@@ -215,14 +286,14 @@ async function bootstrapOnce() {
     (await db.collection<SchoolYear>("schoolYears").findOne({}, { projection: { weeks: 1 } }));
   if (!year) {
     await seedFromLegacy();
+    await insertMissingUsers();
+    await ensureSchoolYearWeeks();
     await ensureIndexes();
     return;
   }
 
   await insertMissingUsers();
-  if (!year.weeks?.[0]?.dateRangeLabel) {
-    await ensureSchoolYearWeeks();
-  }
+  await ensureSchoolYearWeeks();
   await ensureIndexes();
 }
 

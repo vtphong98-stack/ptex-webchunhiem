@@ -28,7 +28,14 @@ export async function loadWeekLockOverrides(schoolYearId: string) {
 
 export async function getWeekLockStates(schoolYearId: string, now = new Date()) {
   const overrides = await loadWeekLockOverrides(schoolYearId);
-  return buildAllWeekLocks(overrides, now);
+  const db = await getDb();
+  const year = schoolYearId
+    ? await db.collection<{ weeks?: import("@/lib/types").SchoolWeek[] }>("schoolYears").findOne(
+        { _id: schoolYearId } as never,
+        { projection: { weeks: 1 } },
+      )
+    : null;
+  return buildAllWeekLocks(overrides, now, year?.weeks?.length ? year.weeks : undefined);
 }
 
 export async function getWeekLockState(schoolYearId: string, weekNumber: number, now = new Date()) {

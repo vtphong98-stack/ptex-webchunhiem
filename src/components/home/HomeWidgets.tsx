@@ -68,6 +68,14 @@ export const LuckyWheel = memo(function LuckyWheel({ names }: { names: string[] 
     rafRef.current = requestAnimationFrame(tick);
   }, [names, spinning]);
 
+  if (!names.length) {
+    return (
+      <div className="site-widget">
+        <p style={{ margin: 0 }}>Chưa có danh sách năm {CLASS_SITE.schoolYear}. Em điền sơ yếu lý lịch trước khi quay.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="site-widget">
       <div style={{ fontSize: 24, fontWeight: 800, color: "#e74c3c", minHeight: 40 }}>{result}</div>

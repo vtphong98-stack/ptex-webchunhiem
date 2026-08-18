@@ -79,7 +79,7 @@ function applyPatchLocal(list: DeskStudent[], id: string, body: PatchBody): Desk
   });
 }
 
-export function TeamManager() {
+export function TeamManager({ readOnly = false, yearName = "" }: { readOnly?: boolean; yearName?: string }) {
   const [students, setStudents] = useState<DeskStudent[]>([]);
   const [message, setMessage] = useState("");
   const [importBusy, setImportBusy] = useState(false);
@@ -88,18 +88,19 @@ export function TeamManager() {
   studentsRef.current = students;
 
   const load = useCallback(async () => {
-    const response = await fetch("/api/gvcn/students?lite=1");
+    const qs = yearName ? `?lite=1&year=${encodeURIComponent(yearName)}` : "?lite=1";
+    const response = await fetch(`/api/gvcn/students${qs}`);
     if (!response.ok) {
       setMessage("Chưa tải được danh sách tổ.");
       return;
     }
     const data = await response.json();
     setStudents(data.students ?? []);
-  }, []);
+  }, [yearName]);
 
   useEffect(() => {
     load().catch(() => setMessage("Chưa tải được danh sách tổ."));
-  }, [load]);
+  }, [load, yearName]);
 
   const teams = useMemo(() => {
     return [1, 2, 3, 4].map((teamNumber) => ({
@@ -186,8 +187,9 @@ export function TeamManager() {
       <div className="card p-5">
         <h2 className="text-lg font-semibold">Phân tổ bằng Excel</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Tải mẫu 4 tổ, gõ học sinh trên máy (dòng 1 tổ trưởng, dòng 2 tổ phó), rồi tải file lên.
-          Chuyển tổ trên web cập nhật ngay — không cần chờ từng em.
+          {readOnly
+            ? "Năm cũ chỉ xem phân công. Chuyển sang năm hiện hành để bổ nhiệm ban cán sự."
+            : "Tải mẫu 4 tổ, gõ học sinh trên máy (dòng 1 tổ trưởng, dòng 2 tổ phó), rồi tải file lên. Chuyển tổ trên web cập nhật ngay — không cần chờ từng em."}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <a className="button-secondary" href="/api/gvcn/students/template">
@@ -196,12 +198,12 @@ export function TeamManager() {
           <a className="button-secondary" href="/api/gvcn/students/export">
             Xuất danh sách lớp
           </a>
-          <label className="button-primary cursor-pointer">
+          <label className={`button-primary ${readOnly ? "pointer-events-none opacity-50" : "cursor-pointer"}`}>
             {importBusy ? "Đang xử lý…" : "Tải Excel lên"}
             <input
               accept=".xlsx,.xls"
               className="hidden"
-              disabled={importBusy}
+              disabled={importBusy || readOnly}
               onChange={(event) => {
                 importFile(event.target.files?.[0]).catch(() => setMessage("Import Excel thất bại."));
                 event.target.value = "";
@@ -239,16 +241,19 @@ export function TeamManager() {
                             {student.position ? ` · ${student.position}` : ""}
                           </p>
                         </div>
-                        <button
-                          className="text-xs font-semibold text-red-600"
-                          onClick={() => removeStudent(student._id, student.fullName)}
-                          type="button"
-                        >
-                          Xóa
-                        </button>
+                        {readOnly ? null : (
+                          <button
+                            className="text-xs font-semibold text-red-600"
+                            onClick={() => removeStudent(student._id, student.fullName)}
+                            type="button"
+                          >
+                            Xóa
+                          </button>
+                        )}
                       </div>
                       <div className="mt-2 grid grid-cols-3 gap-2">
                         <select
+                          disabled={readOnly || saving}
                           onChange={(event) =>
                             patchStudent(student._id, {
                               teamNumber: event.target.value ? Number(event.target.value) : null,
@@ -263,6 +268,7 @@ export function TeamManager() {
                           <option value="4">Sang tổ 4</option>
                         </select>
                         <select
+                          disabled={readOnly || saving}
                           onChange={(event) =>
                             patchStudent(student._id, {
                               teamRole: (event.target.value || "thanhVien") as TeamRole,
@@ -275,6 +281,7 @@ export function TeamManager() {
                           <option value="thanhVien">{TEAM_ROLE_LABELS.thanhVien}</option>
                         </select>
                         <select
+                          disabled={readOnly || saving}
                           onChange={(event) =>
                             patchStudent(student._id, { classDuty: event.target.value ? (event.target.value as ClassDuty) : null })
                           }
@@ -305,6 +312,7 @@ export function TeamManager() {
               <li className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-slate-50 p-3" key={student._id}>
                 <span>{student.fullName}</span>
                 <select
+                  disabled={readOnly}
                   onChange={(event) =>
                     patchStudent(student._id, { teamNumber: event.target.value ? Number(event.target.value) : null })
                   }

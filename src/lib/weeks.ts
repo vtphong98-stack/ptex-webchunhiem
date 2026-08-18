@@ -1,4 +1,7 @@
+import { buildWeeks2026 } from "@/lib/academic-calendar";
 import type { SchoolWeek } from "@/lib/types";
+
+export { EXCEL_WEEK_COUNT } from "@/lib/academic-calendar";
 
 /** Date ranges copied from sheet LT column B of 12c1cn.xlsx (year 2025-2026). */
 export const EXCEL_WEEK_RANGES: Array<{ weekNumber: number; range: string }> = [
@@ -39,7 +42,7 @@ export const EXCEL_WEEK_RANGES: Array<{ weekNumber: number; range: string }> = [
   { weekNumber: 35, range: "" },
 ];
 
-export const EXCEL_WEEK_COUNT = EXCEL_WEEK_RANGES.length;
+export const EXCEL_WEEK_COUNT_2025 = EXCEL_WEEK_RANGES.length;
 
 function parseDayMonthYear(raw: string) {
   const match = raw.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
@@ -67,7 +70,7 @@ export function formatWeekRangeShort(range: string) {
   return `${match[1]} – ${match[2]}`;
 }
 
-export function buildExcelWeeks(): SchoolWeek[] {
+export function buildWeeks2025(): SchoolWeek[] {
   return EXCEL_WEEK_RANGES.map((item) => {
     const dates = parseExcelWeekRange(item.range);
     return {
@@ -78,6 +81,11 @@ export function buildExcelWeeks(): SchoolWeek[] {
       endDate: dates.endDate,
     };
   });
+}
+
+/** Default = năm hiện hành 2026-2027. */
+export function buildExcelWeeks(): SchoolWeek[] {
+  return buildWeeks2026();
 }
 
 export function getExcelWeek(weekNumber: number) {

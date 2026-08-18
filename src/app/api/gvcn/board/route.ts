@@ -3,11 +3,11 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { canReviewReports } from "@/lib/permissions";
 import { computeRanking, computeTeamScore } from "@/lib/report-schema";
+import { listSchoolYears, resolveSchoolYearFromRequest, weeksOfYear } from "@/lib/school-year-scope";
 import { getSessionUser } from "@/lib/session";
-import type { SchoolYear, WeeklyReport } from "@/lib/types";
-import { buildExcelWeeks, EXCEL_WEEK_COUNT } from "@/lib/weeks";
+import type { WeeklyReport } from "@/lib/types";
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getSessionUser();
   if (!session || !canReviewReports(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -15,16 +15,14 @@ export async function GET() {
 
   try {
     const db = await getDb();
-    const schoolYear = await db.collection<SchoolYear>("schoolYears").findOne(
-      { isCurrent: true },
-      { projection: { _id: 1 } },
-    );
+    const schoolYear = await resolveSchoolYearFromRequest(request);
     if (!schoolYear?._id) {
       return NextResponse.json({ rows: [] });
     }
 
     const schoolYearId = String(schoolYear._id);
-    const weeks = buildExcelWeeks();
+    const weeks = weeksOfYear(schoolYear);
+    const years = await listSchoolYears();
     const reports = await db.collection<WeeklyReport>("weeklyReports")
       .find(
         { schoolYearId },
@@ -83,7 +81,8 @@ export async function GET() {
     ];
 
     const rows = [];
-    for (let weekNumber = 1; weekNumber <= EXCEL_WEEK_COUNT; weekNumber += 1) {
+    const weekCount = weeks.length || 35;
+    for (let weekNumber = 1; weekNumber <= weekCount; weekNumber += 1) {
       const cells: Record<string, boolean> = {};
       let submitted = 0;
       for (const slot of slots) {
@@ -103,7 +102,15 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ rows }, { headers: { "Cache-Control": "private, max-age=15" } });
+    return NextResponse.json(
+      {
+        rows,
+        yearName: schoolYear.name,
+        isCurrent: Boolean(schoolYear.isCurrent),
+        years: years.map((year) => ({ name: year.name, label: year.label, isCurrent: Boolean(year.isCurrent) })),
+      },
+      { headers: { "Cache-Control": "private, max-age=15" } },
+    );
   } catch {
     return NextResponse.json({ rows: [] }, { status: 500 });
   }

@@ -4,12 +4,12 @@ import { buildGvcnWeekReport } from "@/lib/gvcn-report";
 import { getDb } from "@/lib/db";
 import { canReviewReports } from "@/lib/permissions";
 import { getReportFields } from "@/lib/report-fields";
+import { resolveSchoolYearFromRequest, weeksOfYear } from "@/lib/school-year-scope";
 import { getSessionUser } from "@/lib/session";
-import type { SchoolYear, WeeklyReport } from "@/lib/types";
-import { buildExcelWeeks } from "@/lib/weeks";
+import type { WeeklyReport } from "@/lib/types";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ weekNumber: string }> },
 ) {
   const session = await getSessionUser();
@@ -25,17 +25,14 @@ export async function GET(
 
   try {
     const db = await getDb();
-    const schoolYear = await db.collection<SchoolYear>("schoolYears").findOne(
-      { isCurrent: true },
-      { projection: { _id: 1 } },
-    );
+    const schoolYear = await resolveSchoolYearFromRequest(request);
 
     if (!schoolYear?._id) {
       return NextResponse.json({ reports: [], summary: "", report: null, ranking: null, weekMeta: null });
     }
 
     const schoolYearId = String(schoolYear._id);
-    const weeks = buildExcelWeeks();
+    const weeks = weeksOfYear(schoolYear);
     const weekMeta = weeks[weekNumber - 1] ?? null;
 
     const reports = await db.collection<WeeklyReport>("weeklyReports")

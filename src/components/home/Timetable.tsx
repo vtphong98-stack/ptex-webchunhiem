@@ -1,4 +1,4 @@
-import { AFTERNOON_TIMETABLE, DAY_LABELS, MORNING_TIMETABLE } from "@/lib/class-site";
+import { AFTERNOON_TIMETABLE, CLASS_SITE, DAY_LABELS, MORNING_TIMETABLE } from "@/lib/class-site";
 import type { TimetableCell } from "@/lib/class-site";
 
 function TimetableTable({
@@ -28,7 +28,7 @@ function TimetableTable({
           {periods.map((period) => (
             <tr key={period}>
               <td>{period}</td>
-              {rows[period].map((cell, index) =>
+              {rows[period]?.map((cell, index) =>
                 cell.skip ? null : (
                   <td className={cell.className} data-tooltip={cell.teacher} key={`${period}-${index}`} rowSpan={cell.rowspan}>
                     {cell.subject}
@@ -43,11 +43,17 @@ function TimetableTable({
   );
 }
 
-export function Timetable() {
+export function Timetable({
+  morning = MORNING_TIMETABLE,
+  afternoon = AFTERNOON_TIMETABLE,
+}: {
+  morning?: Record<number, TimetableCell[]>;
+  afternoon?: Record<number, TimetableCell[]>;
+}) {
   return (
     <>
-      <TimetableTable periods={[1, 2, 3, 4, 5]} rows={MORNING_TIMETABLE} title="Buổi Sáng" />
-      <TimetableTable periods={[2, 3, 4, 5]} rows={AFTERNOON_TIMETABLE} title="Trái Buổi: Chiều" />
+      <TimetableTable periods={[1, 2, 3, 4, 5]} rows={morning} title={CLASS_SITE.morningTitle} />
+      <TimetableTable periods={[2, 3, 4, 5]} rows={afternoon} title={CLASS_SITE.afternoonTitle} />
     </>
   );
 }

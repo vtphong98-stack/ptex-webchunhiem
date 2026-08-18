@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
 import { getTeamScoresForWeek } from "@/lib/report-schema";
+import { resolveSchoolYear } from "@/lib/school-year-scope";
 import type { WeeklyReport } from "@/lib/types";
 
 export const revalidate = 60;
@@ -11,7 +12,7 @@ const CACHE_HEADERS = {
 export async function GET() {
   try {
     const db = await getDb();
-    const schoolYear = await db.collection("schoolYears").findOne({ isCurrent: true }, { projection: { _id: 1 } });
+    const schoolYear = await resolveSchoolYear();
     if (!schoolYear?._id) {
       return Response.json({ rankingWeek: 0, ranking: { scores: [], firstPlace: "" } }, { headers: CACHE_HEADERS });
     }

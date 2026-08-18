@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { logoutAction } from "@/app/dashboard/actions";
 import { GvcnWeekReportView } from "@/components/gvcn/GvcnWeekReport";
+import { StudentLookup } from "@/components/gvcn/StudentLookup";
 import { TeamManager } from "@/components/gvcn/TeamManager";
+import { TimetableUpload } from "@/components/gvcn/TimetableUpload";
 import { CLASS_SITE } from "@/lib/class-site";
 import type { GvcnWeekReport } from "@/lib/gvcn-report";
 import { OFFICER_SLOTS } from "@/lib/report-fields";
@@ -50,44 +52,60 @@ function emptyBoardRows(): BoardRow[] {
   }));
 }
 
+type DeskView = "weeks" | "teams" | "lookup" | "timetable";
+
+function yearQs(yearName: string) {
+  return yearName ? `?year=${encodeURIComponent(yearName)}` : "";
+}
+
 export function GvcnDesk({ fullName }: { fullName: string }) {
   const [board, setBoard] = useState<{ rows: BoardRow[] }>({ rows: emptyBoardRows() });
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [weekDetail, setWeekDetail] = useState<WeekDetailData | null>(null);
   const [loadingWeek, setLoadingWeek] = useState(false);
   const [boardError, setBoardError] = useState("");
-  const [deskView, setDeskView] = useState<"weeks" | "teams">("weeks");
+  const [deskView, setDeskView] = useState<DeskView>("weeks");
   const [locks, setLocks] = useState<WeekLockState[]>([]);
   const [lockPending, setLockPending] = useState(false);
   const [lockError, setLockError] = useState("");
+  const [yearName, setYearName] = useState("");
+  const [years, setYears] = useState<Array<{ name: string; label: string; isCurrent: boolean }>>([]);
+  const [isCurrentYear, setIsCurrentYear] = useState(true);
   const weekCache = useRef(new Map<number, WeekDetailData>());
 
   useEffect(() => {
-    fetch("/api/gvcn/board")
+    weekCache.current.clear();
+    setSelectedWeek(null);
+    setWeekDetail(null);
+    const qs = yearQs(yearName);
+    fetch(`/api/gvcn/board${qs}`)
       .then(async (response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.json();
       })
       .then((data) => {
+        if (Array.isArray(data.years) && data.years.length) setYears(data.years);
+        if (typeof data.yearName === "string" && data.yearName && !yearName) setYearName(data.yearName);
+        if (typeof data.isCurrent === "boolean") setIsCurrentYear(data.isCurrent);
         if (Array.isArray(data.rows) && data.rows.length) {
           setBoard({ rows: data.rows });
         }
       })
       .catch(() => setBoardError("Chưa tải được trạng thái nộp. Vẫn chọn tuần bình thường."));
 
-    fetch("/api/gvcn/week-locks")
+    fetch(`/api/gvcn/week-locks${qs}`)
       .then(async (response) => (response.ok ? response.json() : null))
       .then((data) => {
         if (Array.isArray(data?.locks)) setLocks(data.locks);
       })
       .catch(() => undefined);
-  }, []);
+  }, [yearName]);
 
   const fetchWeek = useCallback(async (weekNumber: number) => {
-    const response = await fetch(`/api/gvcn/week/${weekNumber}`);
+    const response = await fetch(`/api/gvcn/week/${weekNumber}${yearQs(yearName)}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json() as Promise<WeekDetailData>;
-  }, []);
+  }, [yearName]);
 
   const openWeek = useCallback(
     (weekNumber: number) => {
@@ -126,7 +144,7 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
     setLockPending(true);
     setLockError("");
     try {
-      const response = await fetch("/api/gvcn/week-locks", {
+      const response = await fetch(`/api/gvcn/week-locks${yearQs(yearName)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ weekNumber: selectedWeek, action }),
@@ -152,8 +170,34 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
         <div>
           <p className="text-sm text-slate-500">{CLASS_SITE.fullName}</p>
           <h1 className="text-xl font-bold text-slate-950">
-            {deskView === "teams" ? "Quản lý tổ" : "Tổng kết tuần"} · {fullName}
+            {deskView === "teams"
+              ? "Phân công ban cán sự"
+              : deskView === "lookup"
+                ? "Tra cứu học sinh"
+                : deskView === "timetable"
+                  ? "Thời khóa biểu"
+                  : "Tổng kết tuần"}{" "}
+            · {fullName}
           </h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <label className="text-sm text-slate-500">
+              Năm học
+              <select
+                className="ml-2 rounded-lg border border-slate-200 px-2 py-1"
+                onChange={(event) => setYearName(event.target.value)}
+                value={yearName}
+              >
+                {!years.length ? <option value="">Năm hiện hành</option> : null}
+                {years.map((year) => (
+                  <option key={year.name} value={year.name}>
+                    {year.name}
+                    {year.isCurrent ? " (hiện hành)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {!isCurrentYear ? <span className="text-xs font-semibold text-amber-700">Đang xem năm cũ — chỉ đọc</span> : null}
+          </div>
         </div>
         <div className="flex gap-2">
           <button
@@ -164,11 +208,25 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
             Tổng kết tuần
           </button>
           <button
+            className={deskView === "lookup" ? "button-primary" : "button-secondary"}
+            onClick={() => setDeskView("lookup")}
+            type="button"
+          >
+            Tra cứu HS
+          </button>
+          <button
             className={deskView === "teams" ? "button-primary" : "button-secondary"}
             onClick={() => setDeskView("teams")}
             type="button"
           >
-            Quản lý tổ
+            Ban cán sự
+          </button>
+          <button
+            className={deskView === "timetable" ? "button-primary" : "button-secondary"}
+            onClick={() => setDeskView("timetable")}
+            type="button"
+          >
+            TKB
           </button>
           <a className="button-secondary" href="/">
             Trang chủ
@@ -182,7 +240,11 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
       </header>
 
       {deskView === "teams" ? (
-        <TeamManager />
+        <TeamManager readOnly={!isCurrentYear} yearName={yearName} />
+      ) : deskView === "lookup" ? (
+        <StudentLookup yearName={yearName} />
+      ) : deskView === "timetable" ? (
+        <TimetableUpload readOnly={!isCurrentYear} yearName={yearName} />
       ) : (
         <>
       {boardError ? <p className="mb-3 text-sm text-amber-700">{boardError}</p> : null}
@@ -247,16 +309,18 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
               {lockError ? <p className="mt-1 text-sm text-rose-300">{lockError}</p> : null}
             </div>
             <div className="flex flex-wrap gap-2">
-              {selectedLock?.locked ? (
-                <button className="button-primary" disabled={lockPending} onClick={() => void setWeekLock("unlock")} type="button">
-                  {lockPending ? "Đang mở…" : "Mở khóa tuần"}
-                </button>
-              ) : (
-                <button className="button-secondary" disabled={lockPending} onClick={() => void setWeekLock("lock")} type="button">
-                  {lockPending ? "Đang khóa…" : "Khóa tuần"}
-                </button>
-              )}
-              {selectedLock?.override ? (
+              {isCurrentYear ? (
+                selectedLock?.locked ? (
+                  <button className="button-primary" disabled={lockPending} onClick={() => void setWeekLock("unlock")} type="button">
+                    {lockPending ? "Đang mở…" : "Mở khóa tuần"}
+                  </button>
+                ) : (
+                  <button className="button-secondary" disabled={lockPending} onClick={() => void setWeekLock("lock")} type="button">
+                    {lockPending ? "Đang khóa…" : "Khóa tuần"}
+                  </button>
+                )
+              ) : null}
+              {isCurrentYear && selectedLock?.override ? (
                 <button className="button-secondary" disabled={lockPending} onClick={() => void setWeekLock("auto")} type="button">
                   Theo lịch thứ 7 0h
                 </button>

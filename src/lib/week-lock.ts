@@ -39,8 +39,7 @@ function saturdayFromIsoDate(iso: string) {
   return vietnamMidnightUtc(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
 }
 
-export function getWeekLockAt(weekNumber: number): Date | null {
-  const weeks = buildExcelWeeks();
+export function getWeekLockAt(weekNumber: number, weeks = buildExcelWeeks()): Date | null {
   const week = weeks.find((item) => item.weekNumber === weekNumber);
   if (week?.endDate) return saturdayFromIsoDate(week.endDate);
   if (week?.startDate) {
@@ -74,8 +73,9 @@ export function resolveWeekLock(
   weekNumber: number,
   override: WeekLockOverride | null,
   now = new Date(),
+  weeks = buildExcelWeeks(),
 ): WeekLockState {
-  const lockAt = getWeekLockAt(weekNumber);
+  const lockAt = getWeekLockAt(weekNumber, weeks);
   const autoLocked = Boolean(lockAt && now.getTime() >= lockAt.getTime());
   const lockAtIso = lockAt?.toISOString() ?? "";
   const lockAtLabel = formatLockAtLabel(lockAt);
@@ -127,10 +127,14 @@ export function resolveWeekLock(
   };
 }
 
-export function buildAllWeekLocks(overrides: Map<number, WeekLockOverride>, now = new Date()) {
+export function buildAllWeekLocks(
+  overrides: Map<number, WeekLockOverride>,
+  now = new Date(),
+  weeks = buildExcelWeeks(),
+) {
   const states: WeekLockState[] = [];
   for (let weekNumber = 1; weekNumber <= EXCEL_WEEK_COUNT; weekNumber += 1) {
-    states.push(resolveWeekLock(weekNumber, overrides.get(weekNumber) ?? null, now));
+    states.push(resolveWeekLock(weekNumber, overrides.get(weekNumber) ?? null, now, weeks));
   }
   return states;
 }
