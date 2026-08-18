@@ -16,6 +16,7 @@ import {
 import { getReportFields } from "@/lib/report-fields";
 import { enrichReportFields } from "@/lib/report-schema";
 import { clearSession, requireSessionUser } from "@/lib/session";
+import { cascadeTreasuryFields, parseSignedVnd } from "@/lib/treasury-duty";
 import type { AppRole } from "@/lib/types";
 import { APP_ROLES } from "@/lib/types";
 import { buildWeeks, toNumberOrNull, toPlainString } from "@/lib/utils";
@@ -196,18 +197,26 @@ export async function saveReportAction(formData: FormData) {
   if (session.role === "lopPhoPhongTrao") {
     rawFields.campaign_assignments_json = toPlainString(formData.get("campaign_assignments_json"));
   }
+  if (session.role === "thuQuy") {
+    rawFields.treasury_payments_json = toPlainString(formData.get("treasury_payments_json"));
+    rawFields.treasury_rewards_json = toPlainString(formData.get("treasury_rewards_json"));
+    rawFields.treasury_expenses_json = toPlainString(formData.get("treasury_expenses_json"));
+  }
   if (week?.dateRangeLabel) {
     rawFields.week_range = week.dateRangeLabel;
   }
 
   let previousRemaining = 0;
-  if (session.role === "thuQuy" && weekNumber > 1) {
-    const previous = await reportsCollection.findOne({
-      schoolYearId,
-      weekNumber: weekNumber - 1,
-      reporterRole: "thuQuy",
-    });
-    previousRemaining = Number(previous?.fields?.remaining || 0) || 0;
+  if (session.role === "thuQuy") {
+    const prior = await reportsCollection
+      .find(
+        { schoolYearId, reporterRole: "thuQuy", weekNumber: { $lt: weekNumber } },
+        { projection: { weekNumber: 1, "fields.remaining": 1 } },
+      )
+      .sort({ weekNumber: -1 })
+      .limit(1)
+      .toArray();
+    previousRemaining = parseSignedVnd(prior[0]?.fields?.remaining);
   }
 
   const fields = enrichReportFields(session.role, rawFields, previousRemaining);
@@ -218,7 +227,7 @@ export async function saveReportAction(formData: FormData) {
     reporterRole: session.role,
     reporterName: session.fullName,
     teamNumber: session.teamNumber ?? null,
-    summary: fields.summary || fields.campaign_name || fields.class_weekly_review || fields.study_attitude || fields.labor_review || fields.team_score || "Đã nộp báo cáo tuần",
+    summary: fields.summary || fields.campaign_name || fields.class_weekly_review || fields.study_attitude || fields.labor_review || fields.team_score || (fields.remaining != null && fields.remaining !== "" ? `Quỹ còn ${fields.remaining}` : "") || "Đã nộp báo cáo tuần",
     studyNotes: fields.study_attitude || fields.study_attitude_reason || fields.not_prepared_names || "",
     disciplineNotes: fields.class_weekly_review || fields.disorder_sdb || fields.disorder_names || "",
     activityNotes: fields.guild_bgh_notice || fields.progress || fields.social_media || "",
@@ -270,6 +279,24 @@ export async function saveReportAction(formData: FormData) {
       actorName: session.fullName,
       actorRole: session.role,
     });
+  }
+
+  if (session.role === "thuQuy") {
+    const all = await reportsCollection
+      .find({ schoolYearId, reporterRole: "thuQuy" }, { projection: { weekNumber: 1, fields: 1 } })
+      .sort({ weekNumber: 1 })
+      .toArray();
+    const cascaded = cascadeTreasuryFields(
+      all.map((item) => ({ weekNumber: item.weekNumber, fields: item.fields ?? {} })),
+    );
+    const nowIso = new Date().toISOString();
+    for (const item of cascaded) {
+      if (!item.changed) continue;
+      await reportsCollection.updateOne(
+        { schoolYearId, reporterRole: "thuQuy", weekNumber: item.weekNumber },
+        { $set: { fields: item.fields, financeNotes: item.fields.remaining, updatedAt: nowIso } },
+      );
+    }
   }
 
   revalidateTag("home", "max");

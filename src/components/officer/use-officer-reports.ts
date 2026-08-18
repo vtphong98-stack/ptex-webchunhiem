@@ -22,6 +22,7 @@ export function useOfficerReports() {
   const [teamStudents, setTeamStudents] = useState<TeamStudent[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [treasuryPreviousByWeek, setTreasuryPreviousByWeek] = useState<Record<string, number>>({});
 
   const fetchPage = useCallback(async (skip: number, limit: number) => {
     const response = await fetch(`/api/officer/reports?limit=${limit}&skip=${skip}`);
@@ -34,6 +35,7 @@ export function useOfficerReports() {
       reports: (data.reports ?? []) as SavedReport[],
       teamStudents: (data.teamStudents ?? []) as TeamStudent[],
       hasMore: Boolean(data.hasMore),
+      treasuryPreviousByWeek: (data.treasuryPreviousByWeek ?? {}) as Record<string, number>,
     };
   }, []);
 
@@ -43,6 +45,7 @@ export function useOfficerReports() {
     setReports(data.reports);
     setTeamStudents(data.teamStudents);
     setHasMore(data.hasMore);
+    setTreasuryPreviousByWeek(data.treasuryPreviousByWeek);
     return data;
   }, [fetchPage]);
 
@@ -53,6 +56,7 @@ export function useOfficerReports() {
     setReports(data.reports);
     setTeamStudents(data.teamStudents);
     setHasMore(data.hasMore);
+    setTreasuryPreviousByWeek(data.treasuryPreviousByWeek);
     return data;
   }, [fetchPage, reports.length]);
 
@@ -77,6 +81,7 @@ export function useOfficerReports() {
     loadInitial,
     refresh,
     loadMore,
+    treasuryPreviousByWeek,
   };
 }
 

@@ -2,6 +2,7 @@ import { formatCampaignAssignments } from "@/lib/campaign-duty";
 import { formatDisciplineRecords } from "@/lib/discipline-duty";
 import { OFFICER_SLOTS } from "@/lib/report-fields";
 import { summarizeLaborAssignments } from "@/lib/labor-duty";
+import { formatTreasuryLines, formatVnd, parseTreasuryLines, parseSignedVnd } from "@/lib/treasury-duty";
 import { getTeamScoresForWeek, toCount } from "@/lib/report-schema";
 import { parseMemberRows, type TeamMemberWeekRow } from "@/lib/team-roster";
 import type { AppRole, WeeklyReport } from "@/lib/types";
@@ -274,15 +275,19 @@ export function buildGvcnWeekReport(input: {
   const goodPointsTotal = sumTeamCount(reports, "good_points_count");
   const participationTotal = sumTeamCount(reports, "participation_count");
 
-  const expenses = [1, 2, 3, 4, 5, 6]
-    .map((index) => {
-      const name = thuQuy?.fields?.[`expense_name_${index}`]?.trim();
-      const amount = thuQuy?.fields?.[`expense_amount_${index}`]?.trim();
-      if (!name && !amount) return "";
-      return `${name || "Chi"}: ${amount || "0"}`;
-    })
-    .filter(Boolean)
-    .join(", ");
+  const expenses =
+    formatTreasuryLines(parseTreasuryLines(thuQuy?.fields?.treasury_expenses_json), "Chi") ||
+    [1, 2, 3, 4, 5, 6]
+      .map((index) => {
+        const name = thuQuy?.fields?.[`expense_name_${index}`]?.trim();
+        const amount = thuQuy?.fields?.[`expense_amount_${index}`]?.trim();
+        if (!name && !amount) return "";
+        return `${name || "Chi"}: ${amount || "0"}`;
+      })
+      .filter(Boolean)
+      .join(", ");
+  const rewards = formatTreasuryLines(parseTreasuryLines(thuQuy?.fields?.treasury_rewards_json), "Thưởng");
+  const money = (value?: string) => (thuQuy ? `${formatVnd(parseSignedVnd(value))} đ` : "Chưa có");
 
   const sections: ReportSection[] = [
     {
@@ -385,9 +390,14 @@ export function buildGvcnWeekReport(input: {
       id: "quy-lop",
       title: "7. Quỹ lớp",
       lines: [
-        line("Tổng thu", text(thuQuy?.fields, "total_income", "Chưa có"), thuQuy ? ["Thủ quỹ"] : []),
-        line("Tổng chi", `${text(thuQuy?.fields, "total_expense", "Chưa có")}${expenses ? ` (${expenses})` : ""}`, thuQuy ? ["Thủ quỹ"] : []),
-        line("Còn lại", text(thuQuy?.fields, "remaining", "Chưa có"), thuQuy ? ["Thủ quỹ"] : []),
+        line("Tồn tuần trước", money(thuQuy?.fields?.previous_remaining), thuQuy ? ["Thủ quỹ"] : []),
+        line("Tổng thu", money(thuQuy?.fields?.total_income), thuQuy ? ["Thủ quỹ"] : []),
+        line("Thiếu quỹ", text(thuQuy?.fields, "missing_students", "Không có"), thuQuy ? ["Thủ quỹ"] : []),
+        line("Thưởng", rewards || text(thuQuy?.fields, "treasury_rewards_summary", "Không có"), thuQuy ? ["Thủ quỹ"] : []),
+        line("Chi", expenses || text(thuQuy?.fields, "treasury_expenses_summary", "Không có"), thuQuy ? ["Thủ quỹ"] : []),
+        line("Tổng thưởng", money(thuQuy?.fields?.total_rewards), thuQuy ? ["Thủ quỹ"] : []),
+        line("Tổng chi", money(thuQuy?.fields?.total_expense), thuQuy ? ["Thủ quỹ"] : []),
+        line("Còn lại", money(thuQuy?.fields?.remaining), thuQuy ? ["Thủ quỹ"] : []),
       ],
     },
     {

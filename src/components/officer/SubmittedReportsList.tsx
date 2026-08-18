@@ -6,6 +6,15 @@ import { formatCampaignCopyText, parseCampaignAssignments } from "@/lib/campaign
 import { formatDisciplineCopyText, parseDisciplineRecords } from "@/lib/discipline-duty";
 import type { ReportField } from "@/lib/report-fields";
 import { formatLaborCopyText, groupLaborAssignmentsByDay } from "@/lib/labor-duty";
+import {
+  formatPaidStudents,
+  formatTreasuryCopyText,
+  formatTreasuryLines,
+  formatVnd,
+  parseSignedVnd,
+  parseTreasuryLines,
+  parseVnd,
+} from "@/lib/treasury-duty";
 
 import { reportFieldLines, type SavedReport } from "@/components/officer/use-officer-reports";
 
@@ -174,6 +183,91 @@ function CampaignReportBody({ report }: { report: SavedReport }) {
   );
 }
 
+function TreasuryReportBody({ report }: { report: SavedReport }) {
+  const [copied, setCopied] = useState(false);
+  const previousRemaining = parseSignedVnd(report.fields.previous_remaining);
+  const income = parseVnd(report.fields.total_income);
+  const rewardTotal = parseVnd(report.fields.total_rewards);
+  const expenseTotal = parseVnd(report.fields.total_expense);
+  const remaining = parseSignedVnd(report.fields.remaining);
+  const paid = formatPaidStudents(report.fields.treasury_payments_json);
+  const rewards = formatTreasuryLines(parseTreasuryLines(report.fields.treasury_rewards_json), "Thưởng");
+  const expenses =
+    formatTreasuryLines(parseTreasuryLines(report.fields.treasury_expenses_json), "Chi") ||
+    [1, 2, 3, 4, 5, 6]
+      .map((index) => {
+        const name = report.fields[`expense_name_${index}`]?.trim();
+        const amount = report.fields[`expense_amount_${index}`]?.trim();
+        if (!name && !amount) return "";
+        return `- ${name || "Chi"}: ${amount || "0"}`;
+      })
+      .filter(Boolean)
+      .join("\n");
+  const missing = report.fields.missing_students?.trim() || "";
+  const copyValue = formatTreasuryCopyText({ weekLabel: report.weekLabel, fields: report.fields });
+
+  async function handleCopy() {
+    await copyText(copyValue);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="labor-report-body">
+      <p>
+        <strong>Tồn tuần trước:</strong> {formatVnd(previousRemaining)} đ
+      </p>
+      <p>
+        <strong>Tổng thu:</strong> {formatVnd(income)} đ
+        {report.fields.quantity_paid ? ` (${report.fields.quantity_paid} HS nộp)` : ""}
+      </p>
+      {paid ? (
+        <div className="labor-day-block">
+          {paid.split("\n").map((line) => (
+            <p key={line}>{line.replace(/^- /, "")}</p>
+          ))}
+        </div>
+      ) : null}
+      {rewards ? (
+        <p>
+          <strong>Thưởng:</strong>
+          {rewards.split("\n").map((line) => (
+            <span key={line}>
+              <br />
+              {line.replace(/^- /, "")}
+            </span>
+          ))}
+        </p>
+      ) : null}
+      {expenses ? (
+        <p>
+          <strong>Chi:</strong>
+          {expenses.split("\n").map((line) => (
+            <span key={line}>
+              <br />
+              {line.replace(/^- /, "")}
+            </span>
+          ))}
+        </p>
+      ) : null}
+      {missing ? (
+        <p>
+          <strong>Thiếu quỹ:</strong> {missing}
+        </p>
+      ) : null}
+      <p>
+        <strong>Tổng thưởng:</strong> {formatVnd(rewardTotal)} đ · <strong>Tổng chi:</strong> {formatVnd(expenseTotal)} đ
+      </p>
+      <p>
+        <strong>Còn lại:</strong> {formatVnd(remaining)} đ
+      </p>
+      <button className="button-secondary labor-copy-btn" onClick={() => void handleCopy()} type="button">
+        {copied ? "✓ Đã copy" : "Copy gửi Zalo"}
+      </button>
+    </div>
+  );
+}
+
 export function SubmittedReportsList({
   reports,
   fields,
@@ -193,7 +287,7 @@ export function SubmittedReportsList({
   highlightWeekNumber?: number;
   showSuccessHighlight?: boolean;
   sectionRef?: RefObject<HTMLElement | null>;
-  variant?: "default" | "labor" | "discipline" | "campaign";
+  variant?: "default" | "labor" | "discipline" | "campaign" | "treasury";
 }) {
   if (!reports.length) return null;
 
@@ -206,6 +300,9 @@ export function SubmittedReportsList({
     }
     if (variant === "campaign" || report.fields.campaign_assignments_json) {
       return <CampaignReportBody report={report} />;
+    }
+    if (variant === "treasury" || report.fields.treasury_payments_json) {
+      return <TreasuryReportBody report={report} />;
     }
     if (lines.length) {
       return lines.map((line) => (

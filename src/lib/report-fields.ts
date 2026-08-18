@@ -105,22 +105,17 @@ export function getReportFields(role: AppRole): ReportField[] {
 
   if (role === "thuQuy") {
     return [
-      { name: "fee_per_student", label: "1. Tiền thu (1 HS/1 tuần)" },
-      { name: "quantity_paid", label: "2. Số lượng HS nộp" },
-      { name: "missing_students", label: "3. Tên HS thiếu" },
-      { name: "quantity_missing", label: "4. Số lượng HS thiếu" },
-      { name: "expense_name_1", label: "5. Tên tiền chi 1" },
-      { name: "expense_amount_1", label: "Số tiền chi 1" },
-      { name: "expense_name_2", label: "6. Tên tiền chi 2" },
-      { name: "expense_amount_2", label: "Số tiền chi 2" },
-      { name: "expense_name_3", label: "7. Tên tiền chi 3" },
-      { name: "expense_amount_3", label: "Số tiền chi 3" },
-      { name: "expense_name_4", label: "8. Tên tiền chi 4" },
-      { name: "expense_amount_4", label: "Số tiền chi 4" },
-      { name: "expense_name_5", label: "9. Tên tiền chi 5" },
-      { name: "expense_amount_5", label: "Số tiền chi 5" },
-      { name: "expense_name_6", label: "10. Tên tiền chi 6" },
-      { name: "expense_amount_6", label: "Số tiền chi 6" },
+      { name: "fee_per_student", label: "Tiền đóng (mỗi HS)" },
+      { name: "previous_remaining", label: "Tồn tuần trước" },
+      { name: "total_income", label: "Tổng thu" },
+      { name: "quantity_paid", label: "Số HS nộp" },
+      { name: "missing_students", label: "Thiếu quỹ" },
+      { name: "quantity_missing", label: "Số HS thiếu" },
+      { name: "total_rewards", label: "Tổng thưởng" },
+      { name: "treasury_rewards_summary", label: "Tiền thưởng" },
+      { name: "total_expense", label: "Tổng chi" },
+      { name: "treasury_expenses_summary", label: "Tiền chi" },
+      { name: "remaining", label: "Còn lại" },
     ];
   }
 

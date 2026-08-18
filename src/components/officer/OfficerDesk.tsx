@@ -6,6 +6,7 @@ import { logoutAction, saveReportAction } from "@/app/dashboard/actions";
 import { CampaignForm } from "@/components/officer/CampaignForm";
 import { DisciplineForm } from "@/components/officer/DisciplineForm";
 import { LaborForm } from "@/components/officer/LaborForm";
+import { TreasuryForm } from "@/components/officer/TreasuryForm";
 import { SubmittedReportsList } from "@/components/officer/SubmittedReportsList";
 import { TeamLeaderForm } from "@/components/officer/TeamLeaderForm";
 import { useOfficerReports } from "@/components/officer/use-officer-reports";
@@ -36,6 +37,10 @@ export function OfficerDesk({
 
   if (role === "lopPhoPhongTrao") {
     return <CampaignForm fullName={fullName} />;
+  }
+
+  if (role === "thuQuy") {
+    return <TreasuryForm fullName={fullName} />;
   }
 
   return <GenericOfficerForm fullName={fullName} role={role} teamNumber={teamNumber} />;

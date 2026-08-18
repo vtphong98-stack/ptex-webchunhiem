@@ -482,6 +482,82 @@ button {
   width: 100%;
 }
 
+.treasury-sheet {
+  overflow: auto;
+  max-height: min(62vh, 520px);
+  -webkit-overflow-scrolling: touch;
+}
+
+.treasury-sheet .stt-cell {
+  width: 44px;
+  text-align: center;
+  color: #64748b;
+}
+
+.treasury-sheet input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 6px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.treasury-apply {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.treasury-apply button {
+  white-space: nowrap;
+  height: 42px;
+}
+
+.treasury-missing {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.treasury-lines-title {
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+
+.treasury-line-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 140px) 1fr auto;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.treasury-ledger {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.treasury-ledger p {
+  margin: 0 0 6px;
+}
+
+.treasury-remaining {
+  font-size: 18px;
+}
+
+@media (max-width: 640px) {
+  .treasury-apply,
+  .treasury-line-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .team-sheet {
   overflow: auto;
   max-height: min(72vh, 560px);

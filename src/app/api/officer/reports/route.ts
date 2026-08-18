@@ -5,6 +5,7 @@ import { getDb } from "@/lib/db";
 import { isClassOfficer } from "@/lib/permissions";
 import { enrichReportFields } from "@/lib/report-schema";
 import { getSessionUser } from "@/lib/session";
+import { parseSignedVnd, previousRemainingFromChain } from "@/lib/treasury-duty";
 import { getCurrentSchoolYearDoc, getTeamRosterStudents } from "@/lib/student-store";
 import {
   emptyMemberRow,
@@ -90,11 +91,37 @@ export async function GET(request: Request) {
   const teamStudents =
     schoolYearId && teamForRoster ? await getTeamRosterStudents(schoolYearId, teamForRoster) : [];
 
+  let treasuryPreviousByWeek: Record<string, number> = {};
+  if (schoolYearId && session.role === "thuQuy") {
+    const chain = await db
+      .collection<WeeklyReport>("weeklyReports")
+      .find(
+        { schoolYearId, reporterRole: "thuQuy" },
+        { projection: { weekNumber: 1, "fields.remaining": 1 } },
+      )
+      .sort({ weekNumber: 1 })
+      .toArray();
+    const remainings = chain.map((item) => ({
+      weekNumber: item.weekNumber,
+      remaining: parseSignedVnd(item.fields?.remaining),
+    }));
+    for (const item of remainings) {
+      treasuryPreviousByWeek[String(item.weekNumber)] = previousRemainingFromChain(remainings, item.weekNumber);
+    }
+    const maxWeek = remainings.at(-1)?.weekNumber ?? 0;
+    for (let week = 1; week <= Math.max(maxWeek + 1, 35); week += 1) {
+      if (treasuryPreviousByWeek[String(week)] == null) {
+        treasuryPreviousByWeek[String(week)] = previousRemainingFromChain(remainings, week);
+      }
+    }
+  }
+
   return NextResponse.json({
     schoolYearId,
     hasMore,
     teamStudents,
     reports,
+    treasuryPreviousByWeek,
   });
 }
 

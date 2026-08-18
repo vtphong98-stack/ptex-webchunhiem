@@ -2,6 +2,7 @@ import type { AppRole, WeeklyReport } from "@/lib/types";
 import { summarizeCampaignAssignments } from "@/lib/campaign-duty";
 import { summarizeDisciplineRecords } from "@/lib/discipline-duty";
 import { summarizeLaborAssignments } from "@/lib/labor-duty";
+import { applyTreasuryLedger, computeTreasuryLedger } from "@/lib/treasury-duty";
 
 /**
  * Column keys stored in weeklyReports.fields.
@@ -42,17 +43,20 @@ export function computeTeamScore(fields: Record<string, string>) {
   );
 }
 
-/** Sheet ThuQuy: S=C*D, T=H+J+L+N+P+R, U=S-T(+ previous U) */
+/** Sheet ThuQuy: remaining = tồn tuần trước + thu − thưởng − chi (số nguyên đồng). */
 export function computeTreasury(fields: Record<string, string>, previousRemaining = 0) {
-  const totalIncome = toCount(fields.fee_per_student) * toCount(fields.quantity_paid);
-  const totalExpense = [1, 2, 3, 4, 5, 6].reduce(
-    (sum, index) => sum + toCount(fields[`expense_amount_${index}`]),
-    0,
-  );
+  const ledger = computeTreasuryLedger(fields, previousRemaining);
   return {
-    totalIncome,
-    totalExpense,
-    remaining: totalIncome - totalExpense + previousRemaining,
+    totalIncome: ledger.income,
+    totalExpense: ledger.expenseTotal,
+    remaining: ledger.remaining,
+    income: ledger.income,
+    rewardTotal: ledger.rewardTotal,
+    previousRemaining: ledger.previousRemaining,
+    paidCount: ledger.paidCount,
+    missingCount: ledger.missingCount,
+    missingStudents: ledger.missingStudents,
+    feePerStudent: ledger.feePerStudent,
   };
 }
 
@@ -81,10 +85,8 @@ export function enrichReportFields(
   }
 
   if (role === "thuQuy") {
-    const treasury = computeTreasury(next, previousRemaining);
-    next.total_income = String(treasury.totalIncome);
-    next.total_expense = String(treasury.totalExpense);
-    next.remaining = String(treasury.remaining);
+    const ledger = computeTreasuryLedger(next, previousRemaining);
+    Object.assign(next, applyTreasuryLedger(next, ledger));
   }
 
   if (role === "lopPhoLaoDong") {
@@ -108,7 +110,7 @@ export function enrichReportFields(
 export function reportHasContent(fields: Record<string, string> | undefined) {
   if (!fields) return false;
   return Object.entries(fields).some(([key, value]) => {
-    if (key === "week_range" || key === "team_score" || key === "total_income" || key === "total_expense" || key === "remaining") {
+    if (key === "week_range" || key === "team_score" || key === "total_income" || key === "total_expense" || key === "total_rewards" || key === "remaining" || key === "previous_remaining" || key === "quantity_paid" || key === "quantity_missing") {
       return false;
     }
     return String(value ?? "").trim() !== "";
