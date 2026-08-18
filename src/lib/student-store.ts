@@ -1,6 +1,12 @@
 import { getDb } from "@/lib/db";
-import { parseMemberRows } from "@/lib/team-roster";
-import type { SchoolYear, Student, WeeklyReport } from "@/lib/types";
+import { parseMemberRows, sortTeamStudents } from "@/lib/team-roster";
+import type { SchoolYear, Student, TeamRole, WeeklyReport } from "@/lib/types";
+
+export type TeamRosterStudent = {
+  _id: string;
+  fullName: string;
+  teamRole: TeamRole | null;
+};
 
 export async function getCurrentSchoolYearDoc() {
   const db = await getDb();
@@ -8,6 +14,34 @@ export async function getCurrentSchoolYearDoc() {
     { isCurrent: true },
     { projection: { _id: 1, name: 1, label: 1 } },
   );
+}
+
+export function studentsInTeam(students: Student[], teamNumber: number) {
+  return sortTeamStudents(students.filter((student) => Number(student.teamNumber) === teamNumber));
+}
+
+export function toTeamRosterStudents(students: Student[]): TeamRosterStudent[] {
+  return students.map((student) => ({
+    _id: String(student._id),
+    fullName: student.fullName,
+    teamRole: student.teamRole ?? null,
+  }));
+}
+
+export async function getAllTeamRosters(schoolYearId: string) {
+  const db = await getDb();
+  const students = await db.collection<Student>("students").find({ schoolYearId }).toArray();
+  const teams: Record<string, TeamRosterStudent[]> = {};
+  for (const teamNumber of [1, 2, 3, 4]) {
+    teams[String(teamNumber)] = toTeamRosterStudents(studentsInTeam(students, teamNumber));
+  }
+  return teams;
+}
+
+export async function getTeamRosterStudents(schoolYearId: string, teamNumber: number) {
+  const db = await getDb();
+  const students = await db.collection<Student>("students").find({ schoolYearId }).toArray();
+  return toTeamRosterStudents(studentsInTeam(students, teamNumber));
 }
 
 export async function studentStatsById(schoolYearId: string) {

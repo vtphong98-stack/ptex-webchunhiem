@@ -27,6 +27,7 @@ export function LaborForm({ fullName }: { fullName: string }) {
   const [schoolYearId, setSchoolYearId] = useState("");
   const [weekNumber, setWeekNumber] = useState(1);
   const [dutyTeam, setDutyTeam] = useState(1);
+  const [teamsByNumber, setTeamsByNumber] = useState<Record<string, LaborStudent[]>>({});
   const [students, setStudents] = useState<LaborStudent[]>([]);
   const [rows, setRows] = useState<LaborAssignmentRow[]>([]);
   const [review, setReview] = useState("");
@@ -37,34 +38,38 @@ export function LaborForm({ fullName }: { fullName: string }) {
   const [status, setStatus] = useState("");
   const reportsRef = useRef<HTMLElement>(null);
 
-  const loadTeamStudents = useCallback(async (team: number) => {
+  const loadTeamRosters = useCallback(async () => {
     setLoadingRoster(true);
     try {
-      const response = await fetch(`/api/officer/reports?limit=1&skip=0&teamNumber=${team}`);
+      const response = await fetch("/api/officer/team-rosters");
       if (!response.ok) throw new Error("fetch_failed");
       const data = await response.json();
-      setStudents((data.teamStudents ?? []) as LaborStudent[]);
+      const teams = (data.teams ?? {}) as Record<string, LaborStudent[]>;
+      setTeamsByNumber(teams);
+      if (data.schoolYearId) setSchoolYearId(data.schoolYearId);
+      return teams;
     } catch {
-      setStudents([]);
+      setTeamsByNumber({});
       setStatus("Chưa tải được danh sách tổ.");
+      return null;
     } finally {
       setLoadingRoster(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadInitial().then((data) => {
-      if (data?.schoolYearId) setSchoolYearId(data.schoolYearId);
-      const firstWeek = data?.reports[0]?.weekNumber ?? 1;
+    void Promise.all([loadInitial(), loadTeamRosters()]).then(([reportData]) => {
+      if (reportData?.schoolYearId) setSchoolYearId(reportData.schoolYearId);
+      const firstWeek = reportData?.reports[0]?.weekNumber ?? 1;
       setWeekNumber(firstWeek);
-      const saved = data?.reports.find((item) => item.weekNumber === firstWeek);
+      const saved = reportData?.reports.find((item) => item.weekNumber === firstWeek);
       setDutyTeam(saved?.fields?.duty_team ? Number(saved.fields.duty_team) : dutyTeamForWeek(firstWeek));
     });
-  }, [loadInitial]);
+  }, [loadInitial, loadTeamRosters]);
 
   useEffect(() => {
-    void loadTeamStudents(dutyTeam);
-  }, [dutyTeam, loadTeamStudents]);
+    setStudents(teamsByNumber[String(dutyTeam)] ?? []);
+  }, [teamsByNumber, dutyTeam]);
 
   useEffect(() => {
     if (!students.length) {
@@ -211,7 +216,7 @@ export function LaborForm({ fullName }: { fullName: string }) {
             <p className="labor-hint">Đang tải danh sách tổ {dutyTeam}…</p>
           ) : !students.length ? (
             <p className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">
-              Tổ {dutyTeam} chưa có học sinh. GVCN hãy import danh sách lớp từ Excel.
+              Tổ {dutyTeam} chưa có học sinh trong danh sách lớp. GVCN kiểm tra phân tổ trên trang chủ nhiệm.
             </p>
           ) : (
             <div className="labor-sheet">

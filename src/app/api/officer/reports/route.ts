@@ -5,13 +5,13 @@ import { getDb } from "@/lib/db";
 import { isClassOfficer } from "@/lib/permissions";
 import { enrichReportFields } from "@/lib/report-schema";
 import { getSessionUser } from "@/lib/session";
+import { getCurrentSchoolYearDoc, getTeamRosterStudents } from "@/lib/student-store";
 import {
   emptyMemberRow,
   membersToReportFields,
   parseMemberRows,
-  sortTeamStudents,
 } from "@/lib/team-roster";
-import type { SchoolYear, Student, WeeklyReport } from "@/lib/types";
+import type { WeeklyReport } from "@/lib/types";
 import { getExcelWeek } from "@/lib/weeks";
 
 export async function GET(request: Request) {
@@ -28,10 +28,7 @@ export async function GET(request: Request) {
   const beforeWeek = Number(searchParams.get("beforeWeek"));
 
   const db = await getDb();
-  const schoolYear = await db.collection<SchoolYear>("schoolYears").findOne(
-    { isCurrent: true },
-    { projection: { _id: 1 } },
-  );
+  const schoolYear = await getCurrentSchoolYearDoc();
   const schoolYearId = schoolYear?._id ? String(schoolYear._id) : "";
 
   if (schoolYearId && session.role === "lopPhoLaoDong" && reuseTeam >= 1 && reuseTeam <= 4 && beforeWeek > 1) {
@@ -91,23 +88,12 @@ export async function GET(request: Request) {
         : null;
 
   const teamStudents =
-    schoolYearId && teamForRoster
-      ? sortTeamStudents(
-          await db
-            .collection<Student>("students")
-            .find({ schoolYearId, teamNumber: teamForRoster })
-            .toArray(),
-        )
-      : [];
+    schoolYearId && teamForRoster ? await getTeamRosterStudents(schoolYearId, teamForRoster) : [];
 
   return NextResponse.json({
     schoolYearId,
     hasMore,
-    teamStudents: teamStudents.map((student) => ({
-      _id: String(student._id),
-      fullName: student.fullName,
-      teamRole: student.teamRole ?? null,
-    })),
+    teamStudents,
     reports,
   });
 }
@@ -128,10 +114,7 @@ export async function POST(request: Request) {
   }
 
   const db = await getDb();
-  const schoolYear = await db.collection<SchoolYear>("schoolYears").findOne(
-    { isCurrent: true },
-    { projection: { _id: 1 } },
-  );
+  const schoolYear = await getCurrentSchoolYearDoc();
   const schoolYearId = schoolYear?._id ? String(schoolYear._id) : "";
   if (!schoolYearId) {
     return NextResponse.json({ error: "Không có năm học hiện hành." }, { status: 400 });
@@ -145,14 +128,11 @@ export async function POST(request: Request) {
     teamNumber: session.teamNumber ?? null,
   });
 
-  const roster = sortTeamStudents(
-    await db
-      .collection<Student>("students")
-      .find({ schoolYearId, teamNumber: session.teamNumber ?? -1 })
-      .toArray(),
-  );
+  const roster = session.teamNumber
+    ? await getTeamRosterStudents(schoolYearId, session.teamNumber)
+    : [];
   const incoming = parseMemberRows(body.members);
-  const fromRoster = roster.map(emptyMemberRow);
+  const fromRoster = roster.map((student) => emptyMemberRow(student));
   const incomingById = new Map(incoming.map((row) => [row.studentId || row.fullName, row]));
   const aligned = fromRoster.map((row) => incomingById.get(row.studentId) ?? incomingById.get(row.fullName) ?? row);
 
