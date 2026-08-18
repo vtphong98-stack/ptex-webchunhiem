@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { logoutAction } from "@/app/dashboard/actions";
+import { GvcnWeekReportView } from "@/components/gvcn/GvcnWeekReport";
 import { TeamManager } from "@/components/gvcn/TeamManager";
 import { CLASS_SITE } from "@/lib/class-site";
+import type { GvcnWeekReport } from "@/lib/gvcn-report";
 import { OFFICER_SLOTS } from "@/lib/report-fields";
-import { formatDate, formatRoleLabel } from "@/lib/utils";
 import { buildExcelWeeks } from "@/lib/weeks";
 
 interface BoardRow {
@@ -31,6 +32,7 @@ interface WeekReport {
 interface WeekDetailData {
   reports: WeekReport[];
   summary: string;
+  report: GvcnWeekReport | null;
   ranking: { firstPlace: string; scores: Array<{ teamNumber: number; score: number }> } | null;
   weekMeta: { label?: string; dateRangeLabel?: string } | null;
 }
@@ -54,6 +56,7 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
   const [loadingWeek, setLoadingWeek] = useState(false);
   const [boardError, setBoardError] = useState("");
   const [deskView, setDeskView] = useState<"weeks" | "teams">("weeks");
+  const weekCache = useRef(new Map<number, WeekDetailData>());
 
   useEffect(() => {
     fetch("/api/gvcn/board")
@@ -69,19 +72,43 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
       .catch(() => setBoardError("Chưa tải được trạng thái nộp. Vẫn chọn tuần bình thường."));
   }, []);
 
-  const openWeek = useCallback((weekNumber: number) => {
-    setSelectedWeek(weekNumber);
-    setWeekDetail(null);
-    setLoadingWeek(true);
-    fetch(`/api/gvcn/week/${weekNumber}`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      })
-      .then((data) => setWeekDetail(data))
-      .catch(() => setWeekDetail({ reports: [], summary: "", ranking: null, weekMeta: null }))
-      .finally(() => setLoadingWeek(false));
+  const fetchWeek = useCallback(async (weekNumber: number) => {
+    const response = await fetch(`/api/gvcn/week/${weekNumber}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json() as Promise<WeekDetailData>;
   }, []);
+
+  const openWeek = useCallback(
+    (weekNumber: number) => {
+      setSelectedWeek(weekNumber);
+      const cached = weekCache.current.get(weekNumber);
+      if (cached) {
+        setWeekDetail(cached);
+        setLoadingWeek(false);
+        return;
+      }
+      setWeekDetail(null);
+      setLoadingWeek(true);
+      fetchWeek(weekNumber)
+        .then((data) => {
+          weekCache.current.set(weekNumber, data);
+          setWeekDetail(data);
+        })
+        .catch(() => setWeekDetail({ reports: [], summary: "", report: null, ranking: null, weekMeta: null }))
+        .finally(() => setLoadingWeek(false));
+    },
+    [fetchWeek],
+  );
+
+  const prefetchWeek = useCallback(
+    (weekNumber: number) => {
+      if (weekCache.current.has(weekNumber)) return;
+      void fetchWeek(weekNumber)
+        .then((data) => weekCache.current.set(weekNumber, data))
+        .catch(() => undefined);
+    },
+    [fetchWeek],
+  );
 
   return (
     <div className="container py-4 md:py-6">
@@ -141,6 +168,7 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
                   }`}
                   key={row.weekNumber}
                   onClick={() => openWeek(row.weekNumber)}
+                  onMouseEnter={() => prefetchWeek(row.weekNumber)}
                   type="button"
                 >
                   T{row.weekNumber}
@@ -170,50 +198,8 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
             </button>
           </div>
           <div className="p-5">
-            {loadingWeek ? (
-              <p className="text-sm text-slate-500">Đang tải tuần {selectedWeek}…</p>
-            ) : weekDetail?.reports?.length ? (
-              <>
-                {weekDetail.ranking?.scores?.length ? (
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    {weekDetail.ranking.scores.map((score) => (
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold" key={score.teamNumber}>
-                        Tổ {score.teamNumber}: {score.score}đ
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-                <pre className="whitespace-pre-wrap rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-800">
-                  {weekDetail.summary}
-                </pre>
-                <details className="mt-4">
-                  <summary className="cursor-pointer text-sm font-medium text-blue-600">
-                    Từng chức vụ ({weekDetail.reports.length})
-                  </summary>
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    {weekDetail.reports.map((report) => (
-                      <article className="rounded-2xl border border-slate-200 p-4" key={report._id}>
-                        <p className="text-sm font-semibold">
-                          {formatRoleLabel(report.reporterRole)}
-                          {report.teamNumber ? ` · Tổ ${report.teamNumber}` : ""}
-                        </p>
-                        <p className="text-[11px] text-slate-400">{formatDate(report.updatedAt)}</p>
-                        <div className="mt-2 space-y-1 text-sm">
-                          {report.fieldDefs.map((field) => {
-                            const value = report.fields[field.name];
-                            if (!value || field.name === "members_json" || field.name === "write_mode" || field.name === "week_range") return null;
-                            return (
-                              <p key={field.name}>
-                                <strong>{field.label}:</strong> {value}
-                              </p>
-                            );
-                          })}
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </details>
-              </>
+            {weekDetail?.reports?.length || loadingWeek ? (
+              <GvcnWeekReportView loading={loadingWeek} report={weekDetail?.report ?? null} reports={weekDetail?.reports ?? []} />
             ) : (
               <p className="py-6 text-center text-sm text-slate-500">Tuần {selectedWeek} chưa có báo cáo.</p>
             )}

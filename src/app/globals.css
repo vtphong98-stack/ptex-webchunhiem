@@ -479,6 +479,243 @@ button {
   color: #9ca3af;
 }
 
+.gvcn-report {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.gvcn-report-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.gvcn-report-kicker {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.gvcn-report-meta {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.gvcn-copy-btn {
+  white-space: nowrap;
+}
+
+.gvcn-source-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gvcn-source {
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+.gvcn-source-ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.gvcn-ranking-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gvcn-ranking-pill {
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  border: 1px solid #dbeafe;
+  color: #1e3a8a;
+}
+
+.gvcn-report-sections {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.gvcn-report-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 14px;
+  background: #fafbfc;
+}
+
+.gvcn-report-section h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.gvcn-report-line {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.gvcn-report-line dt {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.gvcn-report-line dd {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #0f172a;
+}
+
+.gvcn-line-sources {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.gvcn-violations {
+  border: 1px solid #fecaca;
+  border-radius: 16px;
+  padding: 14px;
+  background: linear-gradient(180deg, #fff7ed 0%, #fff 100%);
+}
+
+.gvcn-violations h4 {
+  margin: 0;
+  font-size: 15px;
+  color: #9a3412;
+}
+
+.gvcn-violations-note {
+  margin: 4px 0 12px;
+  font-size: 12px;
+  color: #b45309;
+}
+
+.gvcn-violations-table-wrap {
+  overflow-x: auto;
+}
+
+.gvcn-violations-table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.gvcn-violations-table th,
+.gvcn-violations-table td {
+  border: 1px solid #fed7aa;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.gvcn-violations-table th {
+  background: #ffedd5;
+  color: #9a3412;
+  font-weight: 700;
+}
+
+.gvcn-viol-tag {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.gvcn-viol-late { background: #fef3c7; color: #92400e; }
+.gvcn-viol-absent { background: #fce7f3; color: #9d174d; }
+.gvcn-viol-notPrepared { background: #ede9fe; color: #5b21b6; }
+.gvcn-viol-noHomework { background: #e0e7ff; color: #3730a3; }
+.gvcn-viol-disorder { background: #ffedd5; color: #c2410c; }
+
+.gvcn-officer-refs {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #fff;
+}
+
+.gvcn-officer-refs summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.gvcn-officer-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.gvcn-officer-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px;
+  background: #f8fafc;
+  font-size: 13px;
+}
+
+.gvcn-officer-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.gvcn-officer-card time {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.gvcn-officer-fields p {
+  margin: 0 0 6px;
+  line-height: 1.45;
+}
+
+.gvcn-officer-fields span {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.gvcn-report-loading,
+.gvcn-report-empty {
+  text-align: center;
+  padding: 24px;
+  color: #64748b;
+  font-size: 14px;
+}
+
 @media (max-width: 600px) {
   .site-shell {
     padding: 16px;

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
+import { buildGvcnWeekReport } from "@/lib/gvcn-report";
 import { getDb } from "@/lib/db";
 import { canReviewReports } from "@/lib/permissions";
 import { getReportFields } from "@/lib/report-fields";
-import { assembleGvcnSummary, getTeamScoresForWeek } from "@/lib/report-schema";
 import { getSessionUser } from "@/lib/session";
 import type { SchoolYear, WeeklyReport } from "@/lib/types";
 import { buildExcelWeeks } from "@/lib/weeks";
@@ -31,7 +31,7 @@ export async function GET(
     );
 
     if (!schoolYear?._id) {
-      return NextResponse.json({ reports: [], summary: "", ranking: null, weekMeta: null });
+      return NextResponse.json({ reports: [], summary: "", report: null, ranking: null, weekMeta: null });
     }
 
     const schoolYearId = String(schoolYear._id);
@@ -41,32 +41,38 @@ export async function GET(
     const reports = await db.collection<WeeklyReport>("weeklyReports")
       .find(
         { schoolYearId, weekNumber },
-        { projection: { reporterRole: 1, teamNumber: 1, updatedAt: 1, fields: 1, summary: 1 } },
+        { projection: { reporterRole: 1, teamNumber: 1, updatedAt: 1, fields: 1, summary: 1, weekNumber: 1 } },
       )
       .sort({ updatedAt: -1 })
       .toArray();
 
-    const imported = reports.find((item) => item.reporterRole === "gvcn");
-    const summary = imported?.fields?.summary || imported?.summary || assembleGvcnSummary({
+    const built = buildGvcnWeekReport({
       weekNumber,
       dateRangeLabel: weekMeta?.dateRangeLabel,
       reports,
     });
 
-    return NextResponse.json({
-      reports: reports.map((report) => ({
-        _id: String(report._id),
-        reporterRole: report.reporterRole,
-        teamNumber: report.teamNumber,
-        updatedAt: report.updatedAt,
-        fields: report.fields ?? {},
-        fieldDefs: getReportFields(report.reporterRole),
-      })),
-      summary,
-      ranking: getTeamScoresForWeek(reports, weekNumber),
-      weekMeta,
-    });
+    const imported = reports.find((item) => item.reporterRole === "gvcn");
+    const summary = imported?.fields?.summary || imported?.summary || built.text;
+
+    return NextResponse.json(
+      {
+        reports: reports.map((report) => ({
+          _id: String(report._id),
+          reporterRole: report.reporterRole,
+          teamNumber: report.teamNumber,
+          updatedAt: report.updatedAt,
+          fields: report.fields ?? {},
+          fieldDefs: getReportFields(report.reporterRole),
+        })),
+        summary,
+        report: built,
+        ranking: built.ranking,
+        weekMeta,
+      },
+      { headers: { "Cache-Control": "private, max-age=15" } },
+    );
   } catch {
-    return NextResponse.json({ reports: [], summary: "", ranking: null, weekMeta: null }, { status: 500 });
+    return NextResponse.json({ reports: [], summary: "", report: null, ranking: null, weekMeta: null }, { status: 500 });
   }
 }
