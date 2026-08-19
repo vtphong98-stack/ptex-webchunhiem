@@ -1,5 +1,5 @@
 import { CLASS_SITE } from "@/lib/class-site";
-import { emptyTimetableGrid, parseStoredTimetable, timetableDisplayFromGrid } from "@/lib/excel-timetable";
+import { emptyTimetableGrid, parseStoredTimetable, timetableDisplayFromGrid, timetableDisplayFromJson } from "@/lib/excel-timetable";
 import { getDb } from "@/lib/db";
 import { getHomeBoard } from "@/lib/home-board";
 import { sortNotices, toPublicNotice } from "@/lib/notices";
@@ -21,6 +21,13 @@ export async function getPublicSiteData() {
   const config = schoolYearId ? await resolveClassConfig(schoolYearId) : null;
   const stored = parseStoredTimetable(config?.timetableJson);
   const display = timetableDisplayFromGrid(stored ?? emptyTimetableGrid());
+  const timetableVersions = (config?.timetableHistory ?? [])
+    .map((item) => {
+      const snapshot = timetableDisplayFromJson(item.timetableJson);
+      if (!snapshot) return null;
+      return { id: item.id, createdAt: item.createdAt, ...snapshot };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
   const noticeDocs = schoolYearId
     ? await db.collection<GvcnNotice>("notices").find({ schoolYearId }).toArray()
     : [];
@@ -40,6 +47,8 @@ export async function getPublicSiteData() {
       birthMonth: item.birthMonth,
     })),
     timetable: display,
+    timetableUpdatedAt: config?.timetableUpdatedAt || (config?.timetableJson ? config.updatedAt : "") || "",
+    timetableVersions,
     board: await getHomeBoard(schoolYearId),
   };
 }

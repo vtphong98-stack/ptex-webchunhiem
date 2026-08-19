@@ -56,8 +56,18 @@ export type ClassConfig = {
   examDate?: string;
   note?: string;
   timetableJson?: string;
+  timetableUpdatedAt?: string;
+  timetableHistory?: TimetableVersion[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type TimetableVersion = {
+  id: string;
+  createdAt: string;
+  createdBy?: string;
+  createdByName?: string;
+  timetableJson: string;
 };
 
 export type GvcnNotice = {

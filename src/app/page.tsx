@@ -1,7 +1,7 @@
 import { BirthdayBanner, ExamCountdown, LuckyWheel } from "@/components/home/HomeWidgets";
 import { ClassBoards } from "@/components/home/ClassBoards";
 import { GvcnNotices } from "@/components/home/GvcnNotices";
-import { Timetable } from "@/components/home/Timetable";
+import { TimetablePanel } from "@/components/home/TimetablePanel";
 import { YearTimeline } from "@/components/home/YearTimeline";
 import { CLASS_SITE, LEARNING_LINKS, OFFICER_LINKS } from "@/lib/class-site";
 import { getPublicSiteData } from "@/lib/public-site";
@@ -42,16 +42,25 @@ export default async function HomePage() {
 
         <BirthdayBanner students={site.students} />
 
-        <section className="site-section">
+        <section className="site-section block-teal">
           <h2>Mốc thời gian năm học {CLASS_SITE.schoolYear}</h2>
           <YearTimeline />
         </section>
 
-        <section className="site-section">
+        <section className="site-section block-blue">
           <h2>Thời khóa biểu</h2>
           <ExamCountdown />
           {site.hasTimetable ? (
-            <Timetable afternoon={site.timetable.afternoon} morning={site.timetable.morning} />
+            <TimetablePanel
+              current={{
+                id: "current",
+                createdAt: site.timetableUpdatedAt,
+                current: true,
+                morning: site.timetable.morning,
+                afternoon: site.timetable.afternoon,
+              }}
+              versions={site.timetableVersions}
+            />
           ) : (
             <div className="site-widget">
               <p style={{ margin: 0 }}>
@@ -62,7 +71,7 @@ export default async function HomePage() {
           )}
         </section>
 
-        <section className="site-section">
+        <section className="site-section block-sky">
           <h2>Học online và Roboki AI cho học sinh</h2>
           <ul className="site-links">
             {LEARNING_LINKS.map((link) => (
@@ -75,7 +84,7 @@ export default async function HomePage() {
           </ul>
         </section>
 
-        <section className="site-section">
+        <section className="site-section block-pink">
           <h2>Kỷ niệm lớp {site.className}</h2>
           <div className="site-widget" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <strong>Album lớp</strong>
@@ -85,7 +94,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section className="site-section">
+        <section className="site-section block-indigo">
           <h2>Ban cán sự lớp báo cáo</h2>
           <ul className="site-links">
             {OFFICER_LINKS.map((link) => (
@@ -96,7 +105,7 @@ export default async function HomePage() {
           </ul>
         </section>
 
-        <section className="site-section">
+        <section className="site-section block-green">
           <h2>Giáo viên chủ nhiệm · Lớp {site.className}</h2>
           <ul className="site-links">
             <li>
@@ -120,10 +129,17 @@ export default async function HomePage() {
           </ul>
         </section>
 
-        <section className="site-section">
+        <section className="site-section block-orange">
           <h2>Vòng quay may mắn</h2>
           <LuckyWheel names={site.students.map((student) => student.fullName)} />
         </section>
+
+        <footer className="site-copyright">
+          <p>
+            © {new Date().getFullYear()} {site.fullName} · GVCN Thầy {CLASS_SITE.gvcnName}
+          </p>
+          <p>Web báo cáo chủ nhiệm · Mọi quyền được bảo lưu.</p>
+        </footer>
       </div>
     </main>
   );

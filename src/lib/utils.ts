@@ -33,6 +33,20 @@ export function formatDate(iso?: string | null) {
   }).format(new Date(iso));
 }
 
+export function formatDateTime(iso?: string | null) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 export function schoolYearLabelFromName(name: string) {
   return `Năm học ${name}`;
 }

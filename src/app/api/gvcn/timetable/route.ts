@@ -1,4 +1,5 @@
 import { ObjectId } from "mongodb";
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { CURRENT_CLASS_NAME, CURRENT_SCHOOL_YEAR } from "@/lib/academic-calendar";
@@ -7,6 +8,7 @@ import { parseTimetableWorkbook } from "@/lib/excel-timetable";
 import { canManageStudents } from "@/lib/permissions";
 import { resolveClassConfig, resolveSchoolYear, resolveSchoolYearFromRequest } from "@/lib/school-year-scope";
 import { getSessionUser } from "@/lib/session";
+import { archiveCurrentTimetable, versionMeta } from "@/lib/timetable-versions";
 import type { ClassConfig } from "@/lib/types";
 
 export async function GET(request: Request) {
@@ -20,7 +22,8 @@ export async function GET(request: Request) {
   return NextResponse.json({
     yearName: year?.name ?? "",
     isCurrent: Boolean(year?.isCurrent),
-    timetableJson: config?.timetableJson ?? "",
+    updatedAt: config?.timetableUpdatedAt || (config?.timetableJson ? config.updatedAt : ""),
+    versions: (config?.timetableHistory ?? []).map(versionMeta),
   });
 }
 
@@ -51,9 +54,13 @@ export async function POST(request: Request) {
   const configs = db.collection<ClassConfig>("classConfigs");
   const existing = await configs.findOne({ schoolYearId });
   const timetableJson = JSON.stringify(grid);
+  const timetableHistory = archiveCurrentTimetable(existing, { id: session.id, fullName: session.fullName });
 
   if (existing?._id) {
-    await configs.updateOne({ _id: existing._id }, { $set: { timetableJson, updatedAt: now } });
+    await configs.updateOne(
+      { _id: existing._id },
+      { $set: { timetableJson, timetableUpdatedAt: now, timetableHistory, updatedAt: now } },
+    );
   } else {
     await configs.insertOne({
       _id: new ObjectId().toHexString(),
@@ -65,10 +72,18 @@ export async function POST(request: Request) {
       gvcnPhone: "0382311919",
       gvcnZalo: "0382311919",
       timetableJson,
+      timetableUpdatedAt: now,
+      timetableHistory,
       createdAt: now,
       updatedAt: now,
     });
   }
 
-  return NextResponse.json({ ok: true, yearName: year.name });
+  revalidatePath("/");
+  return NextResponse.json({
+    ok: true,
+    yearName: year.name,
+    updatedAt: now,
+    versions: timetableHistory.map(versionMeta),
+  });
 }

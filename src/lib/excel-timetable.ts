@@ -124,3 +124,8 @@ export function parseStoredTimetable(raw?: string | null): TimetableGrid | null 
     return null;
   }
 }
+
+export function timetableDisplayFromJson(raw?: string | null) {
+  const stored = parseStoredTimetable(raw);
+  return stored ? timetableDisplayFromGrid(stored) : null;
+}

@@ -106,7 +106,7 @@ export function ClassBoards({ board }: { board: HomeBoard }) {
 
   return (
     <>
-      <section className="site-section home-board-section">
+      <section className="site-section home-board-section block-amber">
         <h2>Bảng xếp hạng các tổ</h2>
         <div className="home-board home-board-rank">
           <p className="home-board-kicker">{kicker}</p>
@@ -116,7 +116,7 @@ export function ClassBoards({ board }: { board: HomeBoard }) {
         </div>
       </section>
 
-      <section className="site-section home-board-section">
+      <section className="site-section home-board-section block-rose">
         <h2>Học sinh tiêu biểu tuần qua</h2>
         <div className="home-board home-board-stars">
           <p className="home-board-kicker">Điểm tốt và phát biểu nhiều nhất được ghi nhận lên bảng vàng lớp.</p>
