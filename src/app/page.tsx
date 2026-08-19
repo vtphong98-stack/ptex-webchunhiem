@@ -1,4 +1,5 @@
-import { BirthdayBanner, ExamCountdown, HomeRanking, LuckyWheel } from "@/components/home/HomeWidgets";
+import { BirthdayBanner, ExamCountdown, LuckyWheel } from "@/components/home/HomeWidgets";
+import { ClassBoards } from "@/components/home/ClassBoards";
 import { GvcnNotices } from "@/components/home/GvcnNotices";
 import { Timetable } from "@/components/home/Timetable";
 import { YearTimeline } from "@/components/home/YearTimeline";
@@ -37,18 +38,7 @@ export default async function HomePage() {
 
         <GvcnNotices notices={site.notices} />
 
-        <section className="site-section">
-          <h2>Sơ yếu lý lịch đầu năm</h2>
-          <div className="syll-home">
-            <p>
-              Năm học {CLASS_SITE.schoolYear} bắt đầu từ sơ yếu lý lịch. Mỗi em điền một lần — dữ liệu vào MongoDB
-              (toàn web: liên hệ, tra cứu, ban cán sự) và Google Sheet lớp.
-            </p>
-            <a className="button-primary" href="/syll">
-              Điền sơ yếu lý lịch
-            </a>
-          </div>
-        </section>
+        <ClassBoards board={site.board} />
 
         <BirthdayBanner students={site.students} />
 
@@ -71,8 +61,6 @@ export default async function HomePage() {
             </div>
           )}
         </section>
-
-        <HomeRanking />
 
         <section className="site-section">
           <h2>Học online và Roboki AI cho học sinh</h2>

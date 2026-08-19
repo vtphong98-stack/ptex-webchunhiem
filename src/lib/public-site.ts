@@ -1,6 +1,7 @@
 import { CLASS_SITE } from "@/lib/class-site";
 import { emptyTimetableGrid, parseStoredTimetable, timetableDisplayFromGrid } from "@/lib/excel-timetable";
 import { getDb } from "@/lib/db";
+import { getHomeBoard } from "@/lib/home-board";
 import { sortNotices, toPublicNotice } from "@/lib/notices";
 import type { ContactCard } from "@/lib/phone";
 import { resolveClassConfig, resolveSchoolYear } from "@/lib/school-year-scope";
@@ -39,6 +40,7 @@ export async function getPublicSiteData() {
       birthMonth: item.birthMonth,
     })),
     timetable: display,
+    board: await getHomeBoard(schoolYearId),
   };
 }
 

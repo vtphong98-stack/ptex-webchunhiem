@@ -1759,3 +1759,306 @@ button {
     font-size: 0.9rem;
   }
 }
+
+.home-board-section {
+  content-visibility: visible;
+}
+
+.home-board {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 16px 20px;
+  border-radius: 22px;
+  color: #1e1b4b;
+}
+
+.home-board-rank {
+  background:
+    radial-gradient(120% 80% at 10% -10%, rgba(250, 204, 21, 0.35), transparent 46%),
+    radial-gradient(90% 70% at 110% 10%, rgba(99, 102, 241, 0.28), transparent 42%),
+    linear-gradient(160deg, #1e1b4b 0%, #312e81 42%, #4c1d95 100%);
+  color: #fff;
+  box-shadow: 0 18px 40px rgba(49, 46, 129, 0.28);
+}
+
+.home-board-stars {
+  background:
+    radial-gradient(90% 70% at 0% 0%, rgba(251, 191, 36, 0.22), transparent 45%),
+    linear-gradient(180deg, #fff7ed 0%, #ffffff 48%, #eef2ff 100%);
+  border: 1px solid #fde68a;
+  box-shadow: 0 16px 32px rgba(245, 158, 11, 0.12);
+}
+
+.home-board-kicker {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+
+.home-board-lead {
+  margin: 0 0 16px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.home-board-empty {
+  margin: 8px 0 14px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.home-board-stars .home-board-empty {
+  background: #fff;
+  color: #7c2d12;
+  border: 1px dashed #fbbf24;
+}
+
+.home-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+  margin: 8px 0 18px;
+}
+
+.home-podium.count-1 {
+  grid-template-columns: minmax(0, 220px);
+  justify-content: center;
+}
+
+.home-podium.count-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.home-podium-card {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 14px 8px 12px;
+  border-radius: 18px 18px 8px 8px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.12);
+  min-height: 118px;
+}
+
+.home-podium-card.is-1 {
+  min-height: 168px;
+  background: linear-gradient(180deg, #fde68a, #f59e0b);
+  color: #7c2d12;
+  box-shadow: 0 12px 24px rgba(245, 158, 11, 0.35);
+  transform: translateY(-8px);
+}
+
+.home-podium-card.is-2 {
+  min-height: 138px;
+  background: linear-gradient(180deg, #e2e8f0, #94a3b8);
+  color: #0f172a;
+}
+
+.home-podium-card.is-3 {
+  min-height: 118px;
+  background: linear-gradient(180deg, #fdba74, #ea580c);
+  color: #7c2d12;
+}
+
+.home-podium-medal {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.home-podium-card strong {
+  font-size: 18px;
+}
+
+.home-podium-card em {
+  font-style: normal;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.home-podium-card span:last-child {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+
+.home-rank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.home-rank-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.home-rank-place {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.home-rank-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.home-rank-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+
+.home-rank-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #fde68a, #f97316);
+}
+
+.home-rank-row.tone-gold .home-rank-bar span { background: linear-gradient(90deg, #fde68a, #f59e0b); }
+.home-rank-row.tone-sky .home-rank-bar span { background: linear-gradient(90deg, #bae6fd, #0ea5e9); }
+.home-rank-row.tone-rose .home-rank-bar span { background: linear-gradient(90deg, #fecdd3, #f43f5e); }
+.home-rank-row.tone-mint .home-rank-bar span { background: linear-gradient(90deg, #bbf7d0, #10b981); }
+
+.home-star-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.home-star-card {
+  padding: 14px 12px 12px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+.home-star-card.is-1 {
+  background: linear-gradient(180deg, #fffbeb, #fff);
+  border-color: #f59e0b;
+  box-shadow: 0 12px 28px rgba(245, 158, 11, 0.18);
+}
+
+.home-star-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.home-star-avatar {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.home-star-card.tone-gold .home-star-avatar { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.home-star-card.tone-sky .home-star-avatar { background: linear-gradient(135deg, #0ea5e9, #2563eb); }
+.home-star-card.tone-rose .home-star-avatar { background: linear-gradient(135deg, #f43f5e, #db2777); }
+.home-star-card.tone-mint .home-star-avatar { background: linear-gradient(135deg, #10b981, #0f766e); }
+
+.home-star-medal {
+  font-size: 22px;
+}
+
+.home-star-card h3 {
+  margin: 10px 0 2px;
+  font-size: 15px;
+  line-height: 1.3;
+  color: #0f172a;
+}
+
+.home-star-card > p {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.home-star-card ul {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.home-star-card li {
+  padding: 8px 6px;
+  border-radius: 12px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.home-star-card li b {
+  display: block;
+  font-size: 18px;
+  color: #b45309;
+}
+
+.home-star-card li span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+@media (min-width: 640px) {
+  .home-star-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .home-podium-card {
+    padding: 10px 4px 10px;
+  }
+
+  .home-podium-card strong {
+    font-size: 14px;
+  }
+
+  .home-podium-card em {
+    font-size: 22px;
+  }
+
+  .home-podium-card.is-1 {
+    min-height: 142px;
+    transform: none;
+  }
+}
