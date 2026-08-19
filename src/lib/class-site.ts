@@ -215,6 +215,15 @@ export const OFFICER_LINKS = [
   { href: "/login?user=thuquy", label: "Thủ Quỹ", code: "thuquy", icon: "wallet", className: "link-3" },
 ];
 
+export const GVCN_HOME_LINKS = [
+  { href: "/login?user=gvcn", label: "Thông báo GVCN", className: "link-gvcn-1" },
+  { href: "/login?user=gvcn", label: "Tổng kết lớp theo tuần", className: "link-gvcn-2" },
+  { href: "/login?user=gvcn", label: "Dữ liệu lớp · tra cứu HS", className: "link-gvcn-3" },
+  { href: "/lien-he-phu-huynh", label: "Liên hệ nhanh phụ huynh", className: "link-gvcn-4" },
+  { href: "/lien-he-hoc-sinh", label: "Liên hệ nhanh học sinh", className: "link-gvcn-5" },
+  { href: "/syll", label: "Sơ yếu lý lịch học sinh", className: "link-gvcn-6" },
+];
+
 export const LEARNING_LINKS = [
   { href: "https://vi.khanacademy.org/", label: "KAV" },
   { href: "https://roboki.vn/g/681d6f075a561b1d5e71e835", label: "Gia sư ROBOKI AI" },

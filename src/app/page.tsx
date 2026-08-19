@@ -3,7 +3,7 @@ import { ClassBoards } from "@/components/home/ClassBoards";
 import { GvcnNotices } from "@/components/home/GvcnNotices";
 import { TimetablePanel } from "@/components/home/TimetablePanel";
 import { YearTimeline } from "@/components/home/YearTimeline";
-import { CLASS_SITE, LEARNING_LINKS, OFFICER_LINKS } from "@/lib/class-site";
+import { CLASS_SITE, GVCN_HOME_LINKS, LEARNING_LINKS, OFFICER_LINKS } from "@/lib/class-site";
 import { getPublicSiteData } from "@/lib/public-site";
 
 export const dynamic = "force-dynamic";
@@ -99,7 +99,9 @@ export default async function HomePage() {
           <ul className="site-links">
             {OFFICER_LINKS.map((link) => (
               <li key={link.code}>
-                <a href={`/login?user=${link.code}`}>{link.label}</a>
+                <a className={link.className} href={`/login?user=${link.code}`}>
+                  {link.label}
+                </a>
               </li>
             ))}
           </ul>
@@ -108,24 +110,13 @@ export default async function HomePage() {
         <section className="site-section block-green">
           <h2>Giáo viên chủ nhiệm · Lớp {site.className}</h2>
           <ul className="site-links">
-            <li>
-              <a href="/login?user=gvcn">Thông báo GVCN</a>
-            </li>
-            <li>
-              <a href="/login?user=gvcn">Tổng kết lớp theo tuần</a>
-            </li>
-            <li>
-              <a href="/login?user=gvcn">Dữ liệu lớp · tra cứu HS</a>
-            </li>
-            <li>
-              <a href="/lien-he-phu-huynh">Liên hệ nhanh phụ huynh</a>
-            </li>
-            <li>
-              <a href="/lien-he-hoc-sinh">Liên hệ nhanh học sinh</a>
-            </li>
-            <li>
-              <a href="/syll">Sơ yếu lý lịch học sinh</a>
-            </li>
+            {GVCN_HOME_LINKS.map((link) => (
+              <li key={link.label}>
+                <a className={link.className} href={link.href}>
+                  {link.label}
+                </a>
+              </li>
+            ))}
           </ul>
         </section>
 
