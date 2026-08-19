@@ -120,15 +120,7 @@ export async function getHomeBoard(schoolYearId: string): Promise<HomeBoard> {
     { sort: { weekNumber: -1 }, projection: { weekNumber: 1 } },
   );
   const latestReported = latest?.weekNumber ?? 0;
-
-  let weekNumber = completed;
-  if (completed) {
-    const count = await reports.countDocuments({ schoolYearId, reporterRole: "toTruong", weekNumber: completed });
-    if (!count && latestReported && latestReported <= completed) weekNumber = latestReported;
-    if (!count && !latestReported) weekNumber = completed;
-  } else {
-    weekNumber = latestReported;
-  }
+  const weekNumber = latestReported || completed;
 
   if (!weekNumber) return empty;
 

@@ -4,8 +4,8 @@ import { getDb } from "@/lib/db";
 import type { ClassConfig, SchoolYear } from "@/lib/types";
 import { buildWeeks2025 } from "@/lib/weeks";
 
-export async function resolveSchoolYear(yearName?: string | null) {
-  await ensureSeedData();
+export async function resolveSchoolYear(yearName?: string | null, options?: { seed?: boolean }) {
+  if (options?.seed !== false) await ensureSeedData();
   const db = await getDb();
   const years = db.collection<SchoolYear>("schoolYears");
   if (yearName) {

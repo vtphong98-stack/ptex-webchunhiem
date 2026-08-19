@@ -287,34 +287,34 @@ button {
   transform: translate3d(0, -2px, 0);
 }
 
-.site-links a:not([class^="link-"]):hover {
+.site-links a:not(.site-tile):hover {
   background: #eef1ff;
 }
 
-.site-links a[class^="link-"] {
+.site-links a.site-tile {
   color: #fff;
   border: 0;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
 }
 
-.site-links a[class^="link-"]:hover {
+.site-links a.site-tile:hover {
   filter: brightness(1.08);
 }
 
-.link-2 { background: linear-gradient(135deg, #38bdf8, #2563eb); }
-.link-3 { background: linear-gradient(135deg, #fbbf24, #d97706); }
-.link-4 { background: linear-gradient(135deg, #34d399, #059669); }
-.link-5 { background: linear-gradient(135deg, #f472b6, #db2777); }
-.link-6 { background: linear-gradient(135deg, #fb7185, #f59e0b); }
-.link-7 { background: linear-gradient(135deg, #22d3ee, #4f46e5); }
-.link-8 { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+.site-links a.link-2 { background: linear-gradient(135deg, #38bdf8, #2563eb); }
+.site-links a.link-3 { background: linear-gradient(135deg, #fbbf24, #d97706); }
+.site-links a.link-4 { background: linear-gradient(135deg, #34d399, #059669); }
+.site-links a.link-5 { background: linear-gradient(135deg, #f472b6, #db2777); }
+.site-links a.link-6 { background: linear-gradient(135deg, #fb7185, #f59e0b); }
+.site-links a.link-7 { background: linear-gradient(135deg, #22d3ee, #4f46e5); }
+.site-links a.link-8 { background: linear-gradient(135deg, #f59e0b, #ef4444); }
 
-.link-gvcn-1 { background: linear-gradient(135deg, #8b5cf6, #2563eb); }
-.link-gvcn-2 { background: linear-gradient(135deg, #10b981, #0f766e); }
-.link-gvcn-3 { background: linear-gradient(135deg, #14b8a6, #0369a1); }
-.link-gvcn-4 { background: linear-gradient(135deg, #f43f5e, #fb7185); }
-.link-gvcn-5 { background: linear-gradient(135deg, #0ea5e9, #6366f1); }
-.link-gvcn-6 { background: linear-gradient(135deg, #84cc16, #16a34a); }
+.site-links a.link-gvcn-1 { background: linear-gradient(135deg, #8b5cf6, #2563eb); }
+.site-links a.link-gvcn-2 { background: linear-gradient(135deg, #10b981, #0f766e); }
+.site-links a.link-gvcn-3 { background: linear-gradient(135deg, #14b8a6, #0369a1); }
+.site-links a.link-gvcn-4 { background: linear-gradient(135deg, #f43f5e, #fb7185); }
+.site-links a.link-gvcn-5 { background: linear-gradient(135deg, #0ea5e9, #6366f1); }
+.site-links a.link-gvcn-6 { background: linear-gradient(135deg, #84cc16, #16a34a); }
 
 .site-widget {
   text-align: center;

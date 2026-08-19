@@ -6,7 +6,7 @@ import { YearTimeline } from "@/components/home/YearTimeline";
 import { CLASS_SITE, GVCN_HOME_LINKS, LEARNING_LINKS, OFFICER_LINKS } from "@/lib/class-site";
 import { getPublicSiteData } from "@/lib/public-site";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 export default async function HomePage() {
   const site = await getPublicSiteData();
@@ -99,7 +99,7 @@ export default async function HomePage() {
           <ul className="site-links">
             {OFFICER_LINKS.map((link) => (
               <li key={link.code}>
-                <a className={link.className} href={`/login?user=${link.code}`}>
+                <a className={`site-tile ${link.className}`} href={`/login?user=${link.code}`}>
                   {link.label}
                 </a>
               </li>
@@ -112,7 +112,7 @@ export default async function HomePage() {
           <ul className="site-links">
             {GVCN_HOME_LINKS.map((link) => (
               <li key={link.label}>
-                <a className={link.className} href={link.href}>
+                <a className={`site-tile ${link.className}`} href={link.href}>
                   {link.label}
                 </a>
               </li>

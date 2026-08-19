@@ -1,5 +1,5 @@
 import { CLASS_SITE } from "@/lib/class-site";
-import { emptyTimetableGrid, parseStoredTimetable, timetableDisplayFromGrid, timetableDisplayFromJson } from "@/lib/excel-timetable";
+import { parseStoredTimetable, timetableDisplayFromGrid, timetableDisplayFromJson } from "@/lib/excel-timetable";
 import { getDb } from "@/lib/db";
 import { getHomeBoard } from "@/lib/home-board";
 import { sortNotices, toPublicNotice } from "@/lib/notices";
@@ -8,29 +8,33 @@ import { resolveClassConfig, resolveSchoolYear } from "@/lib/school-year-scope";
 import type { GvcnNotice, Student } from "@/lib/types";
 
 export async function getPublicSiteData() {
-  const year = await resolveSchoolYear();
+  const year = await resolveSchoolYear(undefined, { seed: false });
   const schoolYearId = year?._id ? String(year._id) : "";
   const db = await getDb();
-  const students = schoolYearId
-    ? await db
-        .collection<Student>("students")
-        .find({ schoolYearId }, { projection: { fullName: 1, birthDay: 1, birthMonth: 1 } })
-        .sort({ profileTt: 1, fullName: 1 })
-        .toArray()
-    : [];
-  const config = schoolYearId ? await resolveClassConfig(schoolYearId) : null;
+
+  const [students, config, noticeDocs, board] = schoolYearId
+    ? await Promise.all([
+        db
+          .collection<Student>("students")
+          .find({ schoolYearId }, { projection: { fullName: 1, birthDay: 1, birthMonth: 1 } })
+          .sort({ profileTt: 1, fullName: 1 })
+          .toArray(),
+        resolveClassConfig(schoolYearId),
+        db.collection<GvcnNotice>("notices").find({ schoolYearId }).limit(12).toArray(),
+        getHomeBoard(schoolYearId),
+      ])
+    : [[], null, [], await getHomeBoard("")];
+
   const stored = parseStoredTimetable(config?.timetableJson);
-  const display = timetableDisplayFromGrid(stored ?? emptyTimetableGrid());
+  const display = stored ? timetableDisplayFromGrid(stored) : { morning: {}, afternoon: {} };
   const timetableVersions = (config?.timetableHistory ?? [])
+    .slice(0, 8)
     .map((item) => {
       const snapshot = timetableDisplayFromJson(item.timetableJson);
       if (!snapshot) return null;
       return { id: item.id, createdAt: item.createdAt, ...snapshot };
     })
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
-  const noticeDocs = schoolYearId
-    ? await db.collection<GvcnNotice>("notices").find({ schoolYearId }).toArray()
-    : [];
   const notices = sortNotices(noticeDocs).slice(0, 8);
   const newest = [...noticeDocs].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
   const newestId = newest?._id ? String(newest._id) : "";
@@ -49,7 +53,7 @@ export async function getPublicSiteData() {
     timetable: display,
     timetableUpdatedAt: config?.timetableUpdatedAt || (config?.timetableJson ? config.updatedAt : "") || "",
     timetableVersions,
-    board: await getHomeBoard(schoolYearId),
+    board,
   };
 }
 
