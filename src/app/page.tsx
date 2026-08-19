@@ -14,24 +14,40 @@ export default async function HomePage() {
   return (
     <main className="py-4 md:py-8">
       <div className="site-shell">
-        <header className="site-header">
-          <h1>{site.fullName}</h1>
-          <p className="site-gvcn">GVCN: {CLASS_SITE.gvcnName}</p>
-          <div className="site-actions">
-            <a className="site-chip" href={CLASS_SITE.syll}>
-              Sơ yếu lý lịch
-            </a>
-            <a className="site-chip" href={CLASS_SITE.careerBot} rel="noreferrer" target="_blank">
-              Bot Tư vấn hướng nghiệp
-            </a>
-            <a className="site-chip" href={CLASS_SITE.careerForm} rel="noreferrer" target="_blank">
-              Đăng ký tư vấn học đường
-            </a>
+        <header className="site-hero">
+          <p className="site-hero-kicker">Năm học {site.yearName}</p>
+          <h1>
+            <span className="site-hero-class">{site.className}</span>
+            <span className="site-hero-sub">Lớp chủ nhiệm</span>
+          </h1>
+          <div className="site-hero-teacher">
+            <span aria-hidden className="site-hero-avatar">
+              {CLASS_SITE.gvcnName
+                .split(/\s+/)
+                .map((part) => part[0])
+                .join("")
+                .slice(-3)}
+            </span>
+            <div>
+              <strong>Thầy {CLASS_SITE.gvcnName}</strong>
+              <span>Giáo viên chủ nhiệm</span>
+            </div>
           </div>
-          <div className="site-contact" style={{ marginTop: 14 }}>
-            <a href={`tel:${CLASS_SITE.gvcnPhone}`}>Gọi Điện</a>
-            <a href={`https://zalo.me/${CLASS_SITE.gvcnPhone}`} rel="noreferrer" target="_blank">
-              Liên hệ Zalo
+          <nav className="site-hero-actions" aria-label="Tác vụ đầu năm">
+            <a href={CLASS_SITE.syll}>Sơ yếu lý lịch</a>
+            <a href={CLASS_SITE.careerBot} rel="noreferrer" target="_blank">
+              Tư vấn hướng nghiệp
+            </a>
+            <a href={CLASS_SITE.careerForm} rel="noreferrer" target="_blank">
+              Đăng ký học đường
+            </a>
+          </nav>
+          <div className="site-hero-contact">
+            <a className="hero-call" href={`tel:${CLASS_SITE.gvcnPhone}`}>
+              Gọi điện
+            </a>
+            <a className="hero-zalo" href={`https://zalo.me/${CLASS_SITE.gvcnPhone}`} rel="noreferrer" target="_blank">
+              Zalo GVCN
             </a>
           </div>
         </header>

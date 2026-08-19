@@ -159,60 +159,163 @@ button {
   border-radius: 20px;
 }
 
-.site-header {
-  text-align: center;
-  margin-bottom: 40px;
-  padding: 30px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
-  color: #fff;
+.site-hero {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 28px;
+  padding: 26px 22px 22px;
+  border-radius: 24px;
+  color: #f6f1e4;
+  background:
+    radial-gradient(80% 70% at 100% -10%, rgba(212, 175, 55, 0.22), transparent 48%),
+    linear-gradient(165deg, #16324f 0%, #0e2236 58%, #1a3a58 100%);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  box-shadow: 0 18px 40px rgba(14, 34, 54, 0.28);
 }
 
-.site-header h1 {
-  font-size: 42px;
+.site-hero::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #d4af37, #f3e2a1, #d4af37);
+}
+
+.site-hero-kicker {
+  display: inline-block;
+  margin: 0;
+  padding: 5px 12px;
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  border-radius: 999px;
+  color: #ead58a;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  letter-spacing: 3px;
-  margin: 0 0 10px;
+}
+
+.site-hero h1 {
+  margin: 16px 0 0;
+}
+
+.site-hero-class {
+  display: block;
+  font-size: clamp(42px, 14vw, 68px);
   font-weight: 800;
-  line-height: 1.2;
+  letter-spacing: 0.06em;
+  line-height: 0.95;
 }
 
-.site-gvcn {
-  font-size: 18px;
-  font-weight: 500;
-  opacity: 0.95;
-  margin-bottom: 18px;
+.site-hero-sub {
+  display: block;
+  margin-top: 8px;
+  color: rgba(246, 241, 228, 0.72);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
-.site-actions,
-.site-contact {
+.site-hero-teacher {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 18px 0 20px;
+  padding: 10px 14px 10px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.site-chip,
-.site-contact a,
-.site-link {
-  display: inline-flex;
+.site-hero-avatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f3e2a1, #d4af37);
+  color: #16324f;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.site-hero-teacher strong {
+  display: block;
+  font-size: 15px;
+}
+
+.site-hero-teacher span:last-child {
+  display: block;
+  margin-top: 2px;
+  color: rgba(246, 241, 228, 0.68);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.site-hero-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.site-hero-actions a {
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  border-radius: 999px;
-  padding: 10px 16px;
-  font-weight: 600;
+  min-height: 46px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: #f6f1e4;
+  color: #16324f;
+  font-size: 14px;
+  font-weight: 700;
 }
 
-.site-chip {
-  background: rgba(255, 255, 255, 0.16);
+.site-hero-actions a:hover {
+  background: #fff;
+}
+
+.site-hero-contact {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.hero-call,
+.hero-zalo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.hero-call {
+  background: #15803d;
   color: #fff;
 }
 
-.site-contact a {
-  background: #fff;
-  color: #2c3e50;
+.hero-zalo {
+  background: #0068ff;
+  color: #fff;
+}
+
+@media (min-width: 640px) {
+  .site-hero {
+    padding: 32px 28px 26px;
+  }
+
+  .site-hero-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .site-section {
@@ -1264,11 +1367,6 @@ button {
     padding: 16px;
     border-radius: 0;
     box-shadow: none;
-  }
-
-  .site-header h1 {
-    font-size: 28px;
-    letter-spacing: 2px;
   }
 
   .countdown-value {
