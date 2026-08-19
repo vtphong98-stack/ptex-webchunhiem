@@ -1,4 +1,4 @@
-import { AFTERNOON_TIMETABLE, CLASS_SITE, DAY_LABELS, MORNING_TIMETABLE } from "@/lib/class-site";
+import { AFTERNOON_TIMETABLE, CLASS_SITE, DAY_LABELS, MORNING_TIMETABLE, subjectStyle } from "@/lib/class-site";
 import type { TimetableCell } from "@/lib/class-site";
 
 function TimetableTable({
@@ -30,7 +30,12 @@ function TimetableTable({
               <td>{period}</td>
               {rows[period]?.map((cell, index) =>
                 cell.skip ? null : (
-                  <td className={cell.className} data-tooltip={cell.teacher} key={`${period}-${index}`} rowSpan={cell.rowspan}>
+                  <td
+                    className={cell.className || subjectStyle(cell.subject).className}
+                    data-tooltip={cell.teacher || subjectStyle(cell.subject).teacher}
+                    key={`${period}-${index}`}
+                    rowSpan={cell.rowspan}
+                  >
                     {cell.subject}
                   </td>
                 ),

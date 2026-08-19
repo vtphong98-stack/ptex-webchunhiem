@@ -14,7 +14,7 @@ export default async function HomePage() {
     <main className="py-4 md:py-8">
       <div className="site-shell">
         <header className="site-header">
-          <h1>{CLASS_SITE.fullName}</h1>
+          <h1>{site.fullName}</h1>
           <p className="site-gvcn">GVCN: {CLASS_SITE.gvcnName}</p>
           <div className="site-actions">
             <a className="site-chip" href={CLASS_SITE.syll}>
@@ -88,7 +88,7 @@ export default async function HomePage() {
         </section>
 
         <section className="site-section">
-          <h2>Kỷ niệm lớp 12C1</h2>
+          <h2>Kỷ niệm lớp {site.className}</h2>
           <div className="site-widget" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <strong>Album lớp</strong>
             <a className="button-primary" href={CLASS_SITE.album} rel="noreferrer" target="_blank">
@@ -109,7 +109,7 @@ export default async function HomePage() {
         </section>
 
         <section className="site-section">
-          <h2>Giáo viên chủ nhiệm</h2>
+          <h2>Giáo viên chủ nhiệm · Lớp {site.className}</h2>
           <ul className="site-links">
             <li>
               <a href="/login?user=gvcn">Thông báo GVCN</a>

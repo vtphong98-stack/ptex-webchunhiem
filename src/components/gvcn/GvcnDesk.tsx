@@ -72,6 +72,10 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
   const [yearName, setYearName] = useState("");
   const [years, setYears] = useState<Array<{ name: string; label: string; isCurrent: boolean }>>([]);
   const [isCurrentYear, setIsCurrentYear] = useState(true);
+  const [className, setClassName] = useState(CLASS_SITE.className);
+  const [classDraft, setClassDraft] = useState(CLASS_SITE.className);
+  const [editingClass, setEditingClass] = useState(false);
+  const [classPending, setClassPending] = useState(false);
   const weekCache = useRef(new Map<number, WeekDetailData>());
 
   useEffect(() => {
@@ -93,6 +97,16 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
         }
       })
       .catch(() => setBoardError("Chưa tải được trạng thái nộp. Vẫn chọn tuần bình thường."));
+
+    fetch(`/api/gvcn/class${qs}`)
+      .then(async (response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (typeof data?.className === "string" && data.className) {
+          setClassName(data.className);
+          setClassDraft(data.className);
+        }
+      })
+      .catch(() => undefined);
 
     fetch(`/api/gvcn/week-locks${qs}`)
       .then(async (response) => (response.ok ? response.json() : null))
@@ -163,13 +177,67 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
     }
   }
 
+  async function saveClassName() {
+    const next = classDraft.trim().replace(/\s+/g, "");
+    if (!next) return;
+    setClassPending(true);
+    try {
+      const response = await fetch(`/api/gvcn/class${yearQs(yearName)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ className: next }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setBoardError(data.error || "Không đổi được tên lớp.");
+        return;
+      }
+      setClassName(data.className || next);
+      setClassDraft(data.className || next);
+      setEditingClass(false);
+    } finally {
+      setClassPending(false);
+    }
+  }
+
   const selectedLock = selectedWeek ? findLock(locks, selectedWeek) : null;
+  const classLabel = `Lớp ${className || CLASS_SITE.className} - ${yearName || CLASS_SITE.schoolYear}`;
 
   return (
-    <div className="container py-4 md:py-6">
-      <header className="card mb-4 flex flex-wrap items-center justify-between gap-3 p-4">
+    <div className="container gvcn-desk py-4 md:py-6">
+      <header className="card gvcn-desk-header mb-4 p-4">
         <div>
-          <p className="text-sm text-slate-500">{CLASS_SITE.fullName}</p>
+          {editingClass && isCurrentYear ? (
+            <div className="gvcn-class-edit">
+              <input
+                aria-label="Tên lớp"
+                onChange={(event) => setClassDraft(event.target.value)}
+                value={classDraft}
+              />
+              <button className="button-primary" disabled={classPending} onClick={() => void saveClassName()} type="button">
+                {classPending ? "Đang lưu…" : "Lưu tên lớp"}
+              </button>
+              <button
+                className="button-secondary"
+                onClick={() => {
+                  setClassDraft(className);
+                  setEditingClass(false);
+                }}
+                type="button"
+              >
+                Hủy
+              </button>
+            </div>
+          ) : (
+            <p className="gvcn-class-line">
+              <span>{classLabel}</span>
+              {isCurrentYear ? (
+                <button className="gvcn-class-edit-btn" onClick={() => setEditingClass(true)} type="button">
+                  Sửa tên lớp
+                </button>
+              ) : null}
+            </p>
+          )}
           <h1 className="text-xl font-bold text-slate-950">
             {deskView === "teams"
               ? "Phân công ban cán sự"
@@ -186,7 +254,7 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
             <label className="text-sm text-slate-500">
               Năm học
               <select
-                className="ml-2 rounded-lg border border-slate-200 px-2 py-1"
+                className="gvcn-year-select ml-2 rounded-lg border border-slate-200 px-2 py-1"
                 onChange={(event) => setYearName(event.target.value)}
                 value={yearName}
               >
@@ -202,7 +270,7 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
             {!isCurrentYear ? <span className="text-xs font-semibold text-amber-700">Đang xem năm cũ — chỉ đọc</span> : null}
           </div>
         </div>
-        <div className="flex gap-2">
+        <nav className="gvcn-nav">
           <button
             className={deskView === "notices" ? "button-primary" : "button-secondary"}
             onClick={() => setDeskView("notices")}
@@ -246,7 +314,7 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
               Đăng xuất
             </button>
           </form>
-        </div>
+        </nav>
       </header>
 
       {deskView === "notices" ? (

@@ -145,18 +145,35 @@ export async function ensureSchoolYearWeeks() {
 
   const live = await years.findOne({ name: CURRENT_SCHOOL_YEAR });
   if (live?._id) {
-    await configs.updateMany(
-      { schoolYearId: String(live._id) },
-      {
-        $set: {
-          className: CURRENT_CLASS_NAME,
-          fullName: `Lớp ${CURRENT_CLASS_NAME} - ${CURRENT_SCHOOL_YEAR}`,
-          examTitle: "Thi học kỳ 1",
-          examDate: "2027-01-04",
-          updatedAt: now,
+    const schoolYearId = String(live._id);
+    const existingConfig = await configs.findOne({ schoolYearId });
+    if (!existingConfig) {
+      await configs.insertOne({
+        _id: new ObjectId().toHexString(),
+        schoolYearId,
+        className: CURRENT_CLASS_NAME,
+        fullName: `Lớp ${CURRENT_CLASS_NAME} - ${CURRENT_SCHOOL_YEAR}`,
+        gvcnName: "Võ Thanh Phong",
+        gvcnDisplayName: "Thầy Võ Thanh Phong",
+        gvcnPhone: "0382311919",
+        gvcnZalo: "0382311919",
+        examTitle: "Thi học kỳ 1",
+        examDate: "2027-01-04",
+        createdAt: now,
+        updatedAt: now,
+      });
+    } else if (!existingConfig.className || existingConfig.className === "12C1") {
+      await configs.updateOne(
+        { _id: existingConfig._id },
+        {
+          $set: {
+            className: CURRENT_CLASS_NAME,
+            fullName: `Lớp ${CURRENT_CLASS_NAME} - ${CURRENT_SCHOOL_YEAR}`,
+            updatedAt: now,
+          },
         },
-      },
-    );
+      );
+    }
   }
 }
 

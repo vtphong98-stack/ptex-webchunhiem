@@ -1,8 +1,15 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/components/login/LoginForm";
+import { getSessionUser } from "@/lib/session";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const session = await getSessionUser();
+  if (session) {
+    redirect("/dashboard");
+  }
+
   return (
     <Suspense
       fallback={

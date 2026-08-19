@@ -1,3 +1,4 @@
+import { CLASS_SITE } from "@/lib/class-site";
 import { emptyTimetableGrid, parseStoredTimetable, timetableDisplayFromGrid } from "@/lib/excel-timetable";
 import { getDb } from "@/lib/db";
 import { sortNotices, toPublicNotice } from "@/lib/notices";
@@ -29,6 +30,8 @@ export async function getPublicSiteData() {
   return {
     yearName: year?.name ?? "2026-2027",
     hasTimetable: Boolean(stored),
+    className: config?.className || CLASS_SITE.className,
+    fullName: config?.fullName || CLASS_SITE.fullName,
     notices: notices.map((notice) => toPublicNotice(notice, newestId)),
     students: students.map((item) => ({
       fullName: item.fullName,

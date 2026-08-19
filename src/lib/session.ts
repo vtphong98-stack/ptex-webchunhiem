@@ -6,6 +6,7 @@ import type { SessionUser, UserAccount } from "@/lib/types";
 import { USERNAME_ALIASES } from "@/lib/seed-users";
 
 const SESSION_COOKIE = "ptex_session";
+const SESSION_MAX_AGE = 60 * 60 * 24 * 365;
 
 function getSecret() {
   const secret = process.env.AUTH_SECRET;
@@ -20,7 +21,7 @@ export async function createSession(user: SessionUser) {
   const token = await new SignJWT(user)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("12h")
+    .setExpirationTime(`${SESSION_MAX_AGE}s`)
     .sign(getSecret());
 
   const cookieStore = await cookies();
@@ -29,7 +30,8 @@ export async function createSession(user: SessionUser) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 12,
+    maxAge: SESSION_MAX_AGE,
+    expires: new Date(Date.now() + SESSION_MAX_AGE * 1000),
   });
 }
 

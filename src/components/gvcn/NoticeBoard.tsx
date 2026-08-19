@@ -112,7 +112,7 @@ export function NoticeBoard({ readOnly, yearName }: { readOnly: boolean; yearNam
             value={body}
           />
         </label>
-        <label className="mt-3 flex items-center gap-2 text-sm">
+        <label className="pin-check">
           <input checked={pinned} disabled={readOnly} onChange={(event) => setPinned(event.target.checked)} type="checkbox" />
           Ghim lên đầu danh sách
         </label>

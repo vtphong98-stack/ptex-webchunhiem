@@ -2,7 +2,7 @@ import type { SchoolWeek } from "@/lib/types";
 
 export const CURRENT_SCHOOL_YEAR = "2026-2027";
 export const ARCHIVE_SCHOOL_YEAR = "2025-2026";
-export const CURRENT_CLASS_NAME = "12C1";
+export const CURRENT_CLASS_NAME = "12A1";
 
 export type Milestone = {
   id: string;

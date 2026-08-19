@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 
-import { DAY_LABELS, SUBJECT_CLASS, SUBJECT_TEACHERS, type TimetableCell } from "@/lib/class-site";
+import { DAY_LABELS, subjectStyle, type TimetableCell } from "@/lib/class-site";
 
 export type TimetableGrid = {
   morning: Record<number, string[]>;
@@ -10,16 +10,15 @@ export type TimetableGrid = {
 const MORNING_PERIODS = [1, 2, 3, 4, 5];
 const AFTERNOON_PERIODS = [2, 3, 4, 5];
 
-function cellsFromSubjects(subjects: string[]): TimetableCell[] {
-  return subjects.map((subject) => {
-    const name = subject.trim() || "-";
-    if (name === "-") return { subject: "-" };
-    return {
-      subject: name,
-      teacher: SUBJECT_TEACHERS[name],
-      className: SUBJECT_CLASS[name],
-    };
-  });
+function subjectLabel(raw: unknown): string {
+  if (raw && typeof raw === "object" && "subject" in raw) {
+    return String((raw as { subject?: unknown }).subject ?? "").trim() || "-";
+  }
+  return String(raw ?? "").trim() || "-";
+}
+
+function cellsFromSubjects(subjects: unknown[]): TimetableCell[] {
+  return subjects.map((subject) => subjectStyle(subjectLabel(subject)));
 }
 
 function applyRowspan(rows: Record<number, TimetableCell[]>, periods: number[]) {

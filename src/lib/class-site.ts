@@ -1,7 +1,7 @@
 export const CLASS_SITE = {
-  className: "12C1",
+  className: "12A1",
   schoolYear: "2026-2027",
-  fullName: "Lớp 12C1 - 2026-2027",
+  fullName: "Lớp 12A1 - 2026-2027",
   gvcnName: "Võ Thanh Phong",
   gvcnPhone: "0382311919",
   examTitle: "Thi học kỳ 1",
@@ -104,14 +104,77 @@ export const SUBJECT_CLASS: Record<string, string> = {
   GDHN: "subject-gdhn",
   HĐTN: "subject-hdtn",
   SHCN: "subject-shcn",
+  "Chào cờ": "subject-cc",
 };
 
-function cell(subject: string): TimetableCell {
-  if (!subject || subject === "-") return { subject: "-" };
+const SUBJECT_ALIAS: Record<string, string> = {
+  t: "Toán",
+  toan: "Toán",
+  v: "Văn",
+  van: "Văn",
+  nguvan: "Văn",
+  nv: "Văn",
+  a: "Anh",
+  anh: "Anh",
+  ta: "Anh",
+  english: "Anh",
+  s: "Sử",
+  su: "Sử",
+  lichsu: "Sử",
+  ls: "Sử",
+  d: "Địa",
+  dia: "Địa",
+  dialy: "Địa",
+  dl: "Địa",
+  tin: "Tin",
+  th: "Tin",
+  cntt: "Tin",
+  gdtc: "GDTC",
+  td: "GDTC",
+  theduc: "GDTC",
+  gdqp: "GDQP",
+  qp: "GDQP",
+  qpan: "GDQP",
+  gdktpl: "GDKT&PL",
+  gdkt: "GDKT&PL",
+  gdcd: "GDKT&PL",
+  pl: "GDKT&PL",
+  cn: "CN(CN)",
+  cncn: "CN(CN)",
+  congnghe: "CN(CN)",
+  hdtn: "HĐTN",
+  hoatdong: "HĐTN",
+  gdhn: "GDHN",
+  huongnghiep: "GDHN",
+  shcn: "SHCN",
+  sinhhoat: "SHCN",
+  cc: "Chào cờ",
+  chaoco: "Chào cờ",
+};
+
+function foldSubject(raw: string) {
+  return raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/gi, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function subjectTone(raw: string) {
+  let hash = 0;
+  for (const ch of raw) hash = (hash + ch.charCodeAt(0)) % 6;
+  return `subject-tone-${hash}`;
+}
+
+export function subjectStyle(raw: string): TimetableCell {
+  const name = raw.trim() || "-";
+  if (name === "-") return { subject: "-" };
+  const canonical = SUBJECT_ALIAS[foldSubject(name)] || name;
   return {
-    subject,
-    teacher: SUBJECT_TEACHERS[subject],
-    className: SUBJECT_CLASS[subject],
+    subject: name,
+    teacher: SUBJECT_TEACHERS[canonical] || SUBJECT_TEACHERS[name],
+    className: SUBJECT_CLASS[canonical] || SUBJECT_CLASS[name] || subjectTone(name),
   };
 }
 
@@ -128,18 +191,18 @@ export type TimetableCell = {
 
 /** Current timetable from sheet TKB of 12c1cn.xlsx. */
 export const MORNING_TIMETABLE: Record<number, TimetableCell[]> = {
-  1: [cell("HĐTN"), cell("Anh"), cell("Toán"), cell("Địa"), cell("GDKT&PL"), cell("HĐTN")],
-  2: [cell("CN(CN)"), cell("Anh"), cell("Toán"), cell("Địa"), cell("Anh"), cell("HĐTN")],
-  3: [cell("Tin"), cell("GDKT&PL"), cell("Tin"), cell("GDHN"), cell("Toán"), cell("HĐTN")],
-  4: [cell("Sử"), cell("Văn"), cell("CN(CN)"), cell("Văn"), cell("Toán"), cell("-")],
-  5: [cell("Địa"), cell("Văn"), cell("-"), cell("Văn"), cell("SHCN"), cell("-")],
+  1: [subjectStyle("HĐTN"), subjectStyle("Anh"), subjectStyle("Toán"), subjectStyle("Địa"), subjectStyle("GDKT&PL"), subjectStyle("HĐTN")],
+  2: [subjectStyle("CN(CN)"), subjectStyle("Anh"), subjectStyle("Toán"), subjectStyle("Địa"), subjectStyle("Anh"), subjectStyle("HĐTN")],
+  3: [subjectStyle("Tin"), subjectStyle("GDKT&PL"), subjectStyle("Tin"), subjectStyle("GDHN"), subjectStyle("Toán"), subjectStyle("HĐTN")],
+  4: [subjectStyle("Sử"), subjectStyle("Văn"), subjectStyle("CN(CN)"), subjectStyle("Văn"), subjectStyle("Toán"), subjectStyle("-")],
+  5: [subjectStyle("Địa"), subjectStyle("Văn"), subjectStyle("-"), subjectStyle("Văn"), subjectStyle("SHCN"), subjectStyle("-")],
 };
 
 export const AFTERNOON_TIMETABLE: Record<number, TimetableCell[]> = {
-  2: [cell("Toán"), cell("Sử"), cell("Văn"), cell("Toán"), cell("GDTC"), cell("-")],
-  3: [cell("Toán"), cell("Sử"), cell("Văn"), cell("Toán"), cell("GDTC"), cell("-")],
-  4: [cell("-"), cell("GDKT&PL"), cell("Địa"), cell("Anh"), cell("GDQP"), cell("-")],
-  5: [cell("-"), cell("GDKT&PL"), cell("Địa"), cell("Anh"), cell("GDQP"), cell("-")],
+  2: [subjectStyle("Toán"), subjectStyle("Sử"), subjectStyle("Văn"), subjectStyle("Toán"), subjectStyle("GDTC"), subjectStyle("-")],
+  3: [subjectStyle("Toán"), subjectStyle("Sử"), subjectStyle("Văn"), subjectStyle("Toán"), subjectStyle("GDTC"), subjectStyle("-")],
+  4: [subjectStyle("-"), subjectStyle("GDKT&PL"), subjectStyle("Địa"), subjectStyle("Anh"), subjectStyle("GDQP"), subjectStyle("-")],
+  5: [subjectStyle("-"), subjectStyle("GDKT&PL"), subjectStyle("Địa"), subjectStyle("Anh"), subjectStyle("GDQP"), subjectStyle("-")],
 };
 
 export const OFFICER_LINKS = [
