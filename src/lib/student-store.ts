@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
-import { parseMemberRows, sortTeamStudents } from "@/lib/team-roster";
+import { semesterOfWeek } from "@/lib/academic-calendar";
+import { parseMemberRows, sortTeamStudents, type TeamMemberWeekRow } from "@/lib/team-roster";
 import type { SchoolYear, Student, TeamRole, WeeklyReport } from "@/lib/types";
 
 export type TeamRosterStudent = {
@@ -57,6 +58,82 @@ export async function getTeamRosterStudents(schoolYearId: string, teamNumber: nu
     )
     .toArray();
   return toTeamRosterStudents(sortTeamStudents(students));
+}
+
+export type SemesterTally = {
+  violations: number;
+  absences: number;
+  lates: number;
+  notPrepared: number;
+  noHomework: number;
+  disorder: number;
+  goodPoints: number;
+  participation: number;
+};
+
+export type StudentSemesterStats = {
+  hk1: SemesterTally;
+  hk2: SemesterTally;
+  total: SemesterTally;
+};
+
+function emptyTally(): SemesterTally {
+  return {
+    violations: 0,
+    absences: 0,
+    lates: 0,
+    notPrepared: 0,
+    noHomework: 0,
+    disorder: 0,
+    goodPoints: 0,
+    participation: 0,
+  };
+}
+
+function addTally(target: SemesterTally, member: TeamMemberWeekRow) {
+  target.violations += member.violationCount;
+  target.absences += member.absentCount;
+  target.lates += member.lateCount;
+  target.notPrepared += member.notPreparedCount;
+  target.noHomework += member.noHomeworkCount;
+  target.disorder += member.disorderCount;
+  target.goodPoints += member.goodPointsCount;
+  target.participation += member.participationCount;
+}
+
+/**
+ * Per-student tallies split by semester. The weekly reports are the only record
+ * of discipline in the app, so this is what "thực tế" can be measured against.
+ */
+export async function studentSemesterStats(schoolYearId: string) {
+  if (!schoolYearId) return new Map<string, StudentSemesterStats>();
+  const db = await getDb();
+  const reports = await db
+    .collection<WeeklyReport>("weeklyReports")
+    .find(
+      { schoolYearId, reporterRole: "toTruong" },
+      { projection: { weekNumber: 1, teamNumber: 1, "fields.members_json": 1 } },
+    )
+    .toArray();
+
+  const stats = new Map<string, StudentSemesterStats>();
+  for (const report of reports) {
+    const semester = semesterOfWeek(report.weekNumber);
+    for (const member of parseMemberRows(report.fields?.members_json)) {
+      // Reports key members by id when the roster supplied one and by name
+      // otherwise, so both keys point at the same record.
+      const keys = [member.studentId, member.fullName?.trim()].filter(Boolean) as string[];
+      if (!keys.length) continue;
+      let entry = keys.map((key) => stats.get(key)).find(Boolean);
+      if (!entry) {
+        entry = { hk1: emptyTally(), hk2: emptyTally(), total: emptyTally() };
+      }
+      addTally(entry[semester], member);
+      addTally(entry.total, member);
+      for (const key of keys) stats.set(key, entry);
+    }
+  }
+  return stats;
 }
 
 export async function studentStatsById(schoolYearId: string) {

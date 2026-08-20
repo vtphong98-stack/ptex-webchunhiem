@@ -50,9 +50,11 @@ export default async function DashboardPage({
   const currentView = (allowedViews.includes(params.view as NavView) ? params.view : allowedViews[0]) as NavView;
 
   if (session.role === "gvcn") {
+    // Hand the tab down from the URL so a refresh or a shared link reopens the
+    // same panel instead of always falling back to Tổng kết tuần.
     return (
       <main>
-        <GvcnDesk fullName={session.fullName} />
+        <GvcnDesk fullName={session.fullName} initialView={params.view} />
       </main>
     );
   }

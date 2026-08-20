@@ -132,6 +132,24 @@ export type ClassTargets = {
   updatedAt?: string;
 };
 
+/**
+ * Actual results the teacher types in per semester, to sit beside the targets.
+ * The app has no grade book, so the conduct/academic counts cannot be derived —
+ * they come from the school's own system and are recorded here for comparison.
+ */
+export type SemesterActual = {
+  totalStudents: number;
+  conduct: { tot: number; kha: number; dat: number; chuaDat: number };
+  academic: { tot: number; kha: number; dat: number; chuaDat: number; xuatSac: number };
+  note?: string;
+};
+
+export type ClassTargetsActual = {
+  hk1: SemesterActual;
+  hk2: SemesterActual;
+  updatedAt?: string;
+};
+
 export type TimetableVersion = {
   id: string;
   createdAt: string;

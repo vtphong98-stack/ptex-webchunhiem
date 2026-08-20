@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 
+import { parseMemberRows, type TeamMemberWeekRow } from "@/lib/team-roster";
 import { formatDate, formatRoleLabel } from "@/lib/utils";
 import type { GvcnWeekReport, ViolationEntry } from "@/lib/gvcn-report";
 
@@ -43,6 +44,26 @@ export function GvcnWeekReportView({
     }
   }, [report?.text]);
 
+  const downloadDoc = useCallback(() => {
+    if (!report?.text) return;
+    // Word opens an HTML payload served as .doc, so this needs no library.
+    const escaped = report.text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const html =
+      `<html xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8">` +
+      `<title>${report.title}</title><style>body{font-family:"Times New Roman",serif;font-size:13pt;line-height:1.5}` +
+      `pre{font-family:inherit;white-space:pre-wrap;margin:0}</style></head>` +
+      `<body><pre>${escaped}</pre></body></html>`;
+    const blob = new Blob([`﻿${html}`], { type: "application/msword" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${report.title.replace(/[^\p{L}\p{N}]+/gu, "-")}.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [report?.text, report?.title]);
+
   if (loading) {
     return <p className="gvcn-report-loading">Đang tổng hợp báo cáo chung…</p>;
   }
@@ -63,9 +84,17 @@ export function GvcnWeekReportView({
             {report.ranking.firstPlace ? ` · ${report.ranking.firstPlace} hạng nhất` : ""}
           </p>
         </div>
-        <button className="button-primary gvcn-copy-btn" onClick={() => void copyReport()} type="button">
-          {copied ? "✓ Đã copy" : "Copy nội dung báo cáo"}
-        </button>
+        <div className="gvcn-report-actions">
+          <button className="button-primary gvcn-copy-btn" onClick={() => void copyReport()} type="button">
+            {copied ? "✓ Đã copy" : "Copy nội dung"}
+          </button>
+          <button className="button-secondary" onClick={downloadDoc} type="button">
+            Tải .doc
+          </button>
+          <button className="button-secondary" onClick={() => window.print()} type="button">
+            In / PDF
+          </button>
+        </div>
       </div>
 
       <div className="gvcn-source-strip">
@@ -133,8 +162,8 @@ export function GvcnWeekReportView({
         </section>
       ) : null}
 
-      <details className="gvcn-officer-refs">
-        <summary>Báo cáo gốc từng chức vụ ({reports.length})</summary>
+      <details className="gvcn-officer-refs" open>
+        <summary>Báo cáo gốc từng chức vụ ({reports.length}) · chỉ đọc</summary>
         <div className="gvcn-officer-grid">
           {reports.map((item) => (
             <article className="gvcn-officer-card" key={item._id}>
@@ -159,10 +188,68 @@ export function GvcnWeekReportView({
                   );
                 })}
               </div>
+              <MemberTable json={item.fields.members_json} />
             </article>
           ))}
         </div>
       </details>
+    </div>
+  );
+}
+
+const MEMBER_COLUMNS: Array<{ key: keyof TeamMemberWeekRow; label: string; detail?: keyof TeamMemberWeekRow }> = [
+  { key: "absentCount", label: "Vắng", detail: "absentDates" },
+  { key: "lateCount", label: "Trễ", detail: "lateDates" },
+  { key: "notPreparedCount", label: "Ko thuộc bài", detail: "notPreparedSubjects" },
+  { key: "noHomeworkCount", label: "Ko BTVN" },
+  { key: "disorderCount", label: "Mất TT" },
+  { key: "violationCount", label: "Vi phạm", detail: "violationDetail" },
+  { key: "goodPointsCount", label: "Điểm tốt" },
+  { key: "participationCount", label: "Phát biểu" },
+];
+
+/**
+ * The tổ trưởng report carries a per-student grid in members_json that the desk
+ * never showed — the teacher could only see the aggregated summary. Read-only.
+ */
+function MemberTable({ json }: { json?: string }) {
+  const rows = parseMemberRows(json);
+  const withData = rows.filter((row) =>
+    MEMBER_COLUMNS.some((col) => Number(row[col.key]) > 0 || String(row[col.detail ?? col.key] ?? "").trim()),
+  );
+  if (!withData.length) {
+    return rows.length ? <p className="gvcn-member-clean">Cả tổ không có lượt nào trong tuần.</p> : null;
+  }
+
+  return (
+    <div className="gvcn-member-wrap">
+      <table className="gvcn-member-table">
+        <thead>
+          <tr>
+            <th>Học sinh</th>
+            {MEMBER_COLUMNS.map((col) => (
+              <th key={String(col.key)}>{col.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {withData.map((row) => (
+            <tr key={row.studentId || row.fullName}>
+              <td>{row.fullName}</td>
+              {MEMBER_COLUMNS.map((col) => {
+                const count = Number(row[col.key]) || 0;
+                const detail = col.detail ? String(row[col.detail] ?? "").trim() : "";
+                return (
+                  <td className={count ? "has-count" : ""} key={String(col.key)} title={detail || undefined}>
+                    {count || (detail ? "•" : "—")}
+                    {detail ? <em>{detail}</em> : null}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

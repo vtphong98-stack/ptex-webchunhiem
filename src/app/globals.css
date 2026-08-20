@@ -2257,6 +2257,134 @@ button {
   min-width: 0;
 }
 
+/* Trang chủ opens the block and Đăng xuất closes it, both full width, so the
+   eight work tabs sit in a clean 4x2 grid and logout cannot be mis-tapped
+   next to a content tab. */
+.gvcn-nav > a.tone-home,
+.gvcn-nav > form {
+  grid-column: 1 / -1;
+}
+
+/* ── Desk tabs ─────────────────────────────
+   Colour groups the work: indigo/violet = việc hàng tuần, green/teal = lớp và
+   học sinh, blue/amber/pink/rose = kế hoạch cả năm. Trang chủ and Đăng xuất
+   bookend the row in neutral and red so they never get hit by accident. */
+.desk-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1.5px solid color-mix(in srgb, var(--tab-ink) 14%, transparent);
+  border-radius: 14px;
+  background: var(--tab-soft);
+  color: var(--tab-ink);
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.desk-tab:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--tab-glow);
+}
+
+.desk-tab.is-active {
+  border-color: transparent;
+  background: var(--tab-grad);
+  color: #fff;
+  box-shadow: 0 6px 16px var(--tab-glow);
+}
+
+.desk-tab-icon {
+  font-size: 1rem;
+  line-height: 1;
+  flex: none;
+}
+
+.desk-tab-badge {
+  flex: none;
+  min-width: 1.2rem;
+  padding: 0 0.32rem;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.2rem;
+}
+
+.desk-tab.is-active .desk-tab-badge {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.desk-tab.tone-home {
+  --tab-soft: #f1f5f9;
+  --tab-ink: #334155;
+  --tab-grad: linear-gradient(135deg, #64748b, #334155);
+  --tab-glow: rgba(51, 65, 85, 0.26);
+}
+.desk-tab.tone-week {
+  --tab-soft: #eef2ff;
+  --tab-ink: #3730a3;
+  --tab-grad: linear-gradient(135deg, #6366f1, #2563eb);
+  --tab-glow: rgba(79, 70, 229, 0.3);
+}
+.desk-tab.tone-notice {
+  --tab-soft: #f5f3ff;
+  --tab-ink: #5b21b6;
+  --tab-grad: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  --tab-glow: rgba(139, 92, 246, 0.3);
+}
+.desk-tab.tone-team {
+  --tab-soft: #ecfdf5;
+  --tab-ink: #065f46;
+  --tab-grad: linear-gradient(135deg, #10b981, #0f766e);
+  --tab-glow: rgba(16, 185, 129, 0.3);
+}
+.desk-tab.tone-student {
+  --tab-soft: #f0fdfa;
+  --tab-ink: #0f766e;
+  --tab-grad: linear-gradient(135deg, #14b8a6, #0369a1);
+  --tab-glow: rgba(20, 184, 166, 0.3);
+}
+.desk-tab.tone-tkb {
+  --tab-soft: #eff6ff;
+  --tab-ink: #1d4ed8;
+  --tab-grad: linear-gradient(135deg, #0ea5e9, #4f46e5);
+  --tab-glow: rgba(14, 165, 233, 0.3);
+}
+.desk-tab.tone-teach {
+  --tab-soft: #fff7ed;
+  --tab-ink: #9a3412;
+  --tab-grad: linear-gradient(135deg, #f59e0b, #d97706);
+  --tab-glow: rgba(245, 158, 11, 0.32);
+}
+.desk-tab.tone-target {
+  --tab-soft: #fdf2f8;
+  --tab-ink: #9d174d;
+  --tab-grad: linear-gradient(135deg, #ec4899, #a855f7);
+  --tab-glow: rgba(236, 72, 153, 0.3);
+}
+.desk-tab.tone-date {
+  --tab-soft: #fff1f2;
+  --tab-ink: #9f1239;
+  --tab-grad: linear-gradient(135deg, #f43f5e, #e11d48);
+  --tab-glow: rgba(244, 63, 94, 0.3);
+}
+.desk-tab.tone-exit {
+  --tab-soft: #fef2f2;
+  --tab-ink: #b91c1c;
+  --tab-grad: linear-gradient(135deg, #ef4444, #b91c1c);
+  --tab-glow: rgba(239, 68, 68, 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-tab:hover {
+    transform: none;
+  }
+}
+
 .pin-check {
   display: flex;
   align-items: center;
@@ -3008,3 +3136,639 @@ button {
   }
 }
 
+/* ── Birthday celebration ──────────────────
+   Runs for the whole day when someone in the class has a birthday. Only
+   transform/opacity animate, the particle count is fixed, and the layer never
+   takes pointer events, so it stays on the compositor. */
+.bday-card {
+  position: relative;
+  margin-bottom: 24px;
+  padding: 22px 18px 0;
+  border-radius: 22px;
+  overflow: hidden;
+  text-align: center;
+  color: #7c2d12;
+  background: linear-gradient(135deg, #fff7ed, #ffe4e6 55%, #fae8ff);
+  box-shadow: 0 12px 30px rgba(244, 63, 94, 0.16);
+}
+
+.bday-emoji {
+  font-size: 44px;
+  line-height: 1;
+  animation: bday-pop 1.8s ease-in-out infinite;
+}
+
+.bday-kicker {
+  margin: 8px 0 2px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #be123c;
+}
+
+.bday-names {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #831843;
+}
+
+.bday-wish {
+  margin: 8px 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #9a3412;
+}
+
+.bday-marquee {
+  margin: 0 -18px;
+  padding: 8px 0;
+  overflow: hidden;
+  background: rgba(190, 18, 60, 0.1);
+}
+
+.bday-marquee-track {
+  display: flex;
+  width: max-content;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #9f1239;
+  animation: bday-marquee 18s linear infinite;
+}
+
+@keyframes bday-pop {
+  0%, 100% { transform: scale(1) rotate(-4deg); }
+  50% { transform: scale(1.14) rotate(4deg); }
+}
+
+@keyframes bday-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+.bday-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+  pointer-events: none;
+  /* Decoration, not content — must never fight the greeting for attention. */
+  opacity: 0.62;
+}
+
+.bday-firework {
+  position: absolute;
+  width: 0;
+  height: 0;
+  animation: bday-burst 5s ease-out infinite;
+}
+
+.bday-firework > i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2.5px;
+  height: 26px;
+  border-radius: 3px;
+  transform-origin: 50% 0;
+  opacity: 0;
+  animation: bday-spark 5s ease-out infinite;
+}
+
+@keyframes bday-burst {
+  0%, 12% { opacity: 1; }
+  40%, 100% { opacity: 0; }
+}
+
+@keyframes bday-spark {
+  0% { opacity: 0; scale: 0.2; }
+  8% { opacity: 1; }
+  38% { opacity: 0; scale: 1; translate: 0 46px; }
+  100% { opacity: 0; }
+}
+
+.bday-balloon {
+  position: absolute;
+  bottom: -60px;
+  font-size: 22px;
+  animation: bday-float 15s linear infinite;
+}
+
+@keyframes bday-float {
+  0% { transform: translate3d(0, 0, 0) rotate(-6deg); opacity: 0; }
+  12% { opacity: 0.8; }
+  85% { opacity: 0.55; }
+  100% { transform: translate3d(26px, -108vh, 0) rotate(8deg); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bday-fx { display: none; }
+  .bday-emoji,
+  .bday-marquee-track { animation: none; }
+}
+
+/* ── GVCN desk: new panels ─────────────────── */
+.gvcn-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.desk-tab.tone-account {
+  --tab-soft: #f8fafc;
+  --tab-ink: #0f172a;
+  --tab-grad: linear-gradient(135deg, #475569, #0f172a);
+  --tab-glow: rgba(15, 23, 42, 0.28);
+}
+
+/* Nhắc việc — tuần đã khóa mà còn thiếu báo cáo */
+.todo-card {
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1.5px solid #fcd34d;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  color: #78350f;
+}
+
+.todo-card header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.todo-card header > span {
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.todo-card h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.todo-card header p {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: #92400e;
+}
+
+.todo-card ul {
+  margin: 0.85rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.todo-card li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+
+.todo-card li button {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: #b45309;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.todo-missing {
+  color: #9a3412;
+  font-weight: 600;
+}
+
+.todo-more {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  color: #92400e;
+}
+
+/* Khóa / mở nhiều tuần một lượt */
+.bulk-lock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 0.9rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 14px;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+}
+
+.bulk-lock-label {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #334155;
+}
+
+.bulk-lock-range {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.bulk-lock-range input {
+  width: 4.2rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.bulk-lock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.bulk-lock-actions button {
+  padding: 0.42rem 0.85rem;
+  font-size: 0.8rem;
+}
+
+/* Tài khoản ban cán sự */
+.acc-grid {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.acc-card {
+  padding: 0.85rem 0.95rem;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.acc-card.is-off {
+  background: #f8fafc;
+  opacity: 0.72;
+}
+
+.acc-card header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.acc-card strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.acc-user {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.acc-weak {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.acc-actions,
+.acc-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.acc-actions button,
+.acc-edit-actions button {
+  padding: 0.38rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+.acc-edit {
+  margin-top: 0.6rem;
+}
+
+.acc-edit input {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+}
+
+.acc-stamp {
+  margin: 0.5rem 0 0;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+/* Nhật ký thao tác */
+.audit-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.audit-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.audit-tag {
+  flex: none;
+  min-width: 5.4rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.audit-tag.tag-report { background: #e0e7ff; color: #3730a3; }
+.audit-tag.tag-student { background: #d1fae5; color: #065f46; }
+.audit-tag.tag-user { background: #fee2e2; color: #b91c1c; }
+.audit-tag.tag-weekLock { background: #fef3c7; color: #92400e; }
+.audit-tag.tag-classConfig { background: #f3e8ff; color: #6b21a8; }
+.audit-tag.tag-notice { background: #cffafe; color: #155e75; }
+
+.audit-main { min-width: 0; }
+
+.audit-summary {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.audit-meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+/* Thống kê vi phạm theo học kỳ */
+.stat-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.stat-chip {
+  display: grid;
+  padding: 0.4rem 0.85rem;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.stat-chip span {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.stat-chip.is-active {
+  border-color: transparent;
+  background: linear-gradient(135deg, #6366f1, #2563eb);
+  color: #fff;
+}
+
+.stat-chip.is-active span { color: rgba(255, 255, 255, 0.8); }
+
+.stat-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.stat-pill {
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.stat-pill.tone-clean { background: #dcfce7; color: #166534; }
+.stat-pill.tone-bad { background: #fee2e2; color: #b91c1c; }
+.stat-pill.tone-good { background: #e0f2fe; color: #075985; }
+
+.stat-table-wrap,
+.cmp-table-wrap,
+.gvcn-member-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.stat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.stat-table th,
+.stat-table td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid #eef2f7;
+  text-align: center;
+}
+
+.stat-table th button {
+  font: inherit;
+  font-weight: 800;
+  color: #334155;
+  cursor: pointer;
+}
+
+.stat-table .stat-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+  text-align: left;
+  font-weight: 700;
+}
+
+.stat-table tbody tr.is-clean .stat-sticky { color: #15803d; }
+.stat-table tbody tr.is-hot { background: #fff1f2; }
+.stat-table tbody tr.is-hot .stat-sticky { background: #fff1f2; color: #9f1239; }
+.stat-table td.has-bad { color: #b91c1c; font-weight: 700; }
+.stat-table td.has-good { color: #0369a1; font-weight: 700; }
+
+/* Đối chiếu chỉ tiêu vs thực tế */
+.cmp-block h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cmp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.cmp-table th,
+.cmp-table td {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #eef2f7;
+  text-align: center;
+}
+
+.cmp-table th:first-child,
+.cmp-table td:first-child {
+  text-align: left;
+  font-weight: 700;
+}
+
+.cmp-target { color: #475569; font-weight: 700; }
+
+.cmp-input {
+  width: 4.6rem;
+  padding: 0.28rem 0.4rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.cmp-delta {
+  display: inline-block;
+  min-width: 3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.cmp-delta.is-met { background: #dcfce7; color: #166534; }
+.cmp-delta.is-over { background: #e0f2fe; color: #075985; }
+.cmp-delta.is-under { background: #fee2e2; color: #b91c1c; }
+
+.cmp-total,
+.cmp-note {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.cmp-total input,
+.cmp-note textarea {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.cmp-total input { width: 7rem; }
+.cmp-note textarea { width: 100%; font-weight: 500; }
+
+.cmp-warn {
+  margin: 0.45rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #b45309;
+}
+
+/* Báo cáo tổ: bảng từng học sinh, chỉ đọc */
+.gvcn-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.gvcn-member-table {
+  width: 100%;
+  margin-top: 0.6rem;
+  border-collapse: collapse;
+  font-size: 0.74rem;
+}
+
+.gvcn-member-table th,
+.gvcn-member-table td {
+  padding: 0.32rem 0.45rem;
+  border-bottom: 1px solid #eef2f7;
+  text-align: center;
+  vertical-align: top;
+}
+
+.gvcn-member-table th:first-child,
+.gvcn-member-table td:first-child {
+  text-align: left;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.gvcn-member-table td.has-count { color: #b91c1c; font-weight: 800; }
+
+.gvcn-member-table td em {
+  display: block;
+  max-width: 8rem;
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.gvcn-member-clean {
+  margin: 0.6rem 0 0;
+  font-size: 0.78rem;
+  color: #15803d;
+}
+
+@media (min-width: 640px) {
+  .acc-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* In / xuất PDF: chỉ giữ nội dung báo cáo */
+@media print {
+  .gvcn-nav,
+  .gvcn-report-actions,
+  .bulk-lock,
+  .todo-card,
+  .cd-bar,
+  .week-badge-bar,
+  .bday-fx {
+    display: none !important;
+  }
+
+  .gvcn-report,
+  .card {
+    box-shadow: none !important;
+  }
+}

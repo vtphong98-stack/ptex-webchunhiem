@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { logoutAction } from "@/app/dashboard/actions";
 import { GvcnWeekReportView } from "@/components/gvcn/GvcnWeekReport";
@@ -13,7 +13,7 @@ import { TeacherTimetable, TeachingPlan } from "@/components/gvcn/TeacherWorkspa
 import { CLASS_SITE } from "@/lib/class-site";
 import type { GvcnWeekReport } from "@/lib/gvcn-report";
 import { OFFICER_SLOTS } from "@/lib/report-fields";
-import { buildExcelWeeks } from "@/lib/weeks";
+import { buildExcelWeeks, EXCEL_WEEK_COUNT } from "@/lib/weeks";
 import { findLock, type WeekLockState } from "@/lib/week-lock";
 
 interface BoardRow {
@@ -55,22 +55,58 @@ function emptyBoardRows(): BoardRow[] {
   }));
 }
 
+import { AccountManager } from "@/components/gvcn/AccountManager";
+import { SemesterStats } from "@/components/gvcn/SemesterStats";
+import { TargetsCompare } from "@/components/gvcn/TargetsCompare";
 import { TargetsManager } from "@/components/gvcn/TargetsManager";
 import { MilestonesManager } from "@/components/gvcn/MilestonesManager";
 
-type DeskView = "weeks" | "teams" | "lookup" | "timetable" | "notices" | "teaching" | "targets" | "milestones";
+type DeskView =
+  | "weeks"
+  | "teams"
+  | "lookup"
+  | "timetable"
+  | "notices"
+  | "teaching"
+  | "targets"
+  | "milestones"
+  | "accounts";
+
+/**
+ * One table drives the button order, their colour group, and the page heading —
+ * the heading used to be a separate if-chain that had never been extended to
+ * "targets" or "milestones", so those tabs showed "Tổng kết tuần".
+ *
+ * Order is the teacher's workflow: weekly work first, then the class, then the
+ * year-long plans. Trang chủ opens the row, Đăng xuất closes it.
+ */
+const DESK_TABS: Array<{ view: DeskView; label: string; icon: string; tone: string; title: string }> = [
+  { view: "weeks", label: "Tổng kết tuần", icon: "📊", tone: "tone-week", title: "Tổng kết tuần" },
+  { view: "notices", label: "Thông báo", icon: "📢", tone: "tone-notice", title: "Thông báo GVCN" },
+  { view: "teams", label: "Ban cán sự", icon: "👥", tone: "tone-team", title: "Phân công ban cán sự" },
+  { view: "lookup", label: "Tra cứu HS", icon: "🔍", tone: "tone-student", title: "Tra cứu học sinh" },
+  { view: "timetable", label: "TKB", icon: "📅", tone: "tone-tkb", title: "Thời khóa biểu" },
+  { view: "teaching", label: "Lịch dạy", icon: "📋", tone: "tone-teach", title: "Lịch dạy & Báo giảng" },
+  { view: "targets", label: "Chỉ tiêu", icon: "🎯", tone: "tone-target", title: "Chỉ tiêu năm học" },
+  { view: "milestones", label: "Mốc ngày / Thi", icon: "⏳", tone: "tone-date", title: "Mốc ngày & kỳ thi" },
+  { view: "accounts", label: "Tài khoản", icon: "🔐", tone: "tone-account", title: "Tài khoản & nhật ký" },
+];
+
+const DESK_VIEWS = new Set<string>(DESK_TABS.map((tab) => tab.view));
 
 function yearQs(yearName: string) {
   return yearName ? `?year=${encodeURIComponent(yearName)}` : "";
 }
 
-export function GvcnDesk({ fullName }: { fullName: string }) {
+export function GvcnDesk({ fullName, initialView }: { fullName: string; initialView?: string }) {
   const [board, setBoard] = useState<{ rows: BoardRow[] }>({ rows: emptyBoardRows() });
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [weekDetail, setWeekDetail] = useState<WeekDetailData | null>(null);
   const [loadingWeek, setLoadingWeek] = useState(false);
   const [boardError, setBoardError] = useState("");
-  const [deskView, setDeskView] = useState<DeskView>("weeks");
+  const [deskView, setDeskView] = useState<DeskView>(
+    initialView && DESK_VIEWS.has(initialView) ? (initialView as DeskView) : "weeks",
+  );
   const [locks, setLocks] = useState<WeekLockState[]>([]);
   const [lockPending, setLockPending] = useState(false);
   const [lockError, setLockError] = useState("");
@@ -116,6 +152,72 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
       })
       .catch(() => undefined);
   }, [yearName]);
+
+  // Keep ?view= in step so a refresh, a bookmark or the back button all land on
+  // the tab the teacher was actually looking at. replaceState avoids a round trip.
+  const openTab = useCallback((view: DeskView) => {
+    setDeskView(view);
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (view === "weeks") url.searchParams.delete("view");
+    else url.searchParams.set("view", view);
+    window.history.replaceState(null, "", url.toString());
+  }, []);
+
+  /**
+   * Weeks already past their lock time that still have missing reports, with the
+   * exact chức vụ that owes one. Derived from state already in memory, so the
+   * reminder panel costs no extra request.
+   */
+  const overdue = useMemo(() => {
+    if (!locks.length) return [] as Array<{ weekNumber: number; label: string; missing: string[] }>;
+    return board.rows
+      .filter((row) => {
+        const lock = locks.find((item) => item.weekNumber === row.weekNumber);
+        return lock?.locked && row.submitted < row.total;
+      })
+      .map((row) => ({
+        weekNumber: row.weekNumber,
+        label: row.label,
+        missing: OFFICER_SLOTS.filter(
+          (slot) => !row.cells[`${slot.role}|${slot.teamNumber ?? ""}`],
+        ).map((slot) => slot.label),
+      }))
+      .sort((a, b) => b.weekNumber - a.weekNumber);
+  }, [board.rows, locks]);
+
+  const overdueWeeks = overdue.length;
+
+  const [bulkFrom, setBulkFrom] = useState(1);
+  const [bulkTo, setBulkTo] = useState(EXCEL_WEEK_COUNT);
+
+  const applyBulkLock = useCallback(
+    async (action: "lock" | "unlock" | "auto") => {
+      const from = Math.min(bulkFrom, bulkTo);
+      const to = Math.max(bulkFrom, bulkTo);
+      const weeks = Array.from({ length: to - from + 1 }, (_, index) => from + index);
+      setLockPending(true);
+      setLockError("");
+      try {
+        const response = await fetch(`/api/gvcn/week-locks${yearQs(yearName)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ weeks, action }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setLockError(data?.error ?? "Không đổi được khóa tuần.");
+          return;
+        }
+        if (Array.isArray(data?.locks)) setLocks(data.locks);
+      } catch {
+        setLockError("Lỗi mạng. Thử lại.");
+      } finally {
+        setLockPending(false);
+      }
+    },
+    [bulkFrom, bulkTo, yearName],
+  );
 
   const fetchWeek = useCallback(async (weekNumber: number) => {
     const response = await fetch(`/api/gvcn/week/${weekNumber}${yearQs(yearName)}`);
@@ -240,18 +342,7 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
             </p>
           )}
           <h1 className="text-xl font-bold text-slate-950">
-            {deskView === "teams"
-              ? "Phân công ban cán sự"
-              : deskView === "lookup"
-                ? "Tra cứu học sinh"
-                : deskView === "timetable"
-                  ? "Thời khóa biểu"
-                  : deskView === "teaching"
-                    ? "Lịch dạy & Báo giảng"
-                    : deskView === "notices"
-                      ? "Thông báo GVCN"
-                    : "Tổng kết tuần"}{" "}
-            · {fullName}
+            {DESK_TABS.find((tab) => tab.view === deskView)?.title ?? "Tổng kết tuần"} · {fullName}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <label className="text-sm text-slate-500">
@@ -273,68 +364,35 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
             {!isCurrentYear ? <span className="text-xs font-semibold text-amber-700">Đang xem năm cũ — chỉ đọc</span> : null}
           </div>
         </div>
-        <nav className="gvcn-nav">
-          <button
-            className={deskView === "notices" ? "button-primary" : "button-secondary"}
-            onClick={() => setDeskView("notices")}
-            type="button"
-          >
-            Thông báo
-          </button>
-          <button
-            className={deskView === "weeks" ? "button-primary" : "button-secondary"}
-            onClick={() => setDeskView("weeks")}
-            type="button"
-          >
-            Tổng kết tuần
-          </button>
-          <button
-            className={deskView === "lookup" ? "button-primary" : "button-secondary"}
-            onClick={() => setDeskView("lookup")}
-            type="button"
-          >
-            Tra cứu HS
-          </button>
-          <button
-            className={deskView === "teams" ? "button-primary" : "button-secondary"}
-            onClick={() => setDeskView("teams")}
-            type="button"
-          >
-            Ban cán sự
-          </button>
-          <button
-            className={deskView === "timetable" ? "button-primary" : "button-secondary"}
-            onClick={() => setDeskView("timetable")}
-            type="button"
-          >
-            TKB
-          </button>
-          <button
-            className={deskView === "teaching" ? "button-primary" : "button-secondary"}
-            onClick={() => setDeskView("teaching")}
-            type="button"
-          >
-            Lịch dạy
-          </button>
-          <button
-            className={deskView === "targets" ? "button-primary" : "button-secondary"}
-            onClick={() => setDeskView("targets")}
-            type="button"
-          >
-            Chỉ tiêu
-          </button>
-          <button
-            className={deskView === "milestones" ? "button-primary" : "button-secondary"}
-            onClick={() => setDeskView("milestones")}
-            type="button"
-          >
-            Mốc ngày / Thi
-          </button>
-          <Link className="button-secondary" href="/">
+        <nav aria-label="Khu vực giáo viên chủ nhiệm" className="gvcn-nav">
+          <Link className="desk-tab tone-home" href="/">
+            <span aria-hidden className="desk-tab-icon">🏠</span>
             Trang chủ
           </Link>
+
+          {DESK_TABS.map((tab) => (
+            <button
+              aria-current={deskView === tab.view ? "page" : undefined}
+              className={`desk-tab ${tab.tone}${deskView === tab.view ? " is-active" : ""}`}
+              key={tab.view}
+              onClick={() => openTab(tab.view)}
+              type="button"
+            >
+              <span aria-hidden className="desk-tab-icon">
+                {tab.icon}
+              </span>
+              {tab.label}
+              {tab.view === "weeks" && overdueWeeks ? (
+                <span className="desk-tab-badge" title={`${overdueWeeks} tuần đã khóa mà còn thiếu báo cáo`}>
+                  {overdueWeeks}
+                </span>
+              ) : null}
+            </button>
+          ))}
+
           <form action={logoutAction}>
-            <button className="button-secondary" type="submit">
+            <button className="desk-tab tone-exit" type="submit">
+              <span aria-hidden className="desk-tab-icon">🚪</span>
               Đăng xuất
             </button>
           </form>
@@ -346,7 +404,10 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
       ) : deskView === "teams" ? (
         <TeamManager readOnly={!isCurrentYear} yearName={yearName} />
       ) : deskView === "lookup" ? (
-        <StudentLookup yearName={yearName} />
+        <div className="gvcn-stack">
+          <StudentLookup yearName={yearName} />
+          <SemesterStats yearName={yearName} />
+        </div>
       ) : deskView === "timetable" ? (
         <TimetableUpload readOnly={!isCurrentYear} yearName={yearName} />
       ) : deskView === "teaching" ? (
@@ -355,18 +416,100 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
           <TeachingPlan />
         </div>
       ) : deskView === "targets" ? (
-        <TargetsManager readOnly={!isCurrentYear} yearName={yearName} />
+        <div className="gvcn-stack">
+          <TargetsManager readOnly={!isCurrentYear} yearName={yearName} />
+          <TargetsCompare readOnly={!isCurrentYear} />
+        </div>
       ) : deskView === "milestones" ? (
         <MilestonesManager readOnly={!isCurrentYear} yearName={yearName} />
+      ) : deskView === "accounts" ? (
+        <AccountManager />
       ) : (
         <>
       {boardError ? <p className="mb-3 text-sm text-amber-700">{boardError}</p> : null}
+
+      {overdue.length ? (
+        <section className="todo-card mb-4">
+          <header>
+            <span aria-hidden>🔔</span>
+            <div>
+              <h2>Còn {overdue.length} tuần đã khóa mà thiếu báo cáo</h2>
+              <p>Mở khóa tuần để ban cán sự nộp bù, hoặc nhắc trực tiếp chức vụ còn thiếu.</p>
+            </div>
+          </header>
+          <ul>
+            {overdue.slice(0, 6).map((item) => (
+              <li key={item.weekNumber}>
+                <button onClick={() => openWeek(item.weekNumber)} type="button">
+                  {item.label}
+                </button>
+                <span className="todo-missing">
+                  {item.missing.length ? `thiếu ${item.missing.join(", ")}` : "chưa đủ báo cáo"}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {overdue.length > 6 ? <p className="todo-more">…và {overdue.length - 6} tuần nữa.</p> : null}
+        </section>
+      ) : null}
 
       <section className="card p-5">
         <h2 className="mb-4 text-lg font-semibold">Chọn tuần</h2>
         <p className="mb-3 text-sm text-slate-500">
           Khóa tự động lúc <strong>0h thứ 7</strong> (giờ Việt Nam) theo lịch tuần. Chỉ GVCN mới mở khóa được.
         </p>
+
+        {isCurrentYear ? (
+          <div className="bulk-lock mb-4">
+            <span className="bulk-lock-label">Áp dụng nhiều tuần</span>
+            <div className="bulk-lock-range">
+              từ
+              <input
+                inputMode="numeric"
+                max={EXCEL_WEEK_COUNT}
+                min={1}
+                onChange={(event) => setBulkFrom(Number(event.target.value) || 1)}
+                type="number"
+                value={bulkFrom}
+              />
+              đến
+              <input
+                inputMode="numeric"
+                max={EXCEL_WEEK_COUNT}
+                min={1}
+                onChange={(event) => setBulkTo(Number(event.target.value) || 1)}
+                type="number"
+                value={bulkTo}
+              />
+            </div>
+            <div className="bulk-lock-actions">
+              <button
+                className="button-primary"
+                disabled={lockPending}
+                onClick={() => void applyBulkLock("unlock")}
+                type="button"
+              >
+                Mở khóa
+              </button>
+              <button
+                className="button-secondary"
+                disabled={lockPending}
+                onClick={() => void applyBulkLock("lock")}
+                type="button"
+              >
+                Khóa
+              </button>
+              <button
+                className="button-secondary"
+                disabled={lockPending}
+                onClick={() => void applyBulkLock("auto")}
+                type="button"
+              >
+                Theo lịch
+              </button>
+            </div>
+          </div>
+        ) : null}
         <div className="grid grid-cols-5 gap-2 sm:grid-cols-7 lg:grid-cols-10">
           {board.rows.map((row) => {
               const hasData = row.submitted > 0;

@@ -102,6 +102,20 @@ export function buildWeeks2026(milestones?: Milestone[]): SchoolWeek[] {
 
 export const EXCEL_WEEK_COUNT = 35;
 
+/** HK1 = 18 tuần thực học, HK2 = 17 tuần (xem buildWeeks2026 ở trên). */
+export const HK1_LAST_WEEK = 18;
+
+export type Semester = "hk1" | "hk2";
+
+export const SEMESTER_LABELS: Record<Semester, string> = {
+  hk1: "Học kỳ 1",
+  hk2: "Học kỳ 2",
+};
+
+export function semesterOfWeek(weekNumber: number): Semester {
+  return weekNumber <= HK1_LAST_WEEK ? "hk1" : "hk2";
+}
+
 export function buildWeeksForYear(name: string): SchoolWeek[] {
   if (name === ARCHIVE_SCHOOL_YEAR) {
     return [];

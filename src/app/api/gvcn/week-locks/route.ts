@@ -26,11 +26,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const body = (await request.json()) as { weekNumber?: number; action?: "lock" | "unlock" | "auto" };
-  const weekNumber = Number(body.weekNumber);
-  if (!Number.isFinite(weekNumber) || weekNumber < 1 || weekNumber > EXCEL_WEEK_COUNT) {
+  const body = (await request.json()) as {
+    weekNumber?: number;
+    weeks?: number[];
+    action?: "lock" | "unlock" | "auto";
+  };
+
+  // Accept either one week or a batch, so the teacher can reopen a whole stretch
+  // of weeks for backfilling instead of clicking through them one at a time.
+  const requested = Array.isArray(body.weeks) && body.weeks.length ? body.weeks : [Number(body.weekNumber)];
+  const weeks = [...new Set(requested.map(Number))]
+    .filter((week) => Number.isFinite(week) && week >= 1 && week <= EXCEL_WEEK_COUNT)
+    .sort((a, b) => a - b);
+
+  if (!weeks.length) {
     return NextResponse.json({ error: "Tuần không hợp lệ." }, { status: 400 });
   }
+  const weekNumber = weeks[0];
 
   const schoolYear = await resolveSchoolYearFromRequest(request);
   const schoolYearId = schoolYear?._id ? String(schoolYear._id) : "";
@@ -44,37 +56,42 @@ export async function POST(request: Request) {
   const db = await getDb();
   const collection = db.collection<WeekLockDoc>("weekLocks");
   const now = new Date().toISOString();
-  const filter = { schoolYearId, weekNumber };
 
   if (body.action === "auto") {
-    await collection.deleteOne(filter);
+    await collection.deleteMany({ schoolYearId, weekNumber: { $in: weeks } });
   } else {
     const override: WeekLockOverride = body.action === "unlock" ? "open" : "locked";
-    await collection.updateOne(
-      filter,
-      {
-        $set: {
-          schoolYearId,
-          weekNumber,
-          override,
-          updatedBy: session.id,
-          updatedByName: session.fullName,
-          updatedAt: now,
+    await collection.bulkWrite(
+      weeks.map((week) => ({
+        updateOne: {
+          filter: { schoolYearId, weekNumber: week },
+          update: {
+            $set: {
+              schoolYearId,
+              weekNumber: week,
+              override,
+              updatedBy: session.id,
+              updatedByName: session.fullName,
+              updatedAt: now,
+            },
+            $setOnInsert: { _id: crypto.randomUUID() },
+          },
+          upsert: true,
         },
-        $setOnInsert: { _id: crypto.randomUUID() },
-      },
-      { upsert: true },
+      })),
+      { ordered: false },
     );
   }
 
   const actionLabel =
     body.action === "unlock" ? "Mở khóa" : body.action === "auto" ? "Trả về lịch tự động" : "Khóa";
+  const weekLabel = weeks.length === 1 ? `tuần ${weeks[0]}` : `${weeks.length} tuần (${weeks.join(", ")})`;
   await createAuditLog({
     schoolYearId,
     entityType: "weekLock",
-    entityId: `${schoolYearId}:${weekNumber}`,
+    entityId: `${schoolYearId}:${weeks.join(",")}`,
     action: body.action === "unlock" ? "unlock" : body.action === "auto" ? "auto" : "lock",
-    summary: `${actionLabel} báo cáo tuần ${weekNumber}.`,
+    summary: `${actionLabel} báo cáo ${weekLabel}.`,
     actorId: session.id,
     actorName: session.fullName,
     actorRole: session.role,

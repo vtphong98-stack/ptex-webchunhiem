@@ -21,14 +21,84 @@ export const BirthdayBanner = memo(function BirthdayBanner({
   if (!names.length) return null;
 
   return (
-    <section className="site-widget" style={{ marginBottom: 24, background: "linear-gradient(135deg,#fff7ed,#ffedd5)" }}>
-      <p style={{ fontSize: 22, margin: 0 }}>🎂</p>
-      <p style={{ marginTop: 10, fontWeight: 700 }}>
-        Chúc mừng {names.join(", ")}!
-        <br />
-        Sinh nhật vui vẻ và ngày càng học giỏi! 🎉
-      </p>
-    </section>
+    <>
+      <BirthdayCelebration />
+      <section className="bday-card">
+        <div className="bday-emoji" aria-hidden>
+          🎂
+        </div>
+        <p className="bday-kicker">Hôm nay lớp mình có sinh nhật</p>
+        <p className="bday-names">{names.join(" · ")}</p>
+        <p className="bday-wish">Chúc mừng sinh nhật! Chúc em một tuổi mới nhiều niềm vui và học thật giỏi 🎉</p>
+        <div className="bday-marquee" aria-hidden>
+          <div className="bday-marquee-track">
+            {[0, 1].map((copy) => (
+              <span key={copy}>
+                🎉 CHÚC MỪNG SINH NHẬT {names.join(" · ").toUpperCase()} 🎂 &nbsp;&nbsp;&nbsp; 🎈 HAPPY BIRTHDAY 🎁
+                &nbsp;&nbsp;&nbsp;
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
+  );
+});
+
+/**
+ * Fireworks + drifting balloons for the whole birthday. Everything is a CSS
+ * animation on transform/opacity only, the particle count is fixed, and the
+ * layer is pointer-events:none + aria-hidden, so it never costs layout or gets
+ * in the way. Honours prefers-reduced-motion.
+ */
+// Kept to the edges and the lower half so the greeting stays readable.
+const FIREWORK_BURSTS = [
+  { left: "8%", top: "52%", delay: "0s", hue: "#f43f5e" },
+  { left: "91%", top: "44%", delay: "1.3s", hue: "#f59e0b" },
+  { left: "14%", top: "82%", delay: "2.4s", hue: "#22d3ee" },
+  { left: "86%", top: "76%", delay: "3.6s", hue: "#a855f7" },
+];
+
+const SPARK_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315];
+
+const BALLOONS = [
+  { left: "3%", delay: "0s", hue: "#f43f5e", emoji: "🎈" },
+  { left: "12%", delay: "3.2s", hue: "#f59e0b", emoji: "🎁" },
+  { left: "88%", delay: "1.4s", hue: "#22d3ee", emoji: "🎈" },
+  { left: "95%", delay: "5s", hue: "#ec4899", emoji: "🎊" },
+];
+
+export const BirthdayCelebration = memo(function BirthdayCelebration() {
+  return (
+    <div aria-hidden className="bday-fx">
+      {FIREWORK_BURSTS.map((burst, index) => (
+        <span
+          className="bday-firework"
+          key={index}
+          style={{ left: burst.left, top: burst.top, animationDelay: burst.delay }}
+        >
+          {SPARK_ANGLES.map((angle) => (
+            <i
+              key={angle}
+              style={{
+                background: burst.hue,
+                transform: `rotate(${angle}deg)`,
+                animationDelay: burst.delay,
+              }}
+            />
+          ))}
+        </span>
+      ))}
+      {BALLOONS.map((balloon, index) => (
+        <span
+          className="bday-balloon"
+          key={index}
+          style={{ left: balloon.left, animationDelay: balloon.delay, color: balloon.hue }}
+        >
+          {balloon.emoji}
+        </span>
+      ))}
+    </div>
   );
 });
 
