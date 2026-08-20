@@ -107,7 +107,7 @@ export function ClassBoards({ board }: { board: HomeBoard }) {
   // Xếp hạng và học sinh tiêu biểu là cùng một câu chuyện của một tuần, nên
   // chúng nằm trong một khu vực thay vì hai section trông ngang hàng nhau.
   return (
-    <section className="site-section home-board-section block-amber hp-span" id="tuan-nay">
+    <section className="site-section home-board-section block-indigo hp-span" id="tuan-nay">
       <h2>Tuần này của lớp</h2>
       <div className="home-board home-board-rank">
         <p className="home-board-kicker">{kicker}</p>

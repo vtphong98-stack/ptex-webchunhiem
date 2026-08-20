@@ -181,6 +181,22 @@ export function subjectStyle(raw: string): TimetableCell {
   };
 }
 
+/**
+ * "Võ Thanh Phong" -> "V.T.Phong".
+ *
+ * Ô thời khóa biểu trên điện thoại chỉ rộng ~56px, không đủ cho tên đầy đủ.
+ * Viết tắt các chữ đệm và giữ nguyên tên gọi (từ cuối) vẫn nhận ra được thầy cô
+ * nào mà chỉ chiếm khoảng một nửa bề rộng.
+ */
+export function shortTeacherName(full?: string) {
+  if (!full) return "";
+  const parts = full.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return parts[0] ?? "";
+  const given = parts[parts.length - 1];
+  const initials = parts.slice(0, -1).map((word) => `${word[0].toUpperCase()}.`).join("");
+  return `${initials}${given}`;
+}
+
 export const DAYS = ["hai", "ba", "tư", "năm", "sáu", "bảy"] as const;
 export const DAY_LABELS = ["Hai", "Ba", "Tư", "Năm", "Sáu", "Bảy"];
 

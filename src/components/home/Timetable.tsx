@@ -1,4 +1,11 @@
-import { AFTERNOON_TIMETABLE, CLASS_SITE, DAY_LABELS, MORNING_TIMETABLE, subjectStyle } from "@/lib/class-site";
+import {
+  AFTERNOON_TIMETABLE,
+  CLASS_SITE,
+  DAY_LABELS,
+  MORNING_TIMETABLE,
+  shortTeacherName,
+  subjectStyle,
+} from "@/lib/class-site";
 import type { TimetableCell } from "@/lib/class-site";
 
 function TimetableTable({
@@ -53,7 +60,11 @@ function TimetableTable({
                     rowSpan={cell.rowspan}
                   >
                     {empty ? "–" : cell.subject}
-                    {!empty && teacher ? <span className="tkb-teacher">{teacher}</span> : null}
+                    {!empty && teacher ? (
+                      <span className="tkb-teacher" title={teacher}>
+                        {shortTeacherName(teacher)}
+                      </span>
+                    ) : null}
                   </td>
                 );
               })}

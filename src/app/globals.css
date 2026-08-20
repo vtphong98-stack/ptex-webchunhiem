@@ -162,10 +162,12 @@ button {
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* mực */
-  --ink: #0f172a;
-  --ink-2: #4a5568;
-  --ink-3: #8b95a7;
+  /* Mực — mọi cấp đều đạt WCAG AA (>= 4.5:1) trên nền trắng.
+     --ink-3 cũ (#8b95a7) chỉ được 3.02:1 nên chữ phụ đọc rất mờ. */
+  --ink: #0f172a;   /* 17.9:1 */
+  --ink-2: #3d4756; /*  9.4:1 */
+  --ink-3: #667287; /*  4.9:1 */
+  --ink-4: #97a1b0; /* chỉ dùng cho đường kẻ / icon, không dùng cho chữ */
   /* nền & đường kẻ */
   --canvas: #f3f5fa;
   --surface: #ffffff;
@@ -421,11 +423,14 @@ button {
 .site-section {
   --sec: var(--accent);
   --sec-soft: var(--accent-soft);
+  --sec-bg: var(--surface);
   margin: 0;
   padding: 16px;
   border-radius: var(--r-card);
-  border: 1px solid var(--line);
-  background: var(--surface);
+  /* Viền và nền hưởng một chút màu của khu vực để mỗi zone có bản sắc riêng,
+     nhưng nhạt đủ để chữ vẫn nằm trên nền gần như trắng. */
+  border: 1px solid color-mix(in srgb, var(--sec) 14%, var(--line));
+  background: var(--sec-bg);
   box-shadow: var(--shadow);
   scroll-margin-top: 96px;
 }
@@ -467,16 +472,16 @@ button {
 }
 
 /* block-* giờ chỉ chọn màu gạch nhấn của tiêu đề, không còn viền + nền màu */
-.block-violet { --sec: #7c3aed; --sec-soft: #f2eeff; }
-.block-amber { --sec: #d97706; --sec-soft: var(--warn-soft); }
-.block-rose { --sec: #e11d48; --sec-soft: var(--alert-soft); }
-.block-teal { --sec: #0d9488; --sec-soft: #e6f7f5; }
-.block-blue { --sec: #2563eb; --sec-soft: #e9f0fe; }
-.block-sky { --sec: #0284c7; --sec-soft: var(--info-soft); }
-.block-pink { --sec: #db2777; --sec-soft: #fdedf5; }
-.block-indigo { --sec: #4f46e5; --sec-soft: var(--accent-soft); }
-.block-green { --sec: #059669; --sec-soft: var(--ok-soft); }
-.block-orange { --sec: #ea580c; --sec-soft: #fff0e6; }
+.block-violet { --sec: #7c3aed; --sec-soft: #f2eeff; --sec-bg: #fdfcff; }
+.block-amber { --sec: #c2740a; --sec-soft: var(--warn-soft); --sec-bg: #fffdf7; }
+.block-rose { --sec: #e11d48; --sec-soft: var(--alert-soft); --sec-bg: #fffcfd; }
+.block-teal { --sec: #0d9488; --sec-soft: #e6f7f5; --sec-bg: #f8fefd; }
+.block-blue { --sec: #2563eb; --sec-soft: #e9f0fe; --sec-bg: #fafcff; }
+.block-sky { --sec: #0284c7; --sec-soft: var(--info-soft); --sec-bg: #f9fdff; }
+.block-pink { --sec: #db2777; --sec-soft: #fdedf5; --sec-bg: #fffbfd; }
+.block-indigo { --sec: #4f46e5; --sec-soft: var(--accent-soft); --sec-bg: #fbfbff; }
+.block-green { --sec: #059669; --sec-soft: var(--ok-soft); --sec-bg: #f9fefb; }
+.block-orange { --sec: #ea580c; --sec-soft: #fff0e6; --sec-bg: #fffcf9; }
 
 /* Ô liên kết — cùng một hình dạng, màu chỉ để nhận diện vai trò ─── */
 .site-links {
@@ -815,7 +820,7 @@ button {
 }
 .tk-detail-header span {
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--ink-3);
 }
 .tk-close {
   background: rgba(255,255,255,0.15);
@@ -847,9 +852,10 @@ button {
    Trước: 14 gradient rực khác nhau, chữ trắng trên nền bão hòa, header xanh
    IN HOA. Giờ mỗi môn là một nền pastel + chữ đậm cùng họ màu, nên đọc được
    tên môn và vẫn phân biệt được môn bằng màu. */
+/* Không còn cuộn ngang: bảng chia đều đúng bề rộng còn lại (374px trên máy
+   430px), nên cả 6 ngày nằm gọn trong một màn hình. */
 .site-table-wrap {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow-x: visible;
 }
 
 .site-table-wrap + .site-table-wrap {
@@ -877,44 +883,46 @@ button {
 
 .site-table {
   width: 100%;
-  min-width: 430px;
+  table-layout: fixed;
   border-collapse: separate;
-  border-spacing: 3px;
+  border-spacing: 2px;
   background: transparent;
 }
 
 .site-table th,
 .site-table td {
-  padding: 8px 4px;
+  padding: 6px 2px;
   text-align: center;
   border: 0;
-  border-radius: 9px;
-  font-size: 12px;
-  line-height: 1.25;
+  border-radius: 8px;
+  font-size: 10.5px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .site-table th {
-  background: #f1f3f9;
+  background: #eef1f7;
   color: var(--ink-2);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.3px;
+  letter-spacing: 0;
   text-transform: none;
 }
 
 /* Cột "Tiết" dính bên trái: bảng rộng hơn màn hình điện thoại nên nếu không
    dính thì cuộn ngang một chút là mất luôn số tiết. */
+/* Cột "Tiết" hẹp và cố định để 6 cột ngày được chia phần rộng nhất có thể.
+   Không cần sticky nữa vì bảng đã hết cuộn ngang. */
 .site-table th:first-child,
 .site-table td:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  width: 32px;
-  min-width: 32px;
-  background: #eaedf5;
+  width: 26px;
+  background: #e7ebf3;
   color: var(--ink-3);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
+  /* "Tiết" bị gãy thành "Tiế/t" khi cột quá hẹp */
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 /* Cột hôm nay */
@@ -964,12 +972,15 @@ button {
 .subject-tone-5 { --sj-soft: #f3e8ff; --sj-ink: #7e22ce; }
 
 /* Tên giáo viên hiện ngay dưới tên môn thay vì chỉ trong tooltip */
+/* Tên giáo viên là thông tin phụ: nhỏ nhất có thể mà vẫn đọc được, viết tắt
+   chữ đệm (V.T.Phong) để không đội bề rộng ô lên. */
 .site-table td .tkb-teacher {
   display: block;
-  margin-top: 2px;
-  font-size: 9.5px;
-  font-weight: 500;
-  opacity: 0.72;
+  margin-top: 1px;
+  font-size: 7.5px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  opacity: 0.78;
 }
 /* ── Thanh đếm ngược + tuần học ──────────────
    Cả hai đều là "chỉ số trạng thái", nên chúng đứng cạnh nhau thành một dải
@@ -1825,7 +1836,7 @@ button {
 
 .week-missing {
   background: #f3f4f6;
-  color: #9ca3af;
+  color: var(--ink-3);
 }
 
 .week-lock-banner {
@@ -1911,7 +1922,7 @@ button {
   font-size: 12px;
   font-weight: 600;
   background: #f1f5f9;
-  color: #94a3b8;
+  color: var(--ink-3);
 }
 
 .gvcn-source-ok {
@@ -2079,7 +2090,7 @@ button {
 
 .gvcn-officer-card time {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--ink-3);
 }
 
 .gvcn-officer-fields p {
@@ -2233,7 +2244,7 @@ button {
 
 .syll-kicker a,
 .contact-back a {
-  color: #667eea;
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -3444,7 +3455,7 @@ button {
 
 .tp-empty {
   text-align: center;
-  color: #94a3b8;
+  color: var(--ink-3);
   font-size: 13px;
   padding: 16px 0;
 }
@@ -3821,7 +3832,7 @@ button {
 .acc-stamp {
   margin: 0.5rem 0 0;
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: var(--ink-3);
 }
 
 /* Nhật ký thao tác */
@@ -3898,7 +3909,7 @@ button {
 .stat-chip span {
   font-size: 0.68rem;
   font-weight: 500;
-  color: #94a3b8;
+  color: var(--ink-3);
 }
 
 .stat-chip.is-active {

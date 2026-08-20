@@ -115,7 +115,7 @@ export default async function HomePage() {
             </ul>
           </section>
 
-          <section className="site-section block-indigo" id="bao-cao">
+          <section className="site-section block-sky" id="bao-cao">
             <h2>Ban cán sự nộp báo cáo</h2>
             <p className="sec-note">Mỗi chức vụ đăng nhập một lần, lần sau vào thẳng form của mình.</p>
             <ul className="site-links">
@@ -132,7 +132,7 @@ export default async function HomePage() {
             </ul>
           </section>
 
-          <section className="site-section block-blue hp-span" id="tkb">
+          <section className="site-section block-teal hp-span" id="tkb">
             <h2>Thời khóa biểu</h2>
             {site.hasTimetable ? (
               <TimetablePanel
@@ -153,13 +153,13 @@ export default async function HomePage() {
             )}
           </section>
 
-          <section className="site-section block-teal hp-span" id="lich-nam">
+          <section className="site-section block-amber hp-span" id="lich-nam">
             <h2>Lịch năm học {site.yearName || CLASS_SITE.schoolYear}</h2>
             <p className="sec-note">Mốc đang tới được tô đậm — kéo ngang để xem cả năm.</p>
             <YearTimeline milestones={site.milestones} />
           </section>
 
-          <section className="site-section block-sky hp-span" id="goc-hoc-sinh">
+          <section className="site-section block-pink hp-span" id="goc-hoc-sinh">
             <h2>Góc học sinh</h2>
             <div className="hp-student-grid">
               <div className="hp-sub">
