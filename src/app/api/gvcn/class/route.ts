@@ -4,8 +4,8 @@ import { NextResponse } from "next/server";
 import { createAuditLog } from "@/lib/data";
 import { getDb } from "@/lib/db";
 import { canManageSchoolYears } from "@/lib/permissions";
-import { resolveClassConfig, resolveSchoolYearFromRequest } from "@/lib/school-year-scope";
-import { getSessionUser } from "@/lib/session";
+import { CLASS_CONFIG_FIELDS, resolveClassConfig, resolveSchoolYearFromRequest } from "@/lib/school-year-scope";
+import { getVerifiedSessionUser } from "@/lib/session";
 import type { ClassConfig } from "@/lib/types";
 
 function classFullName(className: string, yearName: string) {
@@ -13,13 +13,13 @@ function classFullName(className: string, yearName: string) {
 }
 
 export async function GET(request: Request) {
-  const session = await getSessionUser();
+  const session = await getVerifiedSessionUser();
   if (!session || !canManageSchoolYears(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const year = await resolveSchoolYearFromRequest(request);
   const schoolYearId = year?._id ? String(year._id) : "";
-  const config = schoolYearId ? await resolveClassConfig(schoolYearId) : null;
+  const config = await resolveClassConfig(schoolYearId, { ...CLASS_CONFIG_FIELDS.identity });
   return NextResponse.json({
     className: config?.className ?? "",
     fullName: config?.fullName ?? "",
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const session = await getSessionUser();
+  const session = await getVerifiedSessionUser();
   if (!session || !canManageSchoolYears(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -46,7 +46,7 @@ export async function PATCH(request: Request) {
   const schoolYearId = String(year._id);
   const db = await getDb();
   const configs = db.collection<ClassConfig>("classConfigs");
-  const existing = await configs.findOne({ schoolYearId });
+  const existing = await configs.findOne({ schoolYearId }, { projection: { _id: 1 } });
   const fullName = classFullName(className, year.name);
   const now = new Date().toISOString();
   if (!existing?._id) {

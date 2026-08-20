@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 import { SubmitButton } from "@/components/SubmitButton";
 import { GvcnDesk } from "@/components/gvcn/GvcnDesk";
-import { OfficerDesk } from "@/components/officer/OfficerDesk";
 
 import {
   logoutAction,
@@ -13,6 +11,7 @@ import {
   saveUserAction,
   setCurrentSchoolYearAction,
 } from "@/app/dashboard/actions";
+import { requireGvcn } from "@/lib/access";
 import { getDashboardData } from "@/lib/data";
 import {
   canManageAccounts,
@@ -20,9 +19,7 @@ import {
   canManageSchoolYears,
   canManageStudents,
   getAllowedViews,
-  isClassOfficer,
 } from "@/lib/permissions";
-import { getSessionUser } from "@/lib/session";
 import type { AppRole, NavView } from "@/lib/types";
 import { APP_ROLES } from "@/lib/types";
 import { formatDate, formatRoleLabel } from "@/lib/utils";
@@ -42,18 +39,15 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ view?: string; year?: string; week?: string }>;
 }) {
-  const session = await getSessionUser();
-  if (!session) {
-    redirect("/login");
-  }
+  // requireGvcn sends a non-teacher session to the GVCN login form. It must NOT
+  // bounce an officer to their own report page: a student's leftover session
+  // would then lock the teacher out of the setup desk with no way to sign in.
+  const session = await requireGvcn("/dashboard");
 
   const params = await searchParams;
+
   const allowedViews = getAllowedViews(session.role);
   const currentView = (allowedViews.includes(params.view as NavView) ? params.view : allowedViews[0]) as NavView;
-
-  if (isClassOfficer(session.role)) {
-    return <OfficerDesk fullName={session.fullName} role={session.role} teamNumber={session.teamNumber} />;
-  }
 
   if (session.role === "gvcn") {
     return (
@@ -185,7 +179,7 @@ export default async function DashboardPage({
                   <MetricRow label="Thi/Học kỳ" value={data.classConfig?.examTitle ?? "Chưa cấu hình"} />
                   <MetricRow label="Ngày mốc" value={formatDate(data.classConfig?.examDate)} />
                 </dl>
-                {(session.role === "admin" || session.role === "gvcn") && data.classConfig ? (
+                {((session.role as string) === "admin" || (session.role as string) === "gvcn") && data.classConfig ? (
                   <div className="mt-4 rounded-3xl bg-blue-50 p-4 text-sm leading-6 text-blue-900">
                     Chức năng riêng của giáo viên chủ nhiệm chỉ hiện khi đăng nhập bằng tài khoản
                     `gvcn` hoặc `admin`, bao gồm quản trị năm học, chia tổ và xem lịch sử chỉnh sửa.

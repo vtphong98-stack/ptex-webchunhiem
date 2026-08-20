@@ -4,13 +4,13 @@ import { createAuditLog } from "@/lib/data";
 import { getDb } from "@/lib/db";
 import { canReviewReports } from "@/lib/permissions";
 import { resolveSchoolYearFromRequest } from "@/lib/school-year-scope";
-import { getSessionUser } from "@/lib/session";
+import { getVerifiedSessionUser } from "@/lib/session";
 import { EXCEL_WEEK_COUNT } from "@/lib/weeks";
 import { findLock, type WeekLockOverride } from "@/lib/week-lock";
 import { getWeekLockStates, type WeekLockDoc } from "@/lib/week-lock-store";
 
 export async function GET(request: Request) {
-  const session = await getSessionUser();
+  const session = await getVerifiedSessionUser();
   if (!session || !canReviewReports(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await getSessionUser();
+  const session = await getVerifiedSessionUser();
   if (!session || !canReviewReports(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }

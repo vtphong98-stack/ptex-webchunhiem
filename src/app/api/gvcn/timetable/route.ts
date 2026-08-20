@@ -6,19 +6,22 @@ import { CURRENT_CLASS_NAME, CURRENT_SCHOOL_YEAR } from "@/lib/academic-calendar
 import { getDb } from "@/lib/db";
 import { parseTimetableWorkbook } from "@/lib/excel-timetable";
 import { canManageStudents } from "@/lib/permissions";
-import { resolveClassConfig, resolveSchoolYear, resolveSchoolYearFromRequest } from "@/lib/school-year-scope";
-import { getSessionUser } from "@/lib/session";
+import { CLASS_CONFIG_FIELDS, resolveClassConfig, resolveSchoolYear, resolveSchoolYearFromRequest } from "@/lib/school-year-scope";
+import { getVerifiedSessionUser } from "@/lib/session";
 import { archiveCurrentTimetable, versionMeta } from "@/lib/timetable-versions";
 import type { ClassConfig } from "@/lib/types";
 
 export async function GET(request: Request) {
-  const session = await getSessionUser();
+  const session = await getVerifiedSessionUser();
   if (!session || !canManageStudents(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const year = await resolveSchoolYearFromRequest(request);
   const schoolYearId = year?._id ? String(year._id) : "";
-  const config = schoolYearId ? await resolveClassConfig(schoolYearId) : null;
+  const config = await resolveClassConfig(schoolYearId, {
+    ...CLASS_CONFIG_FIELDS.timetable,
+    updatedAt: 1,
+  });
   return NextResponse.json({
     yearName: year?.name ?? "",
     isCurrent: Boolean(year?.isCurrent),
@@ -28,7 +31,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await getSessionUser();
+  const session = await getVerifiedSessionUser();
   if (!session || !canManageStudents(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }

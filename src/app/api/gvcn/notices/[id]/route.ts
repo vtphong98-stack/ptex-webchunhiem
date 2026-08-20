@@ -5,11 +5,11 @@ import { getDb } from "@/lib/db";
 import { formatNoticeDate, isNoticeNew } from "@/lib/notices";
 import { canReviewReports } from "@/lib/permissions";
 import { resolveSchoolYearFromRequest } from "@/lib/school-year-scope";
-import { getSessionUser } from "@/lib/session";
+import { getVerifiedSessionUser } from "@/lib/session";
 import type { GvcnNotice } from "@/lib/types";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getSessionUser();
+  const session = await getVerifiedSessionUser();
   if (!session || !canReviewReports(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -61,7 +61,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getSessionUser();
+  const session = await getVerifiedSessionUser();
   if (!session || !canReviewReports(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }

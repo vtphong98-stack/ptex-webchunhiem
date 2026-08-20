@@ -4,12 +4,12 @@ import { CLASS_SITE } from "@/lib/class-site";
 import { getDb } from "@/lib/db";
 import { buildTeamTemplateWorkbook, workbookToBuffer } from "@/lib/excel-teams";
 import { canManageStudents } from "@/lib/permissions";
-import { getSessionUser } from "@/lib/session";
+import { getVerifiedSessionUser } from "@/lib/session";
 import { getCurrentSchoolYearDoc } from "@/lib/student-store";
 import type { Student } from "@/lib/types";
 
 export async function GET() {
-  const session = await getSessionUser();
+  const session = await getVerifiedSessionUser();
   if (!session || !canManageStudents(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }

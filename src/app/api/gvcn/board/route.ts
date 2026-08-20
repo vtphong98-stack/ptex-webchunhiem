@@ -3,12 +3,18 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { canReviewReports } from "@/lib/permissions";
 import { computeRanking, computeTeamScore } from "@/lib/report-schema";
-import { listSchoolYears, resolveSchoolYearFromRequest, weeksOfYear } from "@/lib/school-year-scope";
-import { getSessionUser } from "@/lib/session";
+import {
+  CLASS_CONFIG_FIELDS,
+  listSchoolYears,
+  resolveClassConfig,
+  resolveSchoolYearFromRequest,
+  weeksOfYear,
+} from "@/lib/school-year-scope";
+import { getVerifiedSessionUser } from "@/lib/session";
 import type { WeeklyReport } from "@/lib/types";
 
 export async function GET(request: Request) {
-  const session = await getSessionUser();
+  const session = await getVerifiedSessionUser();
   if (!session || !canReviewReports(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -22,8 +28,12 @@ export async function GET(request: Request) {
 
     const schoolYearId = String(schoolYear._id);
     const weeks = weeksOfYear(schoolYear);
-    const years = await listSchoolYears();
-    const reports = await db.collection<WeeklyReport>("weeklyReports")
+    // Three independent reads. The class name is folded in here so the desk no
+    // longer needs a separate /api/gvcn/class round trip after hydration.
+    const [years, config, reports] = await Promise.all([
+      listSchoolYears(),
+      resolveClassConfig(schoolYearId, { ...CLASS_CONFIG_FIELDS.identity }),
+      db.collection<WeeklyReport>("weeklyReports")
       .find(
         { schoolYearId },
         {
@@ -44,7 +54,8 @@ export async function GET(request: Request) {
           },
         },
       )
-      .toArray();
+      .toArray(),
+    ]);
 
     const submittedSet = new Set<string>();
     const ttByWeek = new Map<number, Array<{ teamNumber: number; fields: Record<string, string> }>>();
@@ -106,6 +117,8 @@ export async function GET(request: Request) {
       {
         rows,
         yearName: schoolYear.name,
+        className: config?.className ?? "",
+        fullName: config?.fullName ?? "",
         isCurrent: Boolean(schoolYear.isCurrent),
         years: years.map((year) => ({ name: year.name, label: year.label, isCurrent: Boolean(year.isCurrent) })),
       },

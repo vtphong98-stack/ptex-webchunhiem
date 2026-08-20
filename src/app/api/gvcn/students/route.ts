@@ -3,13 +3,13 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { canManageStudents } from "@/lib/permissions";
 import { resolveSchoolYearFromRequest } from "@/lib/school-year-scope";
-import { getSessionUser } from "@/lib/session";
+import { getVerifiedSessionUser } from "@/lib/session";
 import { attachStudentStats, studentStatsById } from "@/lib/student-store";
 import { sortTeamStudents, studentPositionLabel } from "@/lib/team-roster";
 import type { Student } from "@/lib/types";
 
 export async function GET(request: Request) {
-  const session = await getSessionUser();
+  const session = await getVerifiedSessionUser();
   if (!session || !canManageStudents(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }

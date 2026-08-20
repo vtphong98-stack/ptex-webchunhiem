@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { loginAction } from "@/app/login/actions";
@@ -27,9 +28,24 @@ const ROLE_COPY: Record<string, { title: string; username?: string; hint: string
   tt4: { title: "Tổ trưởng tổ 4", username: "tt4", hint: "Tài khoản tt4" },
 };
 
-export function LoginForm() {
+export function LoginForm({
+  signedInAs = "",
+  switchingArea = false,
+  userKeyOverride = "",
+  nextOverride = "",
+}: {
+  /** Who is currently signed in, if anyone — so a leftover session is visible. */
+  signedInAs?: string;
+  /** True when that session belongs to the other area (student vs teacher). */
+  switchingArea?: boolean;
+  /** Preselect the account when the form is embedded on a page that already
+   *  knows the role (the report pages), instead of relying on ?user=. */
+  userKeyOverride?: string;
+  nextOverride?: string;
+} = {}) {
   const searchParams = useSearchParams();
-  const userKey = searchParams.get("user") ?? "";
+  const userKey = userKeyOverride || searchParams.get("user") || "";
+  const nextUrl = nextOverride || searchParams.get("next") || "";
   const role = ROLE_COPY[userKey] ?? {
     title: "Đăng nhập báo cáo",
     hint: "Dùng tài khoản chức vụ: lt, lpht, lpld, lppt, lptt, tt1-tt4, thuquy, gvcn",
@@ -41,23 +57,33 @@ export function LoginForm() {
     <main className="py-8">
       <div className="officer-form">
         <div style={{ textAlign: "center", marginBottom: 16 }}>
-          <a className="button-primary" href="/">
+          <Link className="button-primary" href="/">
             ← Trở về trang chủ
-          </a>
+          </Link>
         </div>
         <h1>{CLASS_SITE.fullName}</h1>
         <h2>{role.title}</h2>
 
+        {signedInAs ? (
+          <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-900">
+            Thiết bị này đang đăng nhập <strong>{signedInAs}</strong>.
+            {switchingArea
+              ? " Đăng nhập bên dưới để chuyển sang khu vực này."
+              : " Đăng nhập bên dưới để đổi tài khoản."}
+          </p>
+        ) : null}
+
         {userKey === "tt" && !role.username ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 20 }}>
             {[1, 2, 3, 4].map((team) => (
-              <a className="button-secondary" href={`/login?user=tt${team}`} key={team}>
+              <a className="button-secondary" href={`/login?user=tt${team}${nextUrl ? `&next=${encodeURIComponent(nextUrl)}` : ""}`} key={team}>
                 Tổ {team}
               </a>
             ))}
           </div>
         ) : (
           <form action={loginAction} className="space-y-4">
+            {nextUrl ? <input name="next" type="hidden" value={nextUrl} /> : null}
             {role.username ? (
               <input name="username" type="hidden" value={role.username} />
             ) : (

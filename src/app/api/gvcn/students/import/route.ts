@@ -4,7 +4,7 @@ import { createAuditLog } from "@/lib/data";
 import { getDb } from "@/lib/db";
 import { parseTeamWorkbook } from "@/lib/excel-teams";
 import { canManageStudents } from "@/lib/permissions";
-import { getSessionUser } from "@/lib/session";
+import { getVerifiedSessionUser } from "@/lib/session";
 import { getCurrentSchoolYearDoc } from "@/lib/student-store";
 import {
   CLASS_DUTY_USERNAME,
@@ -49,7 +49,7 @@ async function syncLoginName(fullName: string, teamNumber: number, teamRole: Tea
 }
 
 export async function POST(request: Request) {
-  const session = await getSessionUser();
+  const session = await getVerifiedSessionUser();
   if (!session || !canManageStudents(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
