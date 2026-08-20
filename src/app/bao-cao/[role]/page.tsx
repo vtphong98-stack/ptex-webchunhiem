@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { LoginForm } from "@/components/login/LoginForm";
 import { OfficerDesk } from "@/components/officer/OfficerDesk";
 import { isOfficerRole } from "@/lib/access";
+import { getClassIdentity } from "@/lib/public-site";
 import { getSessionUser } from "@/lib/session";
 import type { AppRole } from "@/lib/types";
 
@@ -188,6 +189,7 @@ export default async function OfficerReportPage({
   }
 
   const session = await getSessionUser();
+  const site = await getClassIdentity();
 
   // The reporting area belongs to the class officers only. The teacher reviews
   // every submitted report read-only from the setup desk and /tong-ket.
@@ -255,6 +257,7 @@ export default async function OfficerReportPage({
         >
           <LoginForm
             nextOverride={nextPath}
+            siteName={site.fullName}
             signedInAs={signedInAs}
             switchingArea={crossingArea}
             userKeyOverride={targetUsername}

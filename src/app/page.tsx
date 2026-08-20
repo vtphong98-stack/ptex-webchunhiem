@@ -12,6 +12,15 @@ import { getPublicSiteData } from "@/lib/public-site";
 
 export const revalidate = 30;
 
+/** Tên tab cũng phải theo tên lớp GVCN đặt ở setup, không để cứng trong layout. */
+export async function generateMetadata() {
+  const site = await getPublicSiteData();
+  return {
+    title: site.fullName,
+    description: `Trang lớp ${site.className} — thông báo, tổng kết tuần, thời khóa biểu và công cụ chủ nhiệm.`,
+  };
+}
+
 /**
  * Sơ đồ trang, theo thứ tự công việc của GVCN:
  *   Tuần này → Thông báo → Khu GVCN → Ban cán sự → TKB → Lịch năm → Góc học sinh
@@ -30,7 +39,7 @@ const ZONES = [
 
 export default async function HomePage() {
   const site = await getPublicSiteData();
-  const initials = CLASS_SITE.gvcnName
+  const initials = site.gvcnName
     .split(/\s+/)
     .map((part) => part[0])
     .join("")
@@ -52,7 +61,7 @@ export default async function HomePage() {
               {initials}
             </span>
             <div>
-              <strong>Thầy {CLASS_SITE.gvcnName}</strong>
+              <strong>{site.gvcnDisplayName}</strong>
               <span>Giáo viên chủ nhiệm</span>
             </div>
           </div>
@@ -65,10 +74,10 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="site-hero-contact">
-            <a className="hero-call" href={`tel:${CLASS_SITE.gvcnPhone}`}>
+            <a className="hero-call" href={`tel:${site.gvcnPhone}`}>
               <span aria-hidden>📞</span> Gọi GVCN
             </a>
-            <a className="hero-zalo" href={`https://zalo.me/${CLASS_SITE.gvcnPhone}`} rel="noreferrer" target="_blank">
+            <a className="hero-zalo" href={`https://zalo.me/${site.gvcnZalo}`} rel="noreferrer" target="_blank">
               <span aria-hidden>💬</span> Zalo GVCN
             </a>
           </div>
@@ -143,6 +152,9 @@ export default async function HomePage() {
             <h2>Thời khóa biểu</h2>
             {site.hasTimetable ? (
               <TimetablePanel
+                className={site.className}
+                gvcnName={site.gvcnName}
+                schoolYear={site.yearName}
                 current={{
                   id: "current",
                   createdAt: site.timetableUpdatedAt,
@@ -154,14 +166,14 @@ export default async function HomePage() {
               />
             ) : (
               <div className="site-widget">
-                GVCN chưa tải thời khóa biểu năm {CLASS_SITE.schoolYear}. Vào Khu GVCN → TKB, tải mẫu Excel, gõ môn rồi
+                GVCN chưa tải thời khóa biểu năm {site.yearName}. Vào Khu GVCN → TKB, tải mẫu Excel, gõ môn rồi
                 tải lên.
               </div>
             )}
           </section>
 
           <section className="site-section block-amber hp-span" id="lich-nam">
-            <h2>Lịch năm học {site.yearName || CLASS_SITE.schoolYear}</h2>
+            <h2>Lịch năm học {site.yearName}</h2>
             <p className="sec-note">Mốc đang tới được tô đậm — kéo ngang để xem cả năm.</p>
             <YearTimeline milestones={site.milestones} />
           </section>
@@ -205,7 +217,7 @@ export default async function HomePage() {
 
         <footer className="site-copyright">
           <p>
-            © {new Date().getFullYear()} {site.fullName} · GVCN Thầy {CLASS_SITE.gvcnName}
+            © {new Date().getFullYear()} {site.fullName} · GVCN {site.gvcnDisplayName}
           </p>
           <p>Web báo cáo chủ nhiệm · Mọi quyền được bảo lưu.</p>
         </footer>

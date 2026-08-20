@@ -1,4 +1,4 @@
-import { CLASS_SITE, DAY_LABELS, shortTeacherName, subjectStyle, type TimetableCell } from "@/lib/class-site";
+import { DAY_LABELS, shortTeacherName, subjectStyle, type TimetableCell } from "@/lib/class-site";
 
 export type TimetableSession = {
   title: string;
@@ -152,9 +152,10 @@ export async function renderTimetablePng(input: {
   palette: Palette;
   className: string;
   schoolYear: string;
+  gvcnName: string;
   updatedAt?: string;
 }): Promise<Blob | null> {
-  const { sessions, palette, className, schoolYear, updatedAt } = input;
+  const { sessions, palette, className, schoolYear, gvcnName, updatedAt } = input;
   const width = PAD * 2 + COL_PERIOD + COL_DAY * DAY_LABELS.length;
   const height =
     PAD * 2 +
@@ -204,7 +205,7 @@ export async function renderTimetablePng(input: {
   ctx.fillStyle = INK_3;
   ctx.font = `500 11px ${FONT}`;
   const stamp = updatedAt ? `Cập nhật ${updatedAt} · ` : "";
-  ctx.fillText(`${stamp}GVCN ${CLASS_SITE.gvcnName}`, PAD, y + FOOT_H / 2 + 6);
+  ctx.fillText(`${stamp}GVCN ${gvcnName}`, PAD, y + FOOT_H / 2 + 6);
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
 }

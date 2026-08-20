@@ -58,7 +58,7 @@ function Field({
   );
 }
 
-export function SyllForm() {
+export function SyllForm({ siteName }: { siteName: string }) {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -216,7 +216,7 @@ export function SyllForm() {
       </label>
 
       <p className="syll-hint">
-        {CLASS_SITE.fullName}. Hồ sơ lưu trên web lớp và đồng bộ Google Sheet LyLich.
+        {siteName}. Hồ sơ lưu trên web lớp và đồng bộ Google Sheet LyLich.
       </p>
       {message ? <p className="syll-ok">{message}</p> : null}
       {error ? <p className="syll-err">{error}</p> : null}

@@ -1,21 +1,25 @@
 import Link from "next/link";
 
 import { requireGvcn } from "@/lib/access";
-import { CLASS_SITE } from "@/lib/class-site";
 import { getDb } from "@/lib/db";
 import { resolveSchoolYear } from "@/lib/school-year-scope";
 import { sortTeamStudents, studentPositionLabel } from "@/lib/team-roster";
 import type { Student } from "@/lib/types";
 import { StudentLookupPublic } from "@/components/public/StudentLookupPublic";
+import { getClassIdentity } from "@/lib/public-site";
 
 export const revalidate = 60;
 
-export const metadata = {
-  title: `Tra cứu học sinh · ${CLASS_SITE.fullName}`,
-  description: "Tra cứu thông tin học sinh lớp " + CLASS_SITE.className,
-};
+export async function generateMetadata() {
+  const site = await getClassIdentity();
+  return {
+    title: `Tra cứu học sinh · ${site.fullName}`,
+    description: `Tra cứu thông tin học sinh lớp ${site.className}`,
+  };
+}
 
 export default async function TraCuuPage() {
+  const site = await getClassIdentity();
   await requireGvcn("/tra-cuu-hs");
 
   const year = await resolveSchoolYear();
@@ -91,7 +95,7 @@ export default async function TraCuuPage() {
         <section className="site-section block-teal">
           <h1 style={{ fontSize: 22, marginBottom: 4 }}>🔍 Tra Cứu Học Sinh</h1>
           <p style={{ color: "#64748b", fontSize: 14, marginBottom: 16 }}>
-            {CLASS_SITE.fullName} · GVCN Thầy {CLASS_SITE.gvcnName}
+            {site.fullName} · GVCN {site.gvcnDisplayName}
           </p>
           <StudentLookupPublic students={students} />
         </section>

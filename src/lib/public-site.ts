@@ -53,13 +53,22 @@ export const getPublicSiteData = unstable_cache(
     const newestId = newest?._id ? String(newest._id) : "";
     const milestones = parseMilestonesJson(config?.milestonesJson);
 
+    // Danh tính lớp phải lấy từ classConfigs — chỗ mà trang setup ghi vào. Trước
+    // đây hàm này đã tải config nhưng vẫn trả về hằng số trong class-site.ts,
+    // nên đổi tên lớp ở phần setup không hiện ra bất kỳ đâu trên trang chủ.
+    const yearName = year?.name ?? CLASS_SITE.schoolYear;
+    const className = config?.className?.trim() || CLASS_SITE.className;
+    const gvcnName = config?.gvcnName?.trim() || CLASS_SITE.gvcnName;
+
     return {
-      className: CLASS_SITE.className,
-      fullName: CLASS_SITE.fullName,
-      schoolYear: year?.name ?? CLASS_SITE.schoolYear,
-      yearName: year?.name ?? CLASS_SITE.schoolYear,
-      gvcnName: CLASS_SITE.gvcnName,
-      gvcnPhone: CLASS_SITE.gvcnPhone,
+      className,
+      fullName: config?.fullName?.trim() || `Lớp ${className} - ${yearName}`,
+      schoolYear: yearName,
+      yearName,
+      gvcnName,
+      gvcnDisplayName: config?.gvcnDisplayName?.trim() || `Thầy ${gvcnName}`,
+      gvcnPhone: config?.gvcnPhone?.trim() || CLASS_SITE.gvcnPhone,
+      gvcnZalo: config?.gvcnZalo?.trim() || config?.gvcnPhone?.trim() || CLASS_SITE.gvcnPhone,
       studentCount: students.length,
       students: students.map((s) => ({
         fullName: s.fullName,
@@ -77,6 +86,34 @@ export const getPublicSiteData = unstable_cache(
   },
   ["public-site-data"],
   { revalidate: 60, tags: ["public-site", "notices", "timetable", "milestones"] },
+);
+
+/**
+ * Danh tính lớp — tên lớp, tên GVCN, năm học — lấy từ classConfigs.
+ *
+ * Tách riêng khỏi getPublicSiteData để những trang chỉ cần cái tên (tiêu đề tab,
+ * dòng đầu trang) không phải tải kèm học sinh, thông báo và bảng xếp hạng.
+ */
+export const getClassIdentity = unstable_cache(
+  async () => {
+    const year = await resolveSchoolYear(undefined, { seed: false });
+    const schoolYearId = year?._id ? String(year._id) : "";
+    const config = await resolveClassConfig(schoolYearId, { ...CLASS_CONFIG_FIELDS.identity });
+    const yearName = year?.name ?? CLASS_SITE.schoolYear;
+    const className = config?.className?.trim() || CLASS_SITE.className;
+    const gvcnName = config?.gvcnName?.trim() || CLASS_SITE.gvcnName;
+    return {
+      className,
+      fullName: config?.fullName?.trim() || `Lớp ${className} - ${yearName}`,
+      schoolYear: yearName,
+      gvcnName,
+      gvcnDisplayName: config?.gvcnDisplayName?.trim() || `Thầy ${gvcnName}`,
+      gvcnPhone: config?.gvcnPhone?.trim() || CLASS_SITE.gvcnPhone,
+      gvcnZalo: config?.gvcnZalo?.trim() || config?.gvcnPhone?.trim() || CLASS_SITE.gvcnPhone,
+    };
+  },
+  ["class-identity"],
+  { revalidate: 60, tags: ["public-site", "class-identity"] },
 );
 
 export const getBothContactDirectories = unstable_cache(

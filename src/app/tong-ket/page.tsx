@@ -1,20 +1,24 @@
 import Link from "next/link";
 
 import { requireGvcn } from "@/lib/access";
-import { CLASS_SITE } from "@/lib/class-site";
 import { getHomeBoard } from "@/lib/home-board";
 import { resolveSchoolYear } from "@/lib/school-year-scope";
 import { buildExcelWeeks } from "@/lib/weeks";
 import { WeeklyReportPublic } from "@/components/public/WeeklyReportPublic";
+import { getClassIdentity } from "@/lib/public-site";
 
 export const revalidate = 30;
 
-export const metadata = {
-  title: `Tổng kết lớp theo tuần · ${CLASS_SITE.fullName}`,
-  description: "Tổng kết lớp hàng tuần — xếp hạng tổ, vi phạm, báo cáo chi tiết",
-};
+export async function generateMetadata() {
+  const site = await getClassIdentity();
+  return {
+    title: `Tổng kết lớp theo tuần · ${site.fullName}`,
+    description: "Tổng kết lớp hàng tuần — xếp hạng tổ, vi phạm, báo cáo chi tiết",
+  };
+}
 
 export default async function TongKetPage() {
+  const site = await getClassIdentity();
   await requireGvcn("/tong-ket");
 
   const year = await resolveSchoolYear(undefined, { seed: false });
@@ -33,7 +37,7 @@ export default async function TongKetPage() {
         <section className="site-section block-blue">
           <h1 style={{ fontSize: 22, marginBottom: 4 }}>📊 Tổng Kết Lớp Theo Tuần</h1>
           <p style={{ color: "#64748b", fontSize: 14, marginBottom: 16 }}>
-            {CLASS_SITE.fullName} · Năm học {CLASS_SITE.schoolYear}
+            {site.fullName} · Năm học {site.schoolYear}
           </p>
           <WeeklyReportPublic board={board} weeks={weeks} />
         </section>

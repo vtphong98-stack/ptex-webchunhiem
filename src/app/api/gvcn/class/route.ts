@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { createAuditLog } from "@/lib/data";
@@ -64,6 +64,10 @@ export async function PATCH(request: Request) {
     actorRole: session.role,
   });
 
+  // getPublicSiteData mang tag "public-site"; nếu chỉ revalidatePath thì tên lớp
+  // mới chỉ hiện ở đúng trang được nêu, các chỗ khác vẫn đọc bản cache cũ.
+  revalidateTag("public-site", "max");
+  revalidateTag("contacts", "max");
   revalidatePath("/");
   revalidatePath("/syll");
   revalidatePath("/lien-he-phu-huynh");

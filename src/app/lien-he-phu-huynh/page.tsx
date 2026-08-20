@@ -4,14 +4,17 @@ import { ContactDirectory } from "@/components/contact/ContactDirectory";
 import { CLASS_SITE } from "@/lib/class-site";
 import { telHref, zaloHref } from "@/lib/phone";
 import { getContactDirectory } from "@/lib/public-site";
+import { getClassIdentity } from "@/lib/public-site";
 
 export const revalidate = 60;
 
-export const metadata = {
-  title: `Liên hệ phụ huynh · ${CLASS_SITE.fullName}`,
-};
+export async function generateMetadata() {
+  const site = await getClassIdentity();
+  return { title: `Liên hệ phụ huynh · ${site.fullName}` };
+}
 
 export default async function ParentContactPage() {
+  const site = await getClassIdentity();
   const directory = await getContactDirectory("parents");
 
   return (
@@ -23,7 +26,7 @@ export default async function ParentContactPage() {
         <header className="contact-hero">
           <h1>Liên hệ phụ huynh</h1>
           <p>
-            {CLASS_SITE.fullName} · GVCN {CLASS_SITE.gvcnName}
+            {site.fullName} · GVCN {site.gvcnName}
           </p>
         </header>
         <div className="contact-gvcn">

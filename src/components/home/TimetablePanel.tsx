@@ -19,9 +19,16 @@ export type TimetableSnapshot = {
 export function TimetablePanel({
   current,
   versions,
+  className,
+  schoolYear,
+  gvcnName,
 }: {
   current: TimetableSnapshot | null;
   versions: TimetableSnapshot[];
+  /** Truyền từ server để ảnh và tên file theo đúng tên lớp GVCN đã đặt ở setup. */
+  className: string;
+  schoolYear: string;
+  gvcnName: string;
 }) {
   const [selectedId, setSelectedId] = useState("current");
   const [saving, setSaving] = useState(false);
@@ -65,15 +72,16 @@ export function TimetablePanel({
           { title: CLASS_SITE.afternoonTitle, periods: [2, 3, 4, 5], rows: selected.afternoon },
         ],
         palette: readSubjectPalette(tableRef.current),
-        className: CLASS_SITE.className,
-        schoolYear: CLASS_SITE.schoolYear,
+        className,
+        schoolYear,
+        gvcnName,
         updatedAt: stamp ? formatDateTime(stamp) : "",
       });
       if (!blob) {
         setSaveNote("Máy không hỗ trợ lưu ảnh. Thử trình duyệt khác.");
         return;
       }
-      downloadBlob(blob, `TKB-${CLASS_SITE.className}-${CLASS_SITE.schoolYear}.png`);
+      downloadBlob(blob, `TKB-${className}-${schoolYear}.png`);
       setSaveNote("Đã lưu ảnh vào máy.");
       window.setTimeout(() => setSaveNote(""), 4000);
     } catch {
@@ -81,7 +89,7 @@ export function TimetablePanel({
     } finally {
       setSaving(false);
     }
-  }, [selected, stamp]);
+  }, [className, gvcnName, schoolYear, selected, stamp]);
 
   if (!current) {
     return (

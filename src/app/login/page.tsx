@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { LoginForm } from "@/components/login/LoginForm";
 import { areaOf, areaOfUserKey, homePathForRole, nextPathForSession, redirectTo } from "@/lib/access";
+import { getClassIdentity } from "@/lib/public-site";
 import { getSessionUser } from "@/lib/session";
 import type { SessionUser } from "@/lib/types";
 
@@ -33,6 +34,7 @@ export default async function LoginPage({
 }: {
   searchParams?: Promise<{ user?: string; next?: string; error?: string }>;
 }) {
+  const site = await getClassIdentity();
   const params = searchParams ? await searchParams : {};
   const userKey = params.user ?? "";
   const session = await getSessionUser();
@@ -61,7 +63,7 @@ export default async function LoginPage({
         </main>
       }
     >
-      <LoginForm signedInAs={signedInAs} switchingArea={switchingArea} />
+      <LoginForm signedInAs={signedInAs} siteName={site.fullName} switchingArea={switchingArea} />
     </Suspense>
   );
 }

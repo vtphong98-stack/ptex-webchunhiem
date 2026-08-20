@@ -1,16 +1,19 @@
 import Link from "next/link";
 
 import { requireGvcn } from "@/lib/access";
-import { CLASS_SITE } from "@/lib/class-site";
 import { getTargetsServer } from "@/lib/public-site";
 import type { ClassTargets, FourLevelMetric, HomeroomAcademicMetric, SubjectClassTarget } from "@/lib/types";
+import { getClassIdentity } from "@/lib/public-site";
 
 export const revalidate = 30;
 
-export const metadata = {
-  title: `Chỉ tiêu năm học · ${CLASS_SITE.fullName}`,
-  description: `Chỉ tiêu rèn luyện và học tập năm học ${CLASS_SITE.schoolYear}`,
-};
+export async function generateMetadata() {
+  const site = await getClassIdentity();
+  return {
+    title: `Chỉ tiêu năm học · ${site.fullName}`,
+    description: `Chỉ tiêu rèn luyện và học tập năm học ${site.schoolYear}`,
+  };
+}
 
 const DEFAULT_TARGETS: ClassTargets = {
   schoolYear: "2026-2027",
@@ -67,6 +70,9 @@ const DEFAULT_TARGETS: ClassTargets = {
 };
 
 export default async function ChiTieuPage() {
+  const site = await getClassIdentity();
+  // Tên lớp chủ nhiệm lấy từ setup; targetsJson có thể còn giữ tên mẫu cũ.
+  const homeroomClass = site.className;
   await requireGvcn("/chi-tieu");
 
   const { data } = await getTargetsServer();
@@ -168,13 +174,13 @@ export default async function ChiTieuPage() {
         <section className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10">
             <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold uppercase tracking-wider mb-3">
-              Kế hoạch & Mục tiêu năm học {CLASS_SITE.schoolYear}
+              Kế hoạch & Mục tiêu năm học {site.schoolYear}
             </span>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
               🎯 Chỉ Tiêu Chủ Nhiệm & Giảng Dạy Bộ Môn
             </h1>
             <p className="text-indigo-200 text-sm sm:text-base mt-2 font-medium">
-              Thầy {CLASS_SITE.gvcnName} · Lớp chủ nhiệm: <strong>{targets.homeroom?.className || CLASS_SITE.className}</strong> ({targets.homeroom?.totalStudents} HS) · Giảng dạy môn Toán: <strong>{overallSub.classCount}</strong> lớp ({overallSub.totalSubStudents} HS)
+              {site.gvcnDisplayName} · Lớp chủ nhiệm: <strong>{homeroomClass}</strong> ({targets.homeroom?.totalStudents} HS) · Giảng dạy môn Toán: <strong>{overallSub.classCount}</strong> lớp ({overallSub.totalSubStudents} HS)
             </p>
           </div>
           <div className="absolute -right-8 -bottom-8 w-48 h-48 bg-purple-500/20 rounded-full blur-2xl pointer-events-none" />
@@ -189,7 +195,7 @@ export default async function ChiTieuPage() {
               PHẦN A
             </span>
             <h2 className="text-xl font-black text-slate-800">
-              CHỈ TIÊU CÔNG TÁC CHỦ NHIỆM — LỚP {targets.homeroom?.className || "12A1"}
+              CHỈ TIÊU CÔNG TÁC CHỦ NHIỆM — LỚP {homeroomClass}
             </h2>
             <span className="text-xs font-semibold text-slate-500 ml-auto">
               Sĩ số: <strong>{targets.homeroom?.totalStudents}</strong> HS
@@ -237,7 +243,7 @@ export default async function ChiTieuPage() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
               <div>
                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <span>📚</span> 2. Chỉ tiêu Học tập (Học lực cả năm) — Lớp {targets.homeroom?.className}
+                  <span>📚</span> 2. Chỉ tiêu Học tập (Học lực cả năm) — Lớp {homeroomClass}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Vốn dĩ 4 mức <strong>Tốt · Khá · Đạt · Chưa đạt</strong> là 100%. Danh hiệu <strong>Xuất sắc</strong> được xét riêng tính % trên toàn bộ học sinh lớp.

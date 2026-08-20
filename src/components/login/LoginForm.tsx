@@ -33,6 +33,7 @@ export function LoginForm({
   switchingArea = false,
   userKeyOverride = "",
   nextOverride = "",
+  siteName = "",
 }: {
   /** Who is currently signed in, if anyone — so a leftover session is visible. */
   signedInAs?: string;
@@ -42,6 +43,8 @@ export function LoginForm({
    *  knows the role (the report pages), instead of relying on ?user=. */
   userKeyOverride?: string;
   nextOverride?: string;
+  /** Tên lớp thật, truyền từ server; CLASS_SITE chỉ là dự phòng. */
+  siteName?: string;
 } = {}) {
   const searchParams = useSearchParams();
   const userKey = userKeyOverride || searchParams.get("user") || "";
@@ -61,7 +64,7 @@ export function LoginForm({
             ← Trở về trang chủ
           </Link>
         </div>
-        <h1>{CLASS_SITE.fullName}</h1>
+        <h1>{siteName || CLASS_SITE.fullName}</h1>
         <h2>{role.title}</h2>
 
         {signedInAs ? (

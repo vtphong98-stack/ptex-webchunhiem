@@ -98,7 +98,16 @@ function yearQs(yearName: string) {
   return yearName ? `?year=${encodeURIComponent(yearName)}` : "";
 }
 
-export function GvcnDesk({ fullName, initialView }: { fullName: string; initialView?: string }) {
+export function GvcnDesk({
+  fullName,
+  initialView,
+  initialClassName,
+}: {
+  fullName: string;
+  initialView?: string;
+  /** Tên lớp thật từ DB, để tiêu đề không hiện tên cứng rồi mới nhảy. */
+  initialClassName?: string;
+}) {
   const [board, setBoard] = useState<{ rows: BoardRow[] }>({ rows: emptyBoardRows() });
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [weekDetail, setWeekDetail] = useState<WeekDetailData | null>(null);
@@ -113,8 +122,8 @@ export function GvcnDesk({ fullName, initialView }: { fullName: string; initialV
   const [yearName, setYearName] = useState("");
   const [years, setYears] = useState<Array<{ name: string; label: string; isCurrent: boolean }>>([]);
   const [isCurrentYear, setIsCurrentYear] = useState(true);
-  const [className, setClassName] = useState(CLASS_SITE.className);
-  const [classDraft, setClassDraft] = useState(CLASS_SITE.className);
+  const [className, setClassName] = useState(initialClassName || CLASS_SITE.className);
+  const [classDraft, setClassDraft] = useState(initialClassName || CLASS_SITE.className);
   const [editingClass, setEditingClass] = useState(false);
   const [classPending, setClassPending] = useState(false);
   const weekCache = useRef(new Map<number, WeekDetailData>());

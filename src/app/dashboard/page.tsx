@@ -13,6 +13,7 @@ import {
 } from "@/app/dashboard/actions";
 import { requireGvcn } from "@/lib/access";
 import { getDashboardData } from "@/lib/data";
+import { getClassIdentity } from "@/lib/public-site";
 import {
   canManageAccounts,
   canManageParents,
@@ -45,6 +46,7 @@ export default async function DashboardPage({
   const session = await requireGvcn("/dashboard");
 
   const params = await searchParams;
+  const site = await getClassIdentity();
 
   const allowedViews = getAllowedViews(session.role);
   const currentView = (allowedViews.includes(params.view as NavView) ? params.view : allowedViews[0]) as NavView;
@@ -54,7 +56,11 @@ export default async function DashboardPage({
     // same panel instead of always falling back to Tổng kết tuần.
     return (
       <main>
-        <GvcnDesk fullName={session.fullName} initialView={params.view} />
+        <GvcnDesk
+          fullName={session.fullName}
+          initialClassName={site.className}
+          initialView={params.view}
+        />
       </main>
     );
   }
