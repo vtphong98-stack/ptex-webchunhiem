@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Timetable } from "@/components/home/Timetable";
 import type { TimetableCell } from "@/lib/class-site";
+import { CLASS_SITE } from "@/lib/class-site";
+import { downloadBlob, readSubjectPalette, renderTimetablePng } from "@/lib/timetable-image";
 import { formatDateTime } from "@/lib/utils";
 
 export type TimetableSnapshot = {
@@ -22,6 +24,9 @@ export function TimetablePanel({
   versions: TimetableSnapshot[];
 }) {
   const [selectedId, setSelectedId] = useState("current");
+  const [saving, setSaving] = useState(false);
+  const [saveNote, setSaveNote] = useState("");
+  const tableRef = useRef<HTMLDivElement>(null);
   // Set after mount so the server-rendered HTML has no weekday in it — otherwise
   // the highlight would differ between server and client across midnight.
   const [todayIndex, setTodayIndex] = useState<number | null>(null);
@@ -49,6 +54,35 @@ export function TimetablePanel({
   const viewingOld = selectedId !== "current";
   const stamp = selected?.createdAt || current?.createdAt || "";
 
+  const saveImage = useCallback(async () => {
+    if (!selected) return;
+    setSaving(true);
+    setSaveNote("");
+    try {
+      const blob = await renderTimetablePng({
+        sessions: [
+          { title: CLASS_SITE.morningTitle, periods: [1, 2, 3, 4, 5], rows: selected.morning },
+          { title: CLASS_SITE.afternoonTitle, periods: [2, 3, 4, 5], rows: selected.afternoon },
+        ],
+        palette: readSubjectPalette(tableRef.current),
+        className: CLASS_SITE.className,
+        schoolYear: CLASS_SITE.schoolYear,
+        updatedAt: stamp ? formatDateTime(stamp) : "",
+      });
+      if (!blob) {
+        setSaveNote("Máy không hỗ trợ lưu ảnh. Thử trình duyệt khác.");
+        return;
+      }
+      downloadBlob(blob, `TKB-${CLASS_SITE.className}-${CLASS_SITE.schoolYear}.png`);
+      setSaveNote("Đã lưu ảnh vào máy.");
+      window.setTimeout(() => setSaveNote(""), 4000);
+    } catch {
+      setSaveNote("Không lưu được ảnh. Thử lại.");
+    } finally {
+      setSaving(false);
+    }
+  }, [selected, stamp]);
+
   if (!current) {
     return (
       <div className="site-widget">
@@ -59,7 +93,7 @@ export function TimetablePanel({
 
   return (
     <div className="tkb-panel">
-      {(stamp || options.length > 1) ? (
+      {selected ? (
         <div className="tkb-toolbar">
           {/* Chỉ hiện nhãn khi thật sự có mốc thời gian — trước đây nó luôn in
               "Cập nhật:" rồi để trống. */}
@@ -70,23 +104,32 @@ export function TimetablePanel({
           ) : (
             <span />
           )}
-          {options.length > 1 ? (
-            <label className="tkb-version">
-              Phiên bản
-              <select onChange={(event) => setSelectedId(event.target.value)} value={selectedId}>
-                {options.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
+          <div className="tkb-tools">
+            {options.length > 1 ? (
+              <label className="tkb-version">
+                Phiên bản
+                <select onChange={(event) => setSelectedId(event.target.value)} value={selectedId}>
+                  {options.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <button className="tkb-save" disabled={saving} onClick={() => void saveImage()} type="button">
+              <span aria-hidden>🖼️</span>
+              {saving ? "Đang tạo ảnh…" : "Lưu ảnh TKB"}
+            </button>
+          </div>
         </div>
       ) : null}
-      {selected ? (
-        <Timetable afternoon={selected.afternoon} morning={selected.morning} todayIndex={todayIndex} />
-      ) : null}
+      {saveNote ? <p className="tkb-save-note">{saveNote}</p> : null}
+      <div ref={tableRef}>
+        {selected ? (
+          <Timetable afternoon={selected.afternoon} morning={selected.morning} todayIndex={todayIndex} />
+        ) : null}
+      </div>
     </div>
   );
 }

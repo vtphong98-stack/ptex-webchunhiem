@@ -3265,6 +3265,49 @@ button {
   color: var(--ink-2);
 }
 
+.tkb-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tkb-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 7px 13px;
+  border-radius: var(--r-tile);
+  border: 1px solid color-mix(in srgb, var(--sec) 30%, var(--line));
+  background: var(--sec-soft);
+  color: color-mix(in srgb, var(--sec) 78%, #0f172a);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.tkb-save:hover {
+  background: color-mix(in srgb, var(--sec) 16%, #fff);
+  transform: translate3d(0, -1px, 0);
+}
+
+.tkb-save:disabled {
+  opacity: 0.65;
+  cursor: wait;
+  transform: none;
+}
+
+.tkb-save-note {
+  margin: 0 0 10px;
+  padding: 7px 11px;
+  border-radius: var(--r-tile);
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .tkb-version {
   display: flex;
   align-items: center;
