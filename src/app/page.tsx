@@ -56,8 +56,23 @@ export default async function HomePage() {
               <span>Giáo viên chủ nhiệm</span>
             </div>
           </div>
-          <nav className="site-hero-actions" aria-label="Tác vụ đầu năm">
-            <Link href={CLASS_SITE.syll as any}>📝 Khai sơ yếu lý lịch</Link>
+          {/* Ba cấp tác vụ: việc chính (trắng đặc) → liên hệ thầy (kính mờ) →
+              liên kết ra ngoài (viền mảnh). Liên hệ đứng trước liên kết ngoài
+              vì gọi được thầy quan trọng hơn mở chatbot hướng nghiệp. */}
+          <div className="site-hero-primary">
+            <Link href={CLASS_SITE.syll as any}>
+              <span aria-hidden>📝</span> Khai sơ yếu lý lịch
+            </Link>
+          </div>
+          <div className="site-hero-contact">
+            <a className="hero-call" href={`tel:${CLASS_SITE.gvcnPhone}`}>
+              <span aria-hidden>📞</span> Gọi GVCN
+            </a>
+            <a className="hero-zalo" href={`https://zalo.me/${CLASS_SITE.gvcnPhone}`} rel="noreferrer" target="_blank">
+              <span aria-hidden>💬</span> Zalo GVCN
+            </a>
+          </div>
+          <nav className="site-hero-actions" aria-label="Liên kết ngoài">
             <a href={CLASS_SITE.careerBot} rel="noreferrer" target="_blank">
               Tư vấn hướng nghiệp
             </a>
@@ -65,14 +80,6 @@ export default async function HomePage() {
               Đăng ký học đường
             </a>
           </nav>
-          <div className="site-hero-contact">
-            <a className="hero-call" href={`tel:${CLASS_SITE.gvcnPhone}`}>
-              Gọi GVCN
-            </a>
-            <a className="hero-zalo" href={`https://zalo.me/${CLASS_SITE.gvcnPhone}`} rel="noreferrer" target="_blank">
-              Zalo GVCN
-            </a>
-          </div>
         </header>
 
         <div className="hp-strip">

@@ -201,27 +201,31 @@ button {
   padding: 10px 12px 40px;
 }
 
-/* Hero — gọn, một dòng thông tin, ba tác vụ nhanh */
+/* Hero — sáng và tươi, nhưng chữ trắng vẫn phải đạt WCAG AA. Chỉ hai sắc tím
+   đủ sáng mà còn qua chuẩn: #5850ec (5.56:1) và #7c3aed (5.70:1). Sáng hơn nữa
+   là hỏng: #6366f1 chỉ 4.47:1, #8b5cf6 còn 4.23:1. Chiều sâu lấy từ vệt sáng
+   góc trên phải chứ không lấy từ mốc gradient tối. */
 .site-hero {
   position: relative;
   overflow: hidden;
   margin-bottom: 14px;
-  padding: 20px 18px;
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: linear-gradient(135deg, #312e81 0%, #4f46e5 52%, #7c3aed 100%);
+  padding: 22px 18px 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(140deg, #5850ec 0%, #6d5cf0 45%, #7c3aed 100%);
   color: #fff;
-  box-shadow: 0 18px 40px -20px rgba(49, 46, 129, 0.7);
+  box-shadow: 0 16px 36px -20px rgba(88, 80, 236, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
+/* Vệt sáng góc trên phải, đặt xa vùng chữ để không làm giảm tương phản */
 .site-hero::before {
   content: "";
   position: absolute;
-  inset: -40% -20% auto auto;
-  width: 320px;
-  height: 320px;
+  inset: -55% -25% auto auto;
+  width: 340px;
+  height: 340px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 62%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3), transparent 66%);
   pointer-events: none;
 }
 
@@ -229,15 +233,25 @@ button {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  margin: 0 0 8px;
-  padding: 4px 11px;
+  gap: 0.42rem;
+  margin: 0 0 10px;
+  padding: 5px 12px 5px 9px;
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.16);
-  font-size: 11.5px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.7px;
   text-transform: uppercase;
+}
+
+.site-hero-kicker::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.28);
 }
 
 .site-hero h1 {
@@ -247,108 +261,161 @@ button {
   align-items: baseline;
   gap: 0.5rem;
   margin: 0;
-  line-height: 1.1;
+  line-height: 1.05;
 }
 
 .site-hero-class {
-  font-size: 34px;
+  font-size: 38px;
   font-weight: 700;
-  letter-spacing: -0.5px;
+  letter-spacing: -1px;
+  text-shadow: 0 2px 12px rgba(49, 46, 129, 0.28);
 }
 
 .site-hero-sub {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
-  opacity: 0.78;
+  letter-spacing: 0.2px;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .site-hero-teacher {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  gap: 0.7rem;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .site-hero-avatar {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   flex: none;
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.12));
+  border: 1px solid rgba(255, 255, 255, 0.26);
   font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
 }
 
 .site-hero-teacher strong {
   display: block;
-  font-size: 15px;
+  font-size: 15.5px;
   font-weight: 700;
 }
 
 .site-hero-teacher span:last-child {
   font-size: 12px;
-  opacity: 0.74;
+  color: rgba(255, 255, 255, 0.76);
 }
 
-.site-hero-actions {
+/* Cấp 1 — việc chính, trắng đặc */
+.site-hero-primary {
+  position: relative;
+  margin-top: 16px;
+}
+
+.site-hero-primary a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 12px;
+  border-radius: 14px;
+  background: #fff;
+  color: #312e81;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 8px 20px -10px rgba(15, 23, 42, 0.5);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.site-hero-primary a:hover {
+  transform: translate3d(0, -1px, 0);
+  box-shadow: 0 12px 24px -10px rgba(15, 23, 42, 0.55);
+}
+
+/* Cấp 2 — liên hệ thầy, kính mờ nổi rõ */
+.site-hero-contact {
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
-  margin-top: 14px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
-.site-hero-actions a,
 .site-hero-contact a {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  padding: 9px 10px;
-  border-radius: var(--r-tile);
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 11px 8px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.42);
   color: #fff;
-  font-size: 12.5px;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background 0.15s ease;
+}
+
+.site-hero-contact a:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Cấp 3 — liên kết ra ngoài, mảnh nhất, có dấu ↗ */
+.site-hero-actions {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.site-hero-actions a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 9px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
   font-weight: 600;
   text-align: center;
   transition: background 0.15s ease;
 }
 
-.site-hero-actions a:hover,
-.site-hero-contact a:hover {
-  background: rgba(255, 255, 255, 0.24);
+.site-hero-actions a::after {
+  content: "↗";
+  font-size: 10px;
+  opacity: 0.7;
 }
 
-.site-hero-actions a:first-child {
-  grid-column: 1 / -1;
-  background: #fff;
-  border-color: #fff;
-  color: #312e81;
-  font-weight: 700;
+.site-hero-actions a:hover {
+  background: rgba(255, 255, 255, 0.16);
 }
 
-.site-hero-actions a:first-child:hover {
-  background: #f1f0ff;
-}
+@media (min-width: 620px) {
+  .site-hero {
+    padding: 26px 24px 22px;
+  }
 
-.site-hero-contact {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
-  margin-top: 7px;
-}
+  .site-hero-class {
+    font-size: 44px;
+  }
 
-.hero-call,
-.hero-zalo {
-  font-weight: 700 !important;
+  .site-hero-primary,
+  .site-hero-contact,
+  .site-hero-actions {
+    max-width: 30rem;
+  }
 }
 
 /* Thanh nhảy khu vực — "sơ đồ web" luôn trong tầm tay ─── */
@@ -998,13 +1065,28 @@ button {
   }
 }
 
+/* Hai thẻ trạng thái: đếm ngược mang sắc hồng (việc gấp), tuần học mang sắc
+   indigo (thông tin). Trước đó cả hai đều trắng trơn nên trông như hai thẻ
+   trống nối sau khối hero tím. */
 .cd-bar {
-  padding: 10px 14px;
+  position: relative;
+  padding: 11px 14px 11px 16px;
   border-radius: var(--r-card);
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 1px solid #f6dbe2;
+  background: linear-gradient(180deg, #fffafb, #fff);
   box-shadow: var(--shadow);
   color: var(--ink);
+  overflow: hidden;
+}
+
+.cd-bar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #f43f5e, #db2777);
 }
 
 .cd-bar-inner {
@@ -1016,13 +1098,13 @@ button {
 
 .cd-bar-label {
   flex: none;
-  padding: 3px 9px;
+  padding: 4px 10px;
   border-radius: var(--r-pill);
-  background: var(--alert-soft);
-  color: var(--alert);
+  background: linear-gradient(135deg, #f43f5e, #db2777);
+  color: #fff;
   font-size: 10.5px;
   font-weight: 800;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -1040,11 +1122,11 @@ button {
 }
 
 .cd-bar-num {
-  font-size: 19px;
+  font-size: 21px;
   font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.6px;
 }
 
 .cd-bar-sec {
@@ -1092,15 +1174,27 @@ button {
 
 /* Dải tuần học */
 .week-badge-bar {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  padding: 10px 14px;
+  padding: 11px 14px 11px 16px;
   border-radius: var(--r-card);
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 1px solid #dfe0fb;
+  background: linear-gradient(180deg, #fbfbff, #fff);
   box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.week-badge-bar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
 }
 
 .week-badge {

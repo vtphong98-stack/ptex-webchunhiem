@@ -154,6 +154,13 @@ export const LuckyWheel = memo(function LuckyWheel({ names }: { names: string[] 
 
 import type { Milestone } from "@/lib/academic-calendar";
 
+/** Uppercase the milestone label, adding "THI" only when it is not already there. */
+function examTitle(label: string | undefined, fallback: string) {
+  const text = (label ?? fallback).trim();
+  const upper = text.toUpperCase();
+  return upper.startsWith("THI") ? upper : `THI ${upper}`;
+}
+
 /** Compact countdown bar — sits at the top of the page, DOM-only updates */
 export function ExamCountdownBar({ milestones }: { milestones?: Milestone[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -163,9 +170,11 @@ export function ExamCountdownBar({ milestones }: { milestones?: Milestone[] }) {
   const tn = milestones?.find((m) => m.id === "tn");
 
   const targets = useMemo(() => [
-    { iso: hk1?.iso || CLASS_SITE.examDateIso, title: hk1?.label ? `THI ${hk1.label.toUpperCase()}` : CLASS_SITE.examTitle, date: hk1?.date || CLASS_SITE.examDate },
-    { iso: hk2?.iso || CLASS_SITE.hk2DateIso, title: hk2?.label ? `THI ${hk2.label.toUpperCase()}` : CLASS_SITE.hk2Title, date: hk2?.date || CLASS_SITE.hk2Date },
-    { iso: tn?.iso || CLASS_SITE.tnDateIso, title: tn?.label ? `THI ${tn.label.toUpperCase()}` : CLASS_SITE.tnTitle, date: tn?.date || CLASS_SITE.tnDate },
+    // Nhãn mốc đã bắt đầu bằng "Thi" ("Thi học kỳ 1"), nên thêm tiền tố "THI "
+    // cho ra "THI THI HỌC KỲ 1".
+    { iso: hk1?.iso || CLASS_SITE.examDateIso, title: examTitle(hk1?.label, CLASS_SITE.examTitle), date: hk1?.date || CLASS_SITE.examDate },
+    { iso: hk2?.iso || CLASS_SITE.hk2DateIso, title: examTitle(hk2?.label, CLASS_SITE.hk2Title), date: hk2?.date || CLASS_SITE.hk2Date },
+    { iso: tn?.iso || CLASS_SITE.tnDateIso, title: examTitle(tn?.label, CLASS_SITE.tnTitle), date: tn?.date || CLASS_SITE.tnDate },
   ], [hk1, hk2, tn]);
 
   useEffect(() => {
