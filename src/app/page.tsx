@@ -1,7 +1,11 @@
-import { BirthdayBanner, ExamCountdown, LuckyWheel } from "@/components/home/HomeWidgets";
+import Link from "next/link";
+
+import { BirthdayBanner, ExamCountdownBar, LuckyWheel } from "@/components/home/HomeWidgets";
 import { ClassBoards } from "@/components/home/ClassBoards";
 import { GvcnNotices } from "@/components/home/GvcnNotices";
 import { TimetablePanel } from "@/components/home/TimetablePanel";
+import { SchoolWeekBadge } from "@/components/home/SchoolWeekBadge";
+import { ScrollRestore } from "@/components/home/ScrollRestore";
 import { YearTimeline } from "@/components/home/YearTimeline";
 import { CLASS_SITE, GVCN_HOME_LINKS, LEARNING_LINKS, OFFICER_LINKS } from "@/lib/class-site";
 import { getPublicSiteData } from "@/lib/public-site";
@@ -14,6 +18,9 @@ export default async function HomePage() {
   return (
     <main className="py-4 md:py-8">
       <div className="site-shell">
+        <ScrollRestore />
+        <ExamCountdownBar milestones={site.milestones} />
+        <SchoolWeekBadge milestones={site.milestones} />
         <header className="site-hero">
           <p className="site-hero-kicker">Năm học {site.yearName}</p>
           <h1>
@@ -34,7 +41,7 @@ export default async function HomePage() {
             </div>
           </div>
           <nav className="site-hero-actions" aria-label="Tác vụ đầu năm">
-            <a href={CLASS_SITE.syll}>Sơ yếu lý lịch</a>
+            <Link href={CLASS_SITE.syll as any}>Sơ yếu lý lịch</Link>
             <a href={CLASS_SITE.careerBot} rel="noreferrer" target="_blank">
               Tư vấn hướng nghiệp
             </a>
@@ -59,13 +66,12 @@ export default async function HomePage() {
         <BirthdayBanner students={site.students} />
 
         <section className="site-section block-teal">
-          <h2>Mốc thời gian năm học {CLASS_SITE.schoolYear}</h2>
-          <YearTimeline />
+          <h2>Mốc thời gian năm học {site.yearName || CLASS_SITE.schoolYear}</h2>
+          <YearTimeline milestones={site.milestones} />
         </section>
 
         <section className="site-section block-blue">
           <h2>Thời khóa biểu</h2>
-          <ExamCountdown />
           {site.hasTimetable ? (
             <TimetablePanel
               current={{
@@ -115,9 +121,9 @@ export default async function HomePage() {
           <ul className="site-links">
             {OFFICER_LINKS.map((link) => (
               <li key={link.code}>
-                <a className={`site-tile ${link.className}`} href={`/login?user=${link.code}`}>
+                <Link className={`site-tile ${link.className}`} href={`/login?user=${link.code}` as any}>
                   {link.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -128,9 +134,9 @@ export default async function HomePage() {
           <ul className="site-links">
             {GVCN_HOME_LINKS.map((link) => (
               <li key={link.label}>
-                <a className={`site-tile ${link.className}`} href={link.href}>
+                <Link className={`site-tile ${link.className}`} href={link.href as any}>
                   {link.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>

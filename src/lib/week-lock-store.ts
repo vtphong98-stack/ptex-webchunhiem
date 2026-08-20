@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import type { SchoolWeek } from "@/lib/types";
 import {
   buildAllWeekLocks,
   findLock,
@@ -26,15 +27,22 @@ export async function loadWeekLockOverrides(schoolYearId: string) {
   return new Map(rows.map((row) => [row.weekNumber, row.override]));
 }
 
-export async function getWeekLockStates(schoolYearId: string, now = new Date()) {
-  const overrides = await loadWeekLockOverrides(schoolYearId);
+async function loadYearWeeks(schoolYearId: string) {
+  if (!schoolYearId) return null;
   const db = await getDb();
-  const year = schoolYearId
-    ? await db.collection<{ weeks?: import("@/lib/types").SchoolWeek[] }>("schoolYears").findOne(
-        { _id: schoolYearId } as never,
-        { projection: { weeks: 1 } },
-      )
-    : null;
+  return db.collection<{ weeks?: SchoolWeek[] }>("schoolYears").findOne(
+    { _id: schoolYearId } as never,
+    { projection: { weeks: 1 } },
+  );
+}
+
+export async function getWeekLockStates(schoolYearId: string, now = new Date()) {
+  // The overrides and the week table are independent reads — one round trip
+  // instead of two.
+  const [overrides, year] = await Promise.all([
+    loadWeekLockOverrides(schoolYearId),
+    loadYearWeeks(schoolYearId),
+  ]);
   return buildAllWeekLocks(overrides, now, year?.weeks?.length ? year.weeks : undefined);
 }
 

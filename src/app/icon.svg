@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#1e3a5f"/>
+  <!-- Graduation cap -->
+  <polygon points="256,100 100,190 256,280 412,190" fill="#f0b429"/>
+  <rect x="240" y="190" width="32" height="100" rx="4" fill="#f0b429"/>
+  <path d="M160,210 v60 q0,40 96,60 q96,-20 96,-60 v-60" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+  <!-- Tassel -->
+  <line x1="120" y1="190" x2="120" y2="270" stroke="#f0b429" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="120" cy="275" r="10" fill="#f0b429"/>
+  <!-- Text 12A1 -->
+  <text x="256" y="430" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="120" fill="#ffffff" letter-spacing="2">12A1</text>
+</svg>

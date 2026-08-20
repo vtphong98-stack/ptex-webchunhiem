@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { logoutAction } from "@/app/dashboard/actions";
@@ -9,7 +10,7 @@ import { useOfficerReports } from "@/components/officer/use-officer-reports";
 import { getReportFields } from "@/lib/report-fields";
 import { emptyMemberRow, parseMemberRows, TEAM_ROLE_LABELS, type TeamMemberWeekRow } from "@/lib/team-roster";
 import type { TeamRole } from "@/lib/types";
-import { buildExcelWeeks } from "@/lib/weeks";
+import { buildExcelWeeks, getCurrentRealtimeWeekNumber } from "@/lib/weeks";
 import { findLock, pickDefaultOfficerWeek } from "@/lib/week-lock";
 
 type TeamStudent = { _id: string; fullName: string; teamRole: TeamRole | null };
@@ -50,7 +51,7 @@ export function TeamLeaderForm({
   const reportFields = useMemo(() => getReportFields("toTruong"), []);
   const { reports, teamStudents, hasMore, loadingMore, loadInitial, refresh, loadMore, weekLocks } = useOfficerReports();
   const [loadingStudents, setLoadingStudents] = useState(true);
-  const [weekNumber, setWeekNumber] = useState(1);
+  const [weekNumber, setWeekNumber] = useState(() => getCurrentRealtimeWeekNumber(weeks));
   const [rows, setRows] = useState<TeamMemberWeekRow[]>([]);
   const [status, setStatus] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -63,11 +64,7 @@ export function TeamLeaderForm({
   useEffect(() => {
     void loadInitial()
       .then((data) => {
-        if (data?.reports[0]?.weekNumber) {
-          setWeekNumber(pickDefaultOfficerWeek(data.weekLocks ?? [], data.reports[0].weekNumber));
-        } else {
-          setWeekNumber(pickDefaultOfficerWeek(data?.weekLocks ?? [], 1));
-        }
+        setWeekNumber(pickDefaultOfficerWeek(data?.weekLocks ?? []));
       })
       .catch(() => setStatus("Chưa tải được danh sách tổ."))
       .finally(() => setLoadingStudents(false));
@@ -133,9 +130,9 @@ export function TeamLeaderForm({
     <main className="py-6">
       <div className="officer-form officer-form-wide">
         <div className="tt-form-toolbar">
-          <a className="button-secondary" href="/">
+          <Link className="button-secondary" href="/">
             ← Trang chủ
-          </a>
+          </Link>
           <form action={logoutAction}>
             <button className="button-secondary" type="submit">
               Đăng xuất

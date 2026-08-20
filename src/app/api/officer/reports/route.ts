@@ -64,15 +64,40 @@ export async function GET(request: Request) {
     reporterRole: session.role,
     teamNumber: session.teamNumber ?? null,
   };
-  const reportRows = schoolYearId
-    ? await db
-        .collection<WeeklyReport>("weeklyReports")
-        .find(reportFilter, { projection: { weekNumber: 1, weekLabel: 1, fields: 1, updatedAt: 1 } })
-        .sort({ weekNumber: -1, updatedAt: -1 })
-        .skip(skip)
-        .limit(limit + 1)
-        .toArray()
-    : [];
+
+  const teamForRoster =
+    session.role === "toTruong" && session.teamNumber
+      ? session.teamNumber
+      : session.role === "lopPhoLaoDong" && teamQuery >= 1 && teamQuery <= 4
+        ? teamQuery
+        : null;
+
+  // These four reads are independent — running them sequentially cost one Atlas
+  // round trip each (~45ms), so the officer desk waited ~215ms before painting.
+  const [reportRows, teamStudents, treasuryChain, weekLocks] = await Promise.all([
+    schoolYearId
+      ? db
+          .collection<WeeklyReport>("weeklyReports")
+          .find(reportFilter, { projection: { weekNumber: 1, weekLabel: 1, fields: 1, updatedAt: 1 } })
+          .sort({ weekNumber: -1, updatedAt: -1 })
+          .skip(skip)
+          .limit(limit + 1)
+          .toArray()
+      : Promise.resolve([]),
+    schoolYearId && teamForRoster ? getTeamRosterStudents(schoolYearId, teamForRoster) : Promise.resolve([]),
+    schoolYearId && session.role === "thuQuy"
+      ? db
+          .collection<WeeklyReport>("weeklyReports")
+          .find(
+            { schoolYearId, reporterRole: "thuQuy" },
+            { projection: { weekNumber: 1, "fields.remaining": 1 } },
+          )
+          .sort({ weekNumber: 1 })
+          .toArray()
+      : Promise.resolve([]),
+    schoolYearId ? getWeekLockStates(schoolYearId) : Promise.resolve([]),
+  ]);
+
   const hasMore = reportRows.length > limit;
   const reports = (hasMore ? reportRows.slice(0, limit) : reportRows).map((report) => ({
     _id: String(report._id),
@@ -82,27 +107,9 @@ export async function GET(request: Request) {
     updatedAt: report.updatedAt,
   }));
 
-  const teamForRoster =
-    session.role === "toTruong" && session.teamNumber
-      ? session.teamNumber
-      : session.role === "lopPhoLaoDong" && teamQuery >= 1 && teamQuery <= 4
-        ? teamQuery
-        : null;
-
-  const teamStudents =
-    schoolYearId && teamForRoster ? await getTeamRosterStudents(schoolYearId, teamForRoster) : [];
-
-  let treasuryPreviousByWeek: Record<string, number> = {};
+  const treasuryPreviousByWeek: Record<string, number> = {};
   if (schoolYearId && session.role === "thuQuy") {
-    const chain = await db
-      .collection<WeeklyReport>("weeklyReports")
-      .find(
-        { schoolYearId, reporterRole: "thuQuy" },
-        { projection: { weekNumber: 1, "fields.remaining": 1 } },
-      )
-      .sort({ weekNumber: 1 })
-      .toArray();
-    const remainings = chain.map((item) => ({
+    const remainings = treasuryChain.map((item) => ({
       weekNumber: item.weekNumber,
       remaining: parseSignedVnd(item.fields?.remaining),
     }));
@@ -116,8 +123,6 @@ export async function GET(request: Request) {
       }
     }
   }
-
-  const weekLocks = schoolYearId ? await getWeekLockStates(schoolYearId) : [];
 
   return NextResponse.json({
     schoolYearId,
@@ -151,22 +156,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Không có năm học hiện hành." }, { status: 400 });
   }
 
-  const lockedMessage = await assertWeekWritable(schoolYearId, weekNumber);
+  const reports = db.collection<WeeklyReport>("weeklyReports");
+
+  // The lock check, the existing row and the roster are independent lookups.
+  const [lockedMessage, existing, roster] = await Promise.all([
+    assertWeekWritable(schoolYearId, weekNumber),
+    reports.findOne({
+      schoolYearId,
+      weekNumber,
+      reporterRole: session.role,
+      teamNumber: session.teamNumber ?? null,
+    }),
+    session.teamNumber ? getTeamRosterStudents(schoolYearId, session.teamNumber) : Promise.resolve([]),
+  ]);
+
   if (lockedMessage) {
     return NextResponse.json({ error: lockedMessage }, { status: 423 });
   }
 
-  const reports = db.collection<WeeklyReport>("weeklyReports");
-  const existing = await reports.findOne({
-    schoolYearId,
-    weekNumber,
-    reporterRole: session.role,
-    teamNumber: session.teamNumber ?? null,
-  });
-
-  const roster = session.teamNumber
-    ? await getTeamRosterStudents(schoolYearId, session.teamNumber)
-    : [];
   const incoming = parseMemberRows(body.members);
   const fromRoster = roster.map((student) => emptyMemberRow(student));
   const incomingById = new Map(incoming.map((row) => [row.studentId || row.fullName, row]));
@@ -198,38 +205,42 @@ export async function POST(request: Request) {
     updatedAt: now,
   };
 
+  // The audit row does not depend on the write result, so both go out together.
   if (existing?._id) {
-    await reports.updateOne({ _id: existing._id }, { $set: payload });
-    await createAuditLog({
-      schoolYearId,
-      entityType: "report",
-      entityId: String(existing._id),
-      action: "update",
-      summary: `Cập nhật báo cáo ${payload.weekLabel} tổ ${session.teamNumber}.`,
-      actorId: session.id,
-      actorName: session.fullName,
-      actorRole: session.role,
-    });
+    await Promise.all([
+      reports.updateOne({ _id: existing._id }, { $set: payload }),
+      createAuditLog({
+        schoolYearId,
+        entityType: "report",
+        entityId: String(existing._id),
+        action: "update",
+        summary: `Cập nhật báo cáo ${payload.weekLabel} tổ ${session.teamNumber}.`,
+        actorId: session.id,
+        actorName: session.fullName,
+        actorRole: session.role,
+      }),
+    ]);
   } else {
-    const createdAt = now;
     const newReport = {
       _id: crypto.randomUUID(),
       schoolYearId,
       ...payload,
       createdBy: session.id,
-      createdAt,
+      createdAt: now,
     };
-    await reports.insertOne(newReport);
-    await createAuditLog({
-      schoolYearId,
-      entityType: "report",
-      entityId: newReport._id,
-      action: "create",
-      summary: `Ghi mới báo cáo ${payload.weekLabel} tổ ${session.teamNumber}.`,
-      actorId: session.id,
-      actorName: session.fullName,
-      actorRole: session.role,
-    });
+    await Promise.all([
+      reports.insertOne(newReport),
+      createAuditLog({
+        schoolYearId,
+        entityType: "report",
+        entityId: newReport._id,
+        action: "create",
+        summary: `Ghi mới báo cáo ${payload.weekLabel} tổ ${session.teamNumber}.`,
+        actorId: session.id,
+        actorName: session.fullName,
+        actorRole: session.role,
+      }),
+    ]);
   }
 
   return NextResponse.json({ ok: true, weekNumber });

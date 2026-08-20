@@ -83,11 +83,69 @@ export function buildWeeks2025(): SchoolWeek[] {
   });
 }
 
-/** Default = năm hiện hành 2026-2027. */
+/**
+ * Default = năm hiện hành 2026-2027.
+ *
+ * The 35-week table is derived from constants, so it never changes inside a
+ * process. It used to be rebuilt (35 objects, ~70 Date allocations) on every
+ * call, and the week-lock helpers call it dozens of times per request through
+ * their default arguments.
+ */
+let excelWeeksCache: SchoolWeek[] | null = null;
+
 export function buildExcelWeeks(): SchoolWeek[] {
-  return buildWeeks2026();
+  if (!excelWeeksCache) excelWeeksCache = buildWeeks2026();
+  return excelWeeksCache;
 }
 
 export function getExcelWeek(weekNumber: number) {
   return buildExcelWeeks().find((week) => week.weekNumber === weekNumber) ?? null;
 }
+
+/**
+ * Calculates the active school week based on REAL-TIME (current date/time in Vietnam).
+ * - If current date is before Week 1 start (e.g. before 07/09/2026): returns Week 1.
+ * - If current date falls within Week N: returns Week N.
+ * - If current date is after Week 35: returns Week 35.
+ */
+export function getCurrentRealtimeWeekNumber(weeks = buildExcelWeeks(), now = new Date()): number {
+  if (!weeks.length) return 1;
+
+  const validWeeks = weeks.filter((w) => Boolean(w.startDate));
+  if (!validWeeks.length) return 1;
+
+  const nowMs = now.getTime();
+  const firstWeekStartMs = new Date(validWeeks[0].startDate).getTime();
+
+  // If before week 1 start date -> default to week 1
+  if (nowMs < firstWeekStartMs) {
+    return 1;
+  }
+
+  for (let i = 0; i < weeks.length; i++) {
+    const w = weeks[i];
+    if (!w.startDate) continue;
+    const startMs = new Date(w.startDate).getTime();
+
+    // Find next week's start or 7 days after current week
+    let nextStartMs = startMs + 7 * 86400000;
+    for (let j = i + 1; j < weeks.length; j++) {
+      if (weeks[j].startDate) {
+        nextStartMs = new Date(weeks[j].startDate).getTime();
+        break;
+      }
+    }
+
+    if (nowMs >= startMs && nowMs < nextStartMs) {
+      return w.weekNumber;
+    }
+  }
+
+  return weeks[weeks.length - 1].weekNumber;
+}
+
+export function getCurrentRealtimeWeek(weeks = buildExcelWeeks(), now = new Date()): SchoolWeek {
+  const weekNum = getCurrentRealtimeWeekNumber(weeks, now);
+  return weeks.find((w) => w.weekNumber === weekNum) ?? weeks[0];
+}
+

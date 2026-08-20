@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { formatDateTime } from "@/lib/utils";
@@ -93,9 +94,9 @@ export function TimetableUpload({ readOnly, yearName }: { readOnly: boolean; yea
             />
           </label>
         )}
-        <a className="button-secondary" href="/">
+        <Link className="button-secondary" href="/">
           Xem trên trang chủ
-        </a>
+        </Link>
       </div>
       {message ? <p className="mt-3 text-sm text-amber-700">{message}</p> : null}
 

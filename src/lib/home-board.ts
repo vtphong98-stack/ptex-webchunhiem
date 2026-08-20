@@ -33,6 +33,8 @@ export type HomeBoard = {
 
 const TEAM_COUNT = 4;
 const STAR_LIMIT = 8;
+/** 4 tổ per week, with slack for duplicate rows. */
+const NEWEST_REPORT_SCAN = 12;
 
 function lastCompletedWeek(weeks: SchoolWeek[], now: Date) {
   const done = weeks
@@ -115,21 +117,24 @@ export async function getHomeBoard(schoolYearId: string): Promise<HomeBoard> {
   const weeks = buildExcelWeeks();
   const now = new Date();
   const completed = lastCompletedWeek(weeks, now);
-  const latest = await reports.findOne(
-    { schoolYearId, reporterRole: "toTruong" },
-    { sort: { weekNumber: -1 }, projection: { weekNumber: 1 } },
-  );
-  const latestReported = latest?.weekNumber ?? 0;
+
+  // One round trip instead of two: grab the newest slice of tổ-trưởng reports
+  // (at most 4 per week) and keep the rows belonging to the highest week in it.
+  const newest = await reports
+    .find(
+      { schoolYearId, reporterRole: "toTruong" },
+      { projection: { weekNumber: 1, reporterRole: 1, teamNumber: 1, fields: 1 } },
+    )
+    .sort({ weekNumber: -1 })
+    .limit(NEWEST_REPORT_SCAN)
+    .toArray();
+
+  const latestReported = newest.length ? Math.max(...newest.map((item) => item.weekNumber)) : 0;
   const weekNumber = latestReported || completed;
 
   if (!weekNumber) return empty;
 
-  const teamReports = await reports
-    .find(
-      { schoolYearId, reporterRole: "toTruong", weekNumber },
-      { projection: { weekNumber: 1, reporterRole: 1, teamNumber: 1, fields: 1 } },
-    )
-    .toArray();
+  const teamReports = newest.filter((item) => item.weekNumber === weekNumber);
 
   const teams = rankTeams(teamReports);
   const firstPlace = teams

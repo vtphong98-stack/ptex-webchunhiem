@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { logoutAction, saveReportAction } from "@/app/dashboard/actions";
@@ -14,7 +15,7 @@ import {
 } from "@/lib/campaign-duty";
 import { flattenTeamRosters, type RosterStudent } from "@/lib/officer-roster";
 import { getReportFields } from "@/lib/report-fields";
-import { buildExcelWeeks } from "@/lib/weeks";
+import { buildExcelWeeks, getCurrentRealtimeWeekNumber } from "@/lib/weeks";
 import { findLock, pickDefaultOfficerWeek } from "@/lib/week-lock";
 
 export function CampaignForm({ fullName }: { fullName: string }) {
@@ -22,7 +23,7 @@ export function CampaignForm({ fullName }: { fullName: string }) {
   const reportFields = useMemo(() => getReportFields("lopPhoPhongTrao"), []);
   const { reports, hasMore, loadingMore, loadInitial, refresh, loadMore, weekLocks } = useOfficerReports();
   const [schoolYearId, setSchoolYearId] = useState("");
-  const [weekNumber, setWeekNumber] = useState(1);
+  const [weekNumber, setWeekNumber] = useState(() => getCurrentRealtimeWeekNumber(weeks));
   const [students, setStudents] = useState<RosterStudent[]>([]);
   const [rows, setRows] = useState<CampaignAssignmentRow[]>([]);
   const [campaignName, setCampaignName] = useState("");
@@ -53,7 +54,7 @@ export function CampaignForm({ fullName }: { fullName: string }) {
   useEffect(() => {
     void Promise.all([loadInitial(), loadTeamRosters()]).then(([reportData]) => {
       if (reportData?.schoolYearId) setSchoolYearId(reportData.schoolYearId);
-      setWeekNumber(pickDefaultOfficerWeek(reportData?.weekLocks ?? [], reportData?.reports[0]?.weekNumber ?? 1));
+      setWeekNumber(pickDefaultOfficerWeek(reportData?.weekLocks ?? []));
     });
   }, [loadInitial, loadTeamRosters]);
 
@@ -105,9 +106,9 @@ export function CampaignForm({ fullName }: { fullName: string }) {
     <main className="py-6">
       <div className="officer-form officer-form-wide labor-form">
         <div className="tt-form-toolbar">
-          <a className="button-secondary" href="/">
+          <Link className="button-secondary" href="/">
             ← Trang chủ
-          </a>
+          </Link>
           <form action={logoutAction}>
             <button className="button-secondary" type="submit">
               Đăng xuất

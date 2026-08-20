@@ -206,22 +206,23 @@ export const AFTERNOON_TIMETABLE: Record<number, TimetableCell[]> = {
 };
 
 export const OFFICER_LINKS = [
-  { href: "/login?user=lt", label: "Lớp Trưởng", code: "lt", icon: "crown", className: "link-8" },
-  { href: "/login?user=lpht", label: "Lớp Phó Học Tập", code: "lpht", icon: "book", className: "link-7" },
-  { href: "/login?user=lpld", label: "Lớp Phó Lao Động", code: "lpld", icon: "broom", className: "link-4" },
-  { href: "/login?user=lppt", label: "Lớp Phó Phong Trào", code: "lppt", icon: "music", className: "link-5" },
-  { href: "/login?user=lptt", label: "Lớp Phó Trật Tự", code: "lptt", icon: "gavel", className: "link-6" },
-  { href: "/login?user=tt", label: "Tổ Trưởng", code: "tt", icon: "user", className: "link-2" },
-  { href: "/login?user=thuquy", label: "Thủ Quỹ", code: "thuquy", icon: "wallet", className: "link-3" },
+  { href: "/bao-cao/lop-truong", label: "Lớp Trưởng", code: "lt", icon: "crown", className: "link-8" },
+  { href: "/bao-cao/hoc-tap", label: "Lớp Phó Học Tập", code: "lpht", icon: "book", className: "link-7" },
+  { href: "/bao-cao/lao-dong", label: "Lao Động", code: "lpld", icon: "broom", className: "link-4" },
+  { href: "/bao-cao/phong-trao", label: "Phong Trào", code: "lppt", icon: "music", className: "link-5" },
+  { href: "/bao-cao/trat-tu", label: "Trật Tự", code: "lptt", icon: "gavel", className: "link-6" },
+  { href: "/bao-cao/to-truong", label: "Tổ Trưởng", code: "tt", icon: "user", className: "link-2" },
+  { href: "/bao-cao/thu-quy", label: "Thủ Quỹ", code: "thuquy", icon: "wallet", className: "link-3" },
 ];
 
 export const GVCN_HOME_LINKS = [
-  { href: "/login?user=gvcn", label: "Thông báo GVCN", className: "link-gvcn-1" },
-  { href: "/login?user=gvcn", label: "Tổng kết lớp theo tuần", className: "link-gvcn-2" },
-  { href: "/login?user=gvcn", label: "Dữ liệu lớp · tra cứu HS", className: "link-gvcn-3" },
-  { href: "/lien-he-phu-huynh", label: "Liên hệ nhanh phụ huynh", className: "link-gvcn-4" },
-  { href: "/lien-he-hoc-sinh", label: "Liên hệ nhanh học sinh", className: "link-gvcn-5" },
-  { href: "/syll", label: "Sơ yếu lý lịch học sinh", className: "link-gvcn-6" },
+  { href: "/tong-ket", label: "Tổng kết lớp theo tuần", className: "link-gvcn-2" },
+  { href: "/chi-tieu", label: "Chỉ tiêu năm học", className: "link-gvcn-1" },
+  { href: "/tra-cuu-hs", label: "Tra cứu học sinh", className: "link-gvcn-3" },
+  { href: "/lien-he", label: "Liên hệ nhanh PH & HS", className: "link-gvcn-4" },
+  { href: "/lich-day", label: "Lịch dạy giáo viên", className: "link-gvcn-7" },
+  { href: "/bao-giang", label: "Phân phối chương trình", className: "link-gvcn-8" },
+  { href: "/dashboard", label: "⚙️ Khu vực setup GVCN", className: "link-gvcn-setup" },
 ];
 
 export const LEARNING_LINKS = [

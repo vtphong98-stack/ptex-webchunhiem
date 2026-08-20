@@ -391,7 +391,7 @@ export function buildGvcnWeekReport(input: {
       ],
     },
     {
-      id: "gvcn",
+      id: "lop-truong",
       title: "8. Lớp trưởng",
       lines: [
         line(

@@ -286,27 +286,88 @@ async function seedFromLegacy() {
   await db.collection<AuditLog>("auditLogs").insertOne(auditLog);
 }
 
+/**
+ * ensureIndexes() is 13 commands even when every index already exists, which is
+ * ~250ms of cold-start latency. This helper is the only thing that creates them,
+ * so one listIndexes probe is enough to know the whole set is in place.
+ */
+const EXPECTED_REPORT_INDEXES = [
+  "schoolYearId_1_reporterRole_1_teamNumber_1_weekNumber_-1",
+  "schoolYearId_1_reporterRole_1_weekNumber_-1",
+  "schoolYearId_1_weekNumber_1",
+];
+
+async function indexesAlreadyCreated() {
+  try {
+    const db = await getDb();
+    const names = new Set((await db.collection("weeklyReports").indexes()).map((index) => index.name));
+    return EXPECTED_REPORT_INDEXES.every((name) => names.has(name));
+  } catch {
+    return false;
+  }
+}
+
 async function ensureIndexes() {
+  if (await indexesAlreadyCreated()) return;
   const db = await getDb();
   await Promise.all([
     db.collection("weeklyReports").createIndex({ schoolYearId: 1, reporterRole: 1, teamNumber: 1, weekNumber: -1 }),
+    // Serves the "newest tổ-trưởng reports" and "all reports of one week"
+    // queries, which the 4-key index above cannot cover (teamNumber sits
+    // between the equality keys and the sort key).
+    db.collection("weeklyReports").createIndex({ schoolYearId: 1, reporterRole: 1, weekNumber: -1 }),
+    db.collection("weeklyReports").createIndex({ schoolYearId: 1, weekNumber: 1 }),
     db.collection("schoolYears").createIndex({ isCurrent: 1 }),
+    db.collection("schoolYears").createIndex({ name: 1 }),
     db.collection("students").createIndex({ schoolYearId: 1, fullName: 1 }),
+    db.collection("students").createIndex({ schoolYearId: 1, teamNumber: 1 }),
     db.collection("weekLocks").createIndex({ schoolYearId: 1, weekNumber: 1 }, { unique: true }),
     db.collection("notices").createIndex({ schoolYearId: 1, pinned: -1, createdAt: -1 }),
+    db.collection("classConfigs").createIndex({ schoolYearId: 1 }),
+    db.collection("users").createIndex({ username: 1 }),
+    db.collection("parents").createIndex({ schoolYearId: 1, studentName: 1 }),
+    db.collection("auditLogs").createIndex({ schoolYearId: 1, createdAt: -1 }),
   ]);
 }
 
-async function bootstrapOnce() {
+/**
+ * Cheap health probe so a warm database skips ensureSchoolYearWeeks() — that
+ * helper issues ~8 round trips including unconditional writes, and it used to
+ * run on every cold start.
+ */
+async function schoolYearsLookHealthy() {
   const db = await getDb();
-  const year =
-    (await db.collection<SchoolYear>("schoolYears").findOne({ isCurrent: true }, { projection: { weeks: 1 } })) ??
-    (await db.collection<SchoolYear>("schoolYears").findOne({}, { projection: { weeks: 1 } }));
-  if (!year) {
+  const rows = await db
+    .collection<SchoolYear>("schoolYears")
+    .find({}, { projection: { name: 1, isCurrent: 1, weekCount: 1, weekLength: { $size: { $ifNull: ["$weeks", []] } } } })
+    .toArray();
+  if (!rows.length) return "empty";
+
+  const current = rows.find((row) => row.name === CURRENT_SCHOOL_YEAR);
+  const healthy =
+    Boolean(current) &&
+    current!.isCurrent === true &&
+    current!.weekCount === EXCEL_WEEK_COUNT &&
+    (current as unknown as { weekLength?: number }).weekLength === EXCEL_WEEK_COUNT &&
+    rows.every((row) => row.name === CURRENT_SCHOOL_YEAR || row.isCurrent !== true);
+
+  return healthy ? "healthy" : "stale";
+}
+
+async function bootstrapOnce() {
+  const state = await schoolYearsLookHealthy();
+
+  if (state === "empty") {
     await seedFromLegacy();
     await insertMissingUsers();
     await ensureSchoolYearWeeks();
     await ensureIndexes();
+    return;
+  }
+
+  if (state === "healthy") {
+    // Both are idempotent no-ops on a healthy database, so run them together.
+    await Promise.all([insertMissingUsers(), ensureIndexes()]);
     return;
   }
 

@@ -28,9 +28,15 @@ export function toTeamRosterStudents(students: Student[]): TeamRosterStudent[] {
   }));
 }
 
+/** Only the keys a roster row renders — the full student doc is ~1 KB each. */
+const ROSTER_PROJECTION = { fullName: 1, teamNumber: 1, teamRole: 1 } as const;
+
 export async function getAllTeamRosters(schoolYearId: string) {
   const db = await getDb();
-  const students = await db.collection<Student>("students").find({ schoolYearId }).toArray();
+  const students = await db
+    .collection<Student>("students")
+    .find({ schoolYearId }, { projection: ROSTER_PROJECTION })
+    .toArray();
   const teams: Record<string, TeamRosterStudent[]> = {};
   for (const teamNumber of [1, 2, 3, 4]) {
     teams[String(teamNumber)] = toTeamRosterStudents(studentsInTeam(students, teamNumber));
@@ -40,8 +46,17 @@ export async function getAllTeamRosters(schoolYearId: string) {
 
 export async function getTeamRosterStudents(schoolYearId: string, teamNumber: number) {
   const db = await getDb();
-  const students = await db.collection<Student>("students").find({ schoolYearId }).toArray();
-  return toTeamRosterStudents(studentsInTeam(students, teamNumber));
+  // Filter in Mongo, not in JS: this used to pull every student of the year.
+  // $in keeps the old Number()-coercing tolerance for docs that stored the team
+  // as a string.
+  const students = await db
+    .collection<Student>("students")
+    .find(
+      { schoolYearId, teamNumber: { $in: [teamNumber, String(teamNumber)] } as never },
+      { projection: ROSTER_PROJECTION },
+    )
+    .toArray();
+  return toTeamRosterStudents(sortTeamStudents(students));
 }
 
 export async function studentStatsById(schoolYearId: string) {

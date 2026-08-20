@@ -1,26 +1,25 @@
-"use client";
-
-import { YEAR_MILESTONES } from "@/lib/academic-calendar";
+import { YEAR_MILESTONES, type Milestone } from "@/lib/academic-calendar";
 
 function startOfDay(iso: string) {
   return new Date(`${iso}T00:00:00+07:00`).getTime();
 }
 
-export function YearTimeline() {
+export function YearTimeline({ milestones }: { milestones?: Milestone[] }) {
+  const list = milestones && milestones.length ? milestones : YEAR_MILESTONES;
   const now = Date.now();
-  let activeIndex = YEAR_MILESTONES.findIndex((item, index) => {
+  let activeIndex = list.findIndex((item, index) => {
     const start = startOfDay(item.iso);
-    const next = YEAR_MILESTONES[index + 1];
+    const next = list[index + 1];
     const end = next ? startOfDay(next.iso) : start + 86400000 * 14;
     return now >= start && now < end;
   });
   if (activeIndex < 0) {
-    activeIndex = now < startOfDay(YEAR_MILESTONES[0].iso) ? 0 : YEAR_MILESTONES.length - 1;
+    activeIndex = now < startOfDay(list[0]?.iso || "2026-08-24") ? 0 : list.length - 1;
   }
 
   return (
     <div className="year-timeline">
-      {YEAR_MILESTONES.map((item, index) => {
+      {list.map((item, index) => {
         const past = now > startOfDay(item.iso) + 86400000;
         const active = index === activeIndex;
         return (

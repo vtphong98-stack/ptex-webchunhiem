@@ -131,6 +131,6 @@ export async function POST(request: Request) {
     studentId,
     sheetsSynced: sheets.ok,
     sheetsMessage: sheets.message || sheets.error || "",
-    className: (await resolveClassConfig(schoolYearId))?.fullName ?? "",
+    className: (await resolveClassConfig(schoolYearId, { fullName: 1 }))?.fullName ?? "",
   });
 }

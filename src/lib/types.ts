@@ -58,8 +58,78 @@ export type ClassConfig = {
   timetableJson?: string;
   timetableUpdatedAt?: string;
   timetableHistory?: TimetableVersion[];
+  teacherTimetableJson?: string;
+  teacherTimetableUpdatedAt?: string;
+  teachingPlanJson?: string;
+  teachingPlanUpdatedAt?: string;
+  targetsJson?: string;
+  targetsUpdatedAt?: string;
+  milestonesJson?: string;
+  milestonesUpdatedAt?: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type TargetMetric = { count: number; percent: number };
+
+// 4 mức (Rèn luyện hoặc Bộ môn): Tốt, Khá, Đạt, Chưa đạt (không có Xuất sắc)
+export type FourLevelMetric = {
+  tot: TargetMetric;
+  kha: TargetMetric;
+  dat: TargetMetric;
+  chuaDat: TargetMetric;
+};
+
+// 5 mức (Học lực cả năm lớp chủ nhiệm): 4 mức cơ bản (Tốt, Khá, Đạt, Chưa đạt) + Xuất sắc xét riêng trên toàn lớp
+export type HomeroomAcademicMetric = {
+  tot: TargetMetric;      // Tốt / Giỏi (Mức học lực cơ bản)
+  kha: TargetMetric;      // Khá (Mức học lực cơ bản)
+  dat: TargetMetric;      // Đạt (Mức học lực cơ bản)
+  chuaDat: TargetMetric;  // Chưa đạt (Mức học lực cơ bản)
+  xuatSac: TargetMetric;  // Danh hiệu Học sinh Xuất sắc (Xét riêng, % tính trên toàn bộ sĩ số lớp)
+  gioi?: TargetMetric;    // Alias backward compat
+};
+
+// Từng lớp bộ môn Toán (mức cao nhất là Tốt)
+export type SubjectClassTarget = {
+  id: string;
+  className: string;
+  totalStudents: number;
+  subject?: string;
+  tot: TargetMetric;
+  kha: TargetMetric;
+  dat: TargetMetric;
+  chuaDat: TargetMetric;
+};
+
+export type ClassTargets = {
+  schoolYear: string;
+
+  // 1. PHẦN CHỦ NHIỆM (Lớp chủ nhiệm)
+  homeroom: {
+    className: string;
+    totalStudents: number;
+    conduct: FourLevelMetric;          // Rèn luyện: Tốt, Khá, Đạt, Chưa đạt (không có Xuất sắc)
+    academic: HomeroomAcademicMetric; // Học tập: 4 mức cơ bản (100%) + Xuất sắc xét riêng (% tính trên toàn lớp)
+  };
+
+  // 2. PHẦN BỘ MÔN (Giảng dạy môn Toán theo từng lớp)
+  subjectTeaching: {
+    subjectName: string;
+    classes: SubjectClassTarget[];     // Từng lớp: Tốt, Khá, Đạt, Chưa đạt
+  };
+
+  // 3. DANH HIỆU & PHONG TRÀO
+  otherTargets: {
+    hocSinhGioi?: string;
+    totNghiepThpt?: string;
+    daiHocCaoDang?: string;
+    danhHieuLop?: string;
+    phongTrao?: string;
+    ghiChu?: string;
+  };
+
+  updatedAt?: string;
 };
 
 export type TimetableVersion = {

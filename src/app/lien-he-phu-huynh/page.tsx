@@ -1,9 +1,11 @@
+import Link from "next/link";
+
 import { ContactDirectory } from "@/components/contact/ContactDirectory";
 import { CLASS_SITE } from "@/lib/class-site";
 import { telHref, zaloHref } from "@/lib/phone";
 import { getContactDirectory } from "@/lib/public-site";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export const metadata = {
   title: `Liên hệ phụ huynh · ${CLASS_SITE.fullName}`,
@@ -16,7 +18,7 @@ export default async function ParentContactPage() {
     <main className="contact-page">
       <div className="contact-shell">
         <p className="contact-back">
-          <a href="/">← Trang chủ</a>
+          <Link href="/">← Trang chủ</Link>
         </p>
         <header className="contact-hero">
           <h1>Liên hệ phụ huynh</h1>

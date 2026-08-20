@@ -1,4 +1,4 @@
-import { buildExcelWeeks, EXCEL_WEEK_COUNT } from "@/lib/weeks";
+import { buildExcelWeeks, EXCEL_WEEK_COUNT, getCurrentRealtimeWeekNumber } from "@/lib/weeks";
 
 /** Asia/Ho_Chi_Minh = UTC+7. Saturday 00:00 VN = Friday 17:00 UTC. */
 export const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -143,14 +143,8 @@ export function findLock(locks: WeekLockState[], weekNumber: number) {
   return locks.find((item) => item.weekNumber === weekNumber) ?? resolveWeekLock(weekNumber, null);
 }
 
-export function pickDefaultOfficerWeek(locks: WeekLockState[], fallback = 1) {
-  const now = Date.now();
-  const inWindow = [...locks]
-    .reverse()
-    .find((item) => !item.locked && item.lockAt && new Date(item.lockAt).getTime() > now);
-  if (inWindow) return inWindow.weekNumber;
-  const unlocked = [...locks].reverse().find((item) => !item.locked);
-  return unlocked?.weekNumber ?? fallback;
+export function pickDefaultOfficerWeek(_locks?: WeekLockState[], fallback = 1) {
+  return getCurrentRealtimeWeekNumber();
 }
 
 export function weekSelectSuffix(lock?: WeekLockState | null) {

@@ -183,10 +183,6 @@ export async function saveReportAction(formData: FormData) {
     schoolYearId = currentYear?._id ? String(currentYear._id) : "";
   }
   const weekNumber = Number(toPlainString(formData.get("weekNumber")) || "1");
-  const lockedMessage = await assertWeekWritable(schoolYearId, weekNumber);
-  if (lockedMessage) {
-    return { ok: false as const, error: lockedMessage };
-  }
   const week = getExcelWeek(weekNumber);
   const weekLabel = week?.label ?? `Tuần ${weekNumber}`;
   const rawFields: Record<string, string> = {};
@@ -211,19 +207,33 @@ export async function saveReportAction(formData: FormData) {
     rawFields.week_range = week.dateRangeLabel;
   }
 
-  let previousRemaining = 0;
-  if (session.role === "thuQuy") {
-    const prior = await reportsCollection
-      .find(
-        { schoolYearId, reporterRole: "thuQuy", weekNumber: { $lt: weekNumber } },
-        { projection: { weekNumber: 1, "fields.remaining": 1 } },
-      )
-      .sort({ weekNumber: -1 })
-      .limit(1)
-      .toArray();
-    previousRemaining = parseSignedVnd(prior[0]?.fields?.remaining);
+  // Lock state, the previous treasury row and the row we may overwrite are three
+  // independent reads; they used to run back to back, one Atlas round trip each.
+  const [lockedMessage, prior, existing] = await Promise.all([
+    assertWeekWritable(schoolYearId, weekNumber),
+    session.role === "thuQuy"
+      ? reportsCollection
+          .find(
+            { schoolYearId, reporterRole: "thuQuy", weekNumber: { $lt: weekNumber } },
+            { projection: { weekNumber: 1, "fields.remaining": 1 } },
+          )
+          .sort({ weekNumber: -1 })
+          .limit(1)
+          .toArray()
+      : Promise.resolve([]),
+    reportsCollection.findOne({
+      schoolYearId,
+      weekNumber,
+      reporterRole: session.role,
+      teamNumber: session.teamNumber ?? null,
+    }),
+  ]);
+
+  if (lockedMessage) {
+    return { ok: false as const, error: lockedMessage };
   }
 
+  const previousRemaining = session.role === "thuQuy" ? parseSignedVnd(prior[0]?.fields?.remaining) : 0;
   const fields = enrichReportFields(session.role, rawFields, previousRemaining);
 
   const payload = {
@@ -245,25 +255,21 @@ export async function saveReportAction(formData: FormData) {
     updatedAt: new Date().toISOString(),
   };
 
-  const existing = await reportsCollection.findOne({
-    schoolYearId,
-    weekNumber,
-    reporterRole: session.role,
-    teamNumber: session.teamNumber ?? null,
-  });
-
+  // The audit row does not depend on the write result, so both go out together.
   if (existing?._id) {
-    await reportsCollection.updateOne({ _id: existing._id }, { $set: payload });
-    await createAuditLog({
-      schoolYearId,
-      entityType: "report",
-      entityId: existing._id,
-      action: "update",
-      summary: `Cập nhật báo cáo ${payload.weekLabel}.`,
-      actorId: session.id,
-      actorName: session.fullName,
-      actorRole: session.role,
-    });
+    await Promise.all([
+      reportsCollection.updateOne({ _id: existing._id }, { $set: payload }),
+      createAuditLog({
+        schoolYearId,
+        entityType: "report",
+        entityId: existing._id,
+        action: "update",
+        summary: `Cập nhật báo cáo ${payload.weekLabel}.`,
+        actorId: session.id,
+        actorName: session.fullName,
+        actorRole: session.role,
+      }),
+    ]);
   } else {
     const createdAt = new Date().toISOString();
     const newReport = {
@@ -273,17 +279,19 @@ export async function saveReportAction(formData: FormData) {
       createdBy: session.id,
       createdAt,
     };
-    await reportsCollection.insertOne(newReport);
-    await createAuditLog({
-      schoolYearId,
-      entityType: "report",
-      entityId: newReport._id,
-      action: "create",
-      summary: `Nộp báo cáo ${payload.weekLabel}.`,
-      actorId: session.id,
-      actorName: session.fullName,
-      actorRole: session.role,
-    });
+    await Promise.all([
+      reportsCollection.insertOne(newReport),
+      createAuditLog({
+        schoolYearId,
+        entityType: "report",
+        entityId: newReport._id,
+        action: "create",
+        summary: `Nộp báo cáo ${payload.weekLabel}.`,
+        actorId: session.id,
+        actorName: session.fullName,
+        actorRole: session.role,
+      }),
+    ]);
   }
 
   if (session.role === "thuQuy") {
@@ -295,16 +303,23 @@ export async function saveReportAction(formData: FormData) {
       all.map((item) => ({ weekNumber: item.weekNumber, fields: item.fields ?? {} })),
     );
     const nowIso = new Date().toISOString();
-    for (const item of cascaded) {
-      if (!item.changed) continue;
-      await reportsCollection.updateOne(
-        { schoolYearId, reporterRole: "thuQuy", weekNumber: item.weekNumber },
-        { $set: { fields: item.fields, financeNotes: item.fields.remaining, updatedAt: nowIso } },
-      );
+    // One bulkWrite instead of an awaited updateOne per changed week: the carry
+    // chain can touch every week of the year, and each update was a round trip.
+    const operations = cascaded
+      .filter((item) => item.changed)
+      .map((item) => ({
+        updateOne: {
+          filter: { schoolYearId, reporterRole: "thuQuy", weekNumber: item.weekNumber },
+          update: { $set: { fields: item.fields, financeNotes: item.fields.remaining, updatedAt: nowIso } },
+        },
+      }));
+    if (operations.length) {
+      await reportsCollection.bulkWrite(operations, { ordered: false });
     }
   }
 
-  revalidateTag("home", "max");
+  // getPublicSiteData is tagged "public-site"; the old "home" tag matched nothing.
+  revalidateTag("public-site", "max");
   revalidatePath("/");
   revalidatePath("/dashboard");
   return { ok: true as const };

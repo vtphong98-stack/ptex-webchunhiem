@@ -1,93 +1,189 @@
+import { unstable_cache } from "next/cache";
+
+import { parseMilestonesJson } from "@/lib/academic-calendar";
 import { CLASS_SITE } from "@/lib/class-site";
 import { parseStoredTimetable, timetableDisplayFromGrid, timetableDisplayFromJson } from "@/lib/excel-timetable";
 import { getDb } from "@/lib/db";
 import { getHomeBoard } from "@/lib/home-board";
 import { sortNotices, toPublicNotice } from "@/lib/notices";
 import type { ContactCard } from "@/lib/phone";
-import { resolveClassConfig, resolveSchoolYear } from "@/lib/school-year-scope";
-import type { GvcnNotice, Student } from "@/lib/types";
+import { CLASS_CONFIG_FIELDS, resolveClassConfig, resolveSchoolYear } from "@/lib/school-year-scope";
+import type { ClassTargets, GvcnNotice, Student } from "@/lib/types";
 
-export async function getPublicSiteData() {
-  const year = await resolveSchoolYear(undefined, { seed: false });
-  const schoolYearId = year?._id ? String(year._id) : "";
-  const db = await getDb();
+export const getPublicSiteData = unstable_cache(
+  async () => {
+    const year = await resolveSchoolYear(undefined, { seed: false });
+    const schoolYearId = year?._id ? String(year._id) : "";
+    const db = await getDb();
 
-  const [students, config, noticeDocs, board] = schoolYearId
-    ? await Promise.all([
-        db
-          .collection<Student>("students")
-          .find({ schoolYearId }, { projection: { fullName: 1, birthDay: 1, birthMonth: 1 } })
-          .sort({ profileTt: 1, fullName: 1 })
-          .toArray(),
-        resolveClassConfig(schoolYearId),
-        db.collection<GvcnNotice>("notices").find({ schoolYearId }).limit(12).toArray(),
-        getHomeBoard(schoolYearId),
-      ])
-    : [[], null, [], await getHomeBoard("")];
+    const [students, config, noticeDocs, board] = schoolYearId
+      ? await Promise.all([
+          db
+            .collection<Student>("students")
+            .find({ schoolYearId }, { projection: { fullName: 1, birthDay: 1, birthMonth: 1 } })
+            .sort({ profileTt: 1, fullName: 1 })
+            .toArray(),
+          resolveClassConfig(schoolYearId, {
+            ...CLASS_CONFIG_FIELDS.identity,
+            ...CLASS_CONFIG_FIELDS.timetable,
+            ...CLASS_CONFIG_FIELDS.milestones,
+          }),
+          db
+            .collection<GvcnNotice>("notices")
+            .find({ schoolYearId }, { projection: { title: 1, body: 1, pinned: 1, createdByName: 1, createdAt: 1 } })
+            .sort({ pinned: -1, createdAt: -1 })
+            .limit(12)
+            .toArray(),
+          getHomeBoard(schoolYearId),
+        ])
+      : [[], null, [], await getHomeBoard("")];
 
-  const stored = parseStoredTimetable(config?.timetableJson);
-  const display = stored ? timetableDisplayFromGrid(stored) : { morning: {}, afternoon: {} };
-  const timetableVersions = (config?.timetableHistory ?? [])
-    .slice(0, 8)
-    .map((item) => {
-      const snapshot = timetableDisplayFromJson(item.timetableJson);
-      if (!snapshot) return null;
-      return { id: item.id, createdAt: item.createdAt, ...snapshot };
-    })
-    .filter((item): item is NonNullable<typeof item> => Boolean(item));
-  const notices = sortNotices(noticeDocs).slice(0, 8);
-  const newest = [...noticeDocs].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
-  const newestId = newest?._id ? String(newest._id) : "";
+    const stored = parseStoredTimetable(config?.timetableJson);
+    const display = stored ? timetableDisplayFromGrid(stored) : { morning: {}, afternoon: {} };
+    const timetableVersions = (config?.timetableHistory ?? [])
+      .slice(0, 8)
+      .map((item) => {
+        const snapshot = timetableDisplayFromJson(item.timetableJson);
+        if (!snapshot) return null;
+        return { id: item.id, createdAt: item.createdAt, ...snapshot };
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+    const notices = sortNotices(noticeDocs).slice(0, 8);
+    const newest = [...noticeDocs].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+    const newestId = newest?._id ? String(newest._id) : "";
+    const milestones = parseMilestonesJson(config?.milestonesJson);
 
-  return {
-    yearName: year?.name ?? "2026-2027",
-    hasTimetable: Boolean(stored),
-    className: config?.className || CLASS_SITE.className,
-    fullName: config?.fullName || CLASS_SITE.fullName,
-    notices: notices.map((notice) => toPublicNotice(notice, newestId)),
-    students: students.map((item) => ({
-      fullName: item.fullName,
-      birthDay: item.birthDay,
-      birthMonth: item.birthMonth,
-    })),
-    timetable: display,
-    timetableUpdatedAt: config?.timetableUpdatedAt || (config?.timetableJson ? config.updatedAt : "") || "",
-    timetableVersions,
-    board,
-  };
-}
+    return {
+      className: CLASS_SITE.className,
+      fullName: CLASS_SITE.fullName,
+      schoolYear: year?.name ?? CLASS_SITE.schoolYear,
+      yearName: year?.name ?? CLASS_SITE.schoolYear,
+      gvcnName: CLASS_SITE.gvcnName,
+      gvcnPhone: CLASS_SITE.gvcnPhone,
+      studentCount: students.length,
+      students: students.map((s) => ({
+        fullName: s.fullName,
+        birthDay: s.birthDay ?? 0,
+        birthMonth: s.birthMonth ?? 0,
+      })),
+      board,
+      milestones,
+      hasTimetable: Boolean(config?.timetableJson),
+      timetableUpdatedAt: config?.timetableUpdatedAt || "",
+      timetable: display,
+      timetableVersions,
+      notices: notices.map((n) => toPublicNotice(n, newestId)),
+    };
+  },
+  ["public-site-data"],
+  { revalidate: 60, tags: ["public-site", "notices", "timetable", "milestones"] },
+);
+
+export const getBothContactDirectories = unstable_cache(
+  async () => {
+    const year = await resolveSchoolYear(undefined, { seed: false });
+    const schoolYearId = year?._id ? String(year._id) : "";
+    if (!schoolYearId) {
+      return { yearName: "", parents: [] as ContactCard[], students: [] as ContactCard[] };
+    }
+
+    const db = await getDb();
+    const rawStudents = await db
+      .collection<Student>("students")
+      .find(
+        { schoolYearId },
+        {
+          projection: {
+            fullName: 1,
+            parentName: 1,
+            fatherName: 1,
+            motherName: 1,
+            parentPhone: 1,
+            contactPhone: 1,
+            studentPhone: 1,
+            classRole: 1,
+            position: 1,
+          },
+        },
+      )
+      .sort({ profileTt: 1, fullName: 1 })
+      .toArray();
+
+    const parents: ContactCard[] = [];
+    const students: ContactCard[] = [];
+
+    for (const s of rawStudents) {
+      const parentNotes = [s.fatherName && `Cha: ${s.fatherName}`, s.motherName && `Mẹ: ${s.motherName}`]
+        .filter(Boolean)
+        .join(" · ");
+
+      parents.push({
+        id: String(s._id),
+        fullName: s.fullName,
+        subtitle: parentNotes || s.parentName || "",
+        phone: s.contactPhone || s.parentPhone || "",
+      });
+
+      students.push({
+        id: String(s._id),
+        fullName: s.fullName,
+        subtitle: s.classRole || s.position || "",
+        phone: s.studentPhone || "",
+      });
+    }
+
+    return { yearName: year?.name ?? "", parents, students };
+  },
+  ["both-contact-directories"],
+  { revalidate: 60, tags: ["contacts", "students"] },
+);
+
+export const getTeacherTimetableServer = unstable_cache(
+  async () => {
+    const year = await resolveSchoolYear(undefined, { seed: false });
+    const schoolYearId = year?._id ? String(year._id) : "";
+    const config = await resolveClassConfig(schoolYearId, { ...CLASS_CONFIG_FIELDS.teacherTimetable });
+    const raw = (config as Record<string, unknown>)?.teacherTimetableJson as string | undefined;
+    return {
+      data: raw ? JSON.parse(raw) : null,
+      updatedAt: (config as Record<string, unknown>)?.teacherTimetableUpdatedAt || "",
+    };
+  },
+  ["teacher-timetable-server"],
+  { revalidate: 60, tags: ["timetable", "teacher-timetable"] },
+);
+
+export const getTeachingPlanServer = unstable_cache(
+  async () => {
+    const year = await resolveSchoolYear(undefined, { seed: false });
+    const schoolYearId = year?._id ? String(year._id) : "";
+    const config = await resolveClassConfig(schoolYearId, { ...CLASS_CONFIG_FIELDS.teachingPlan });
+    const raw = (config as Record<string, unknown>)?.teachingPlanJson as string | undefined;
+    return {
+      data: raw ? JSON.parse(raw) : null,
+      updatedAt: (config as Record<string, unknown>)?.teachingPlanUpdatedAt || "",
+    };
+  },
+  ["teaching-plan-server"],
+  { revalidate: 60, tags: ["teaching-plan"] },
+);
+
+export const getTargetsServer = unstable_cache(
+  async () => {
+    const year = await resolveSchoolYear(undefined, { seed: false });
+    const schoolYearId = year?._id ? String(year._id) : "";
+    const config = await resolveClassConfig(schoolYearId, { ...CLASS_CONFIG_FIELDS.targets });
+    const raw = (config as Record<string, unknown>)?.targetsJson as string | undefined;
+    return {
+      data: raw ? (JSON.parse(raw) as ClassTargets) : null,
+      updatedAt: ((config as Record<string, unknown>)?.targetsUpdatedAt as string) || "",
+    };
+  },
+  ["targets-server-data"],
+  { revalidate: 60, tags: ["targets", "class-targets"] },
+);
 
 export async function getContactDirectory(kind: "parents" | "students") {
-  const year = await resolveSchoolYear();
-  const schoolYearId = year?._id ? String(year._id) : "";
-  if (!schoolYearId) return { yearName: year?.name ?? "", items: [] as ContactCard[] };
-
-  const db = await getDb();
-  const students = await db
-    .collection<Student>("students")
-    .find({ schoolYearId })
-    .sort({ profileTt: 1, fullName: 1 })
-    .toArray();
-
-  const items = students.map((student) => {
-    if (kind === "students") {
-      return {
-        id: String(student._id),
-        fullName: student.fullName,
-        subtitle: student.classRole || student.position || "",
-        phone: student.studentPhone || "",
-      };
-    }
-    const parents = [student.fatherName && `Cha: ${student.fatherName}`, student.motherName && `Mẹ: ${student.motherName}`]
-      .filter(Boolean)
-      .join(" · ");
-    return {
-      id: String(student._id),
-      fullName: student.fullName,
-      subtitle: parents || student.parentName || "",
-      phone: student.contactPhone || student.parentPhone || "",
-    };
-  });
-
-  return { yearName: year?.name ?? "", items };
+  const both = await getBothContactDirectories();
+  return { yearName: both.yearName, items: kind === "parents" ? both.parents : both.students };
 }

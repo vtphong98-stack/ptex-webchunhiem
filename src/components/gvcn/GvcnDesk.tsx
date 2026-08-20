@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { logoutAction } from "@/app/dashboard/actions";
@@ -8,6 +9,7 @@ import { NoticeBoard } from "@/components/gvcn/NoticeBoard";
 import { StudentLookup } from "@/components/gvcn/StudentLookup";
 import { TeamManager } from "@/components/gvcn/TeamManager";
 import { TimetableUpload } from "@/components/gvcn/TimetableUpload";
+import { TeacherTimetable, TeachingPlan } from "@/components/gvcn/TeacherWorkspace";
 import { CLASS_SITE } from "@/lib/class-site";
 import type { GvcnWeekReport } from "@/lib/gvcn-report";
 import { OFFICER_SLOTS } from "@/lib/report-fields";
@@ -53,7 +55,10 @@ function emptyBoardRows(): BoardRow[] {
   }));
 }
 
-type DeskView = "weeks" | "teams" | "lookup" | "timetable" | "notices";
+import { TargetsManager } from "@/components/gvcn/TargetsManager";
+import { MilestonesManager } from "@/components/gvcn/MilestonesManager";
+
+type DeskView = "weeks" | "teams" | "lookup" | "timetable" | "notices" | "teaching" | "targets" | "milestones";
 
 function yearQs(yearName: string) {
   return yearName ? `?year=${encodeURIComponent(yearName)}` : "";
@@ -92,21 +97,17 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
         if (Array.isArray(data.years) && data.years.length) setYears(data.years);
         if (typeof data.yearName === "string" && data.yearName && !yearName) setYearName(data.yearName);
         if (typeof data.isCurrent === "boolean") setIsCurrentYear(data.isCurrent);
+        // /api/gvcn/board carries the class name too — it used to cost a second
+        // request that re-resolved the school year on the server.
+        if (typeof data.className === "string" && data.className) {
+          setClassName(data.className);
+          setClassDraft(data.className);
+        }
         if (Array.isArray(data.rows) && data.rows.length) {
           setBoard({ rows: data.rows });
         }
       })
       .catch(() => setBoardError("Chưa tải được trạng thái nộp. Vẫn chọn tuần bình thường."));
-
-    fetch(`/api/gvcn/class${qs}`)
-      .then(async (response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        if (typeof data?.className === "string" && data.className) {
-          setClassName(data.className);
-          setClassDraft(data.className);
-        }
-      })
-      .catch(() => undefined);
 
     fetch(`/api/gvcn/week-locks${qs}`)
       .then(async (response) => (response.ok ? response.json() : null))
@@ -245,8 +246,10 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
                 ? "Tra cứu học sinh"
                 : deskView === "timetable"
                   ? "Thời khóa biểu"
-                  : deskView === "notices"
-                    ? "Thông báo GVCN"
+                  : deskView === "teaching"
+                    ? "Lịch dạy & Báo giảng"
+                    : deskView === "notices"
+                      ? "Thông báo GVCN"
                     : "Tổng kết tuần"}{" "}
             · {fullName}
           </h1>
@@ -306,9 +309,30 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
           >
             TKB
           </button>
-          <a className="button-secondary" href="/">
+          <button
+            className={deskView === "teaching" ? "button-primary" : "button-secondary"}
+            onClick={() => setDeskView("teaching")}
+            type="button"
+          >
+            Lịch dạy
+          </button>
+          <button
+            className={deskView === "targets" ? "button-primary" : "button-secondary"}
+            onClick={() => setDeskView("targets")}
+            type="button"
+          >
+            Chỉ tiêu
+          </button>
+          <button
+            className={deskView === "milestones" ? "button-primary" : "button-secondary"}
+            onClick={() => setDeskView("milestones")}
+            type="button"
+          >
+            Mốc ngày / Thi
+          </button>
+          <Link className="button-secondary" href="/">
             Trang chủ
-          </a>
+          </Link>
           <form action={logoutAction}>
             <button className="button-secondary" type="submit">
               Đăng xuất
@@ -325,6 +349,15 @@ export function GvcnDesk({ fullName }: { fullName: string }) {
         <StudentLookup yearName={yearName} />
       ) : deskView === "timetable" ? (
         <TimetableUpload readOnly={!isCurrentYear} yearName={yearName} />
+      ) : deskView === "teaching" ? (
+        <div className="gvcn-teaching-workspace">
+          <TeacherTimetable />
+          <TeachingPlan />
+        </div>
+      ) : deskView === "targets" ? (
+        <TargetsManager readOnly={!isCurrentYear} yearName={yearName} />
+      ) : deskView === "milestones" ? (
+        <MilestonesManager readOnly={!isCurrentYear} yearName={yearName} />
       ) : (
         <>
       {boardError ? <p className="mb-3 text-sm text-amber-700">{boardError}</p> : null}

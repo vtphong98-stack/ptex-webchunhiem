@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { logoutAction, saveReportAction } from "@/app/dashboard/actions";
@@ -19,7 +20,7 @@ import {
   type LaborStudent,
 } from "@/lib/labor-duty";
 import { getReportFields } from "@/lib/report-fields";
-import { buildExcelWeeks } from "@/lib/weeks";
+import { buildExcelWeeks, getCurrentRealtimeWeekNumber } from "@/lib/weeks";
 import { findLock, pickDefaultOfficerWeek } from "@/lib/week-lock";
 
 export function LaborForm({ fullName }: { fullName: string }) {
@@ -27,8 +28,8 @@ export function LaborForm({ fullName }: { fullName: string }) {
   const reportFields = useMemo(() => getReportFields("lopPhoLaoDong"), []);
   const { reports, hasMore, loadingMore, loadInitial, refresh, loadMore, weekLocks } = useOfficerReports();
   const [schoolYearId, setSchoolYearId] = useState("");
-  const [weekNumber, setWeekNumber] = useState(1);
-  const [dutyTeam, setDutyTeam] = useState(1);
+  const [weekNumber, setWeekNumber] = useState(() => getCurrentRealtimeWeekNumber(weeks));
+  const [dutyTeam, setDutyTeam] = useState(() => dutyTeamForWeek(getCurrentRealtimeWeekNumber(weeks)));
   const [teamsByNumber, setTeamsByNumber] = useState<Record<string, LaborStudent[]>>({});
   const [students, setStudents] = useState<LaborStudent[]>([]);
   const [rows, setRows] = useState<LaborAssignmentRow[]>([]);
@@ -63,7 +64,7 @@ export function LaborForm({ fullName }: { fullName: string }) {
   useEffect(() => {
     void Promise.all([loadInitial(), loadTeamRosters()]).then(([reportData]) => {
       if (reportData?.schoolYearId) setSchoolYearId(reportData.schoolYearId);
-      const firstWeek = pickDefaultOfficerWeek(reportData?.weekLocks ?? [], reportData?.reports[0]?.weekNumber ?? 1);
+      const firstWeek = pickDefaultOfficerWeek(reportData?.weekLocks ?? []);
       setWeekNumber(firstWeek);
       const saved = reportData?.reports.find((item) => item.weekNumber === firstWeek);
       setDutyTeam(saved?.fields?.duty_team ? Number(saved.fields.duty_team) : dutyTeamForWeek(firstWeek));
@@ -158,9 +159,9 @@ export function LaborForm({ fullName }: { fullName: string }) {
     <main className="py-6">
       <div className="officer-form officer-form-wide labor-form">
         <div className="tt-form-toolbar">
-          <a className="button-secondary" href="/">
+          <Link className="button-secondary" href="/">
             ← Trang chủ
-          </a>
+          </Link>
           <form action={logoutAction}>
             <button className="button-secondary" type="submit">
               Đăng xuất

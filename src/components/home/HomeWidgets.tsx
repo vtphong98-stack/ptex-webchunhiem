@@ -86,24 +86,33 @@ export const LuckyWheel = memo(function LuckyWheel({ names }: { names: string[] 
   );
 });
 
-/** Countdown only updates the DOM text, not React state, to avoid re-renders */
-export function ExamCountdown() {
+import type { Milestone } from "@/lib/academic-calendar";
+
+/** Compact countdown bar — sits at the top of the page, DOM-only updates */
+export function ExamCountdownBar({ milestones }: { milestones?: Milestone[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const targets = [
-      { iso: CLASS_SITE.examDateIso, title: CLASS_SITE.examTitle, date: CLASS_SITE.examDate },
-      { iso: CLASS_SITE.hk2DateIso, title: CLASS_SITE.hk2Title, date: CLASS_SITE.hk2Date },
-      { iso: CLASS_SITE.tnDateIso, title: CLASS_SITE.tnTitle, date: CLASS_SITE.tnDate },
-    ];
+  const hk1 = milestones?.find((m) => m.id === "hk1");
+  const hk2 = milestones?.find((m) => m.id === "hk2");
+  const tn = milestones?.find((m) => m.id === "tn");
 
-    // Find the nearest future target for countdown
+  const targets = useMemo(() => [
+    { iso: hk1?.iso || CLASS_SITE.examDateIso, title: hk1?.label ? `THI ${hk1.label.toUpperCase()}` : CLASS_SITE.examTitle, date: hk1?.date || CLASS_SITE.examDate },
+    { iso: hk2?.iso || CLASS_SITE.hk2DateIso, title: hk2?.label ? `THI ${hk2.label.toUpperCase()}` : CLASS_SITE.hk2Title, date: hk2?.date || CLASS_SITE.hk2Date },
+    { iso: tn?.iso || CLASS_SITE.tnDateIso, title: tn?.label ? `THI ${tn.label.toUpperCase()}` : CLASS_SITE.tnTitle, date: tn?.date || CLASS_SITE.tnDate },
+  ], [hk1, hk2, tn]);
+
+  useEffect(() => {
     function getActiveTarget() {
       const now = Date.now();
       for (const t of targets) {
         if (new Date(`${t.iso}T07:30:00`).getTime() > now) return t;
       }
       return targets[targets.length - 1];
+    }
+
+    function pad2(n: number) {
+      return String(n).padStart(2, "0");
     }
 
     function update() {
@@ -117,44 +126,68 @@ export function ExamCountdown() {
       const mins = Math.floor((diff % 3600000) / 60000);
       const secs = Math.floor((diff % 60000) / 1000);
 
+      const titleEl = el.querySelector("[data-cd=title]");
       const daysEl = el.querySelector("[data-cd=d]");
       const hoursEl = el.querySelector("[data-cd=h]");
       const minsEl = el.querySelector("[data-cd=m]");
       const secsEl = el.querySelector("[data-cd=s]");
+      if (titleEl) titleEl.textContent = active.title;
       if (daysEl) daysEl.textContent = String(days);
-      if (hoursEl) hoursEl.textContent = String(hours);
-      if (minsEl) minsEl.textContent = String(mins);
-      if (secsEl) secsEl.textContent = String(secs);
+      if (hoursEl) hoursEl.textContent = pad2(hours);
+      if (minsEl) minsEl.textContent = pad2(mins);
+      if (secsEl) {
+        secsEl.textContent = pad2(secs);
+        // Restarting the animation used to read offsetWidth, which forces a
+        // synchronous layout of the whole document every second. Alternating two
+        // equivalent classes restarts it without touching layout.
+        const useAlt = secs % 2 === 0;
+        secsEl.classList.toggle("cd-tick", !useAlt);
+        secsEl.classList.toggle("cd-tick-alt", useAlt);
+      }
     }
 
     update();
     const timer = window.setInterval(update, 1000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [targets]);
 
-  const info = `${CLASS_SITE.examTitle}: ${CLASS_SITE.examDate} · ${CLASS_SITE.hk2Title}: ${CLASS_SITE.hk2Date} · ${CLASS_SITE.tnTitle}: ${CLASS_SITE.tnDate}`;
+  const exams = [
+    { label: "HK1", date: hk1?.date || CLASS_SITE.examDate },
+    { label: "HK2", date: hk2?.date || CLASS_SITE.hk2Date },
+    { label: "TN", date: tn?.date || CLASS_SITE.tnDate },
+  ];
 
   return (
-    <div ref={containerRef}>
-      <div className="countdown-grid">
-        <div className="countdown-card">
-          <div className="countdown-value" data-cd="d">0</div>
-          <div>Ngày</div>
+    <div className="cd-bar" ref={containerRef}>
+      <div className="cd-bar-inner">
+        <span className="cd-bar-label" data-cd="title">{targets[0]?.title || CLASS_SITE.examTitle}</span>
+        <div className="cd-bar-clock">
+          <span className="cd-bar-unit">
+            <span className="cd-bar-num" data-cd="d">0</span>
+            <span className="cd-bar-tag">ngày</span>
+          </span>
+          <span className="cd-bar-sep">:</span>
+          <span className="cd-bar-unit">
+            <span className="cd-bar-num" data-cd="h">00</span>
+            <span className="cd-bar-tag">giờ</span>
+          </span>
+          <span className="cd-bar-sep">:</span>
+          <span className="cd-bar-unit">
+            <span className="cd-bar-num" data-cd="m">00</span>
+            <span className="cd-bar-tag">phút</span>
+          </span>
+          <span className="cd-bar-sep">:</span>
+          <span className="cd-bar-unit">
+            <span className="cd-bar-num cd-bar-sec" data-cd="s">00</span>
+            <span className="cd-bar-tag">giây</span>
+          </span>
         </div>
-        <div className="countdown-card">
-          <div className="countdown-value" data-cd="h">0</div>
-          <div>Giờ</div>
-        </div>
-        <div className="countdown-card">
-          <div className="countdown-value" data-cd="m">0</div>
-          <div>Phút</div>
-        </div>
-        <div className="countdown-card">
-          <div className="countdown-value" data-cd="s">0</div>
-          <div>Giây</div>
+        <div className="cd-bar-dates">
+          {exams.map((e) => (
+            <span key={e.label} className="cd-bar-date">{e.label}: {e.date}</span>
+          ))}
         </div>
       </div>
-      <p style={{ textAlign: "center", color: "#64748b" }}>{info}</p>
     </div>
   );
 }

@@ -43,18 +43,21 @@ export async function getDashboardData(
     throw new Error("No school year available.");
   }
 
-  const yearDoc = await db.collection<SchoolYear>("schoolYears").findOne({ _id: currentSchoolYear._id });
-  currentSchoolYear.weeks = weeksOfYear(yearDoc ?? currentSchoolYear);
-  currentSchoolYear.weekCount = currentSchoolYear.weeks.length;
-
   const schoolYearId = currentSchoolYear._id;
   const loadStudents = view === "students";
   const loadParents = view === "parents";
   const loadAccounts = view === "accounts";
   const loadAudit = view === "audit";
 
-  const [classConfig, studentCount, parentCount, students, parents, accounts, auditLogs] = await Promise.all([
-    db.collection<ClassConfig>("classConfigs").findOne({ schoolYearId }),
+  // The week table used to be fetched on its own line before this batch, costing
+  // an extra Atlas round trip; nothing below depends on it.
+  const [yearDoc, classConfig, studentCount, parentCount, students, parents, accounts, auditLogs] = await Promise.all([
+    db
+      .collection<SchoolYear>("schoolYears")
+      .findOne({ _id: currentSchoolYear._id }, { projection: { name: 1, weeks: 1 } }),
+    db
+      .collection<ClassConfig>("classConfigs")
+      .findOne({ schoolYearId }, { projection: { className: 1, fullName: 1, gvcnName: 1, gvcnDisplayName: 1, gvcnPhone: 1, gvcnZalo: 1, examTitle: 1, examDate: 1, note: 1 } }),
     db.collection<Student>("students").countDocuments({ schoolYearId }),
     db.collection<ParentContact>("parents").countDocuments({ schoolYearId }),
     loadStudents
@@ -63,11 +66,21 @@ export async function getDashboardData(
     loadParents
       ? db.collection<ParentContact>("parents").find({ schoolYearId }).sort({ studentName: 1 }).toArray()
       : Promise.resolve([]),
-    loadAccounts ? db.collection<UserAccount>("users").find({}).sort({ role: 1, username: 1 }).toArray() : Promise.resolve([]),
+    loadAccounts
+      ? db
+          .collection<UserAccount>("users")
+          // Never pull passwordHash into a rendered page.
+          .find({}, { projection: { username: 1, fullName: 1, role: 1, teamNumber: 1, active: 1 } })
+          .sort({ role: 1, username: 1 })
+          .toArray()
+      : Promise.resolve([]),
     loadAudit
       ? db.collection<AuditLog>("auditLogs").find({ schoolYearId }).sort({ createdAt: -1 }).limit(30).toArray()
       : Promise.resolve([]),
   ]);
+
+  currentSchoolYear.weeks = weeksOfYear(yearDoc ?? currentSchoolYear);
+  currentSchoolYear.weekCount = currentSchoolYear.weeks.length;
 
   return {
     schoolYears,

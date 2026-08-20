@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { logoutAction, saveReportAction } from "@/app/dashboard/actions";
@@ -13,7 +14,7 @@ import { WeekLockBanner, weekOptionLabel } from "@/components/officer/WeekLockBa
 import { useOfficerReports } from "@/components/officer/use-officer-reports";
 import { getOfficerTitle, getReportFields } from "@/lib/report-fields";
 import type { AppRole } from "@/lib/types";
-import { buildExcelWeeks } from "@/lib/weeks";
+import { buildExcelWeeks, getCurrentRealtimeWeekNumber } from "@/lib/weeks";
 import { findLock, pickDefaultOfficerWeek } from "@/lib/week-lock";
 
 export function OfficerDesk({
@@ -61,7 +62,7 @@ function GenericOfficerForm({
   const fields = useMemo(() => getReportFields(role), [role]);
   const { reports, hasMore, loadingMore, loadInitial, refresh, loadMore, weekLocks } = useOfficerReports();
   const [schoolYearId, setSchoolYearId] = useState("");
-  const [weekNumber, setWeekNumber] = useState(1);
+  const [weekNumber, setWeekNumber] = useState(() => getCurrentRealtimeWeekNumber(weeks));
   const [pending, setPending] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -71,7 +72,7 @@ function GenericOfficerForm({
   useEffect(() => {
     void loadInitial().then((data) => {
       if (data?.schoolYearId) setSchoolYearId(data.schoolYearId);
-      setWeekNumber(pickDefaultOfficerWeek(data?.weekLocks ?? [], data?.reports[0]?.weekNumber ?? 1));
+      setWeekNumber(pickDefaultOfficerWeek(data?.weekLocks ?? []));
     });
   }, [loadInitial]);
 
@@ -106,9 +107,9 @@ function GenericOfficerForm({
     <main className="py-6">
       <div className="officer-form">
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-          <a className="button-secondary" href="/">
+          <Link className="button-secondary" href="/">
             ← Trang chủ
-          </a>
+          </Link>
           <form action={logoutAction}>
             <button className="button-secondary" type="submit">
               Đăng xuất

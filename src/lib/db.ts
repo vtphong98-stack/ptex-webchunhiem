@@ -14,13 +14,20 @@ function getClientPromise() {
 
   if (!global.__mongoClientPromise) {
     const client = new MongoClient(uri, {
-      maxPoolSize: 3,
+      // A Promise.all of 4 reads was serialising into 2 batches at pool size 3
+      // (93ms vs 52ms measured against Atlas). Idle sockets are reaped by
+      // maxIdleTimeMS, so the headroom costs nothing when traffic is low.
+      maxPoolSize: 10,
       minPoolSize: 1,
       maxIdleTimeMS: 30000,
       serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 5000,
       socketTimeoutMS: 10000,
-      compressors: ["snappy", "zstd"],
+      // zlib ships with Node, so it always negotiates. snappy/zstd need native
+      // add-ons that are not installed here, so asking for them silently gave
+      // us no compression at all.
+      compressors: ["zlib"],
+      zlibCompressionLevel: 6,
     });
     global.__mongoClientPromise = client.connect();
   }
