@@ -12,3 +12,9 @@ yarn-error.log*
 pnpm-debug.log*
 scratch/
 scratch_xlsx_*.md
+
+# Local credential notes — must never be in the repo (see security review)
+pass.txt
+# Throwaway parsing/inspection scripts
+scratch_*.js
+scratch_*.mjs
