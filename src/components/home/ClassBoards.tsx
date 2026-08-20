@@ -104,35 +104,32 @@ export function ClassBoards({ board }: { board: HomeBoard }) {
     ? `${board.ended ? "Tuần qua" : "Tuần đang thi đua"} · ${board.weekLabel}${board.dateRange ? ` · ${board.dateRange}` : ""}`
     : "Chờ báo cáo tổ trưởng";
 
+  // Xếp hạng và học sinh tiêu biểu là cùng một câu chuyện của một tuần, nên
+  // chúng nằm trong một khu vực thay vì hai section trông ngang hàng nhau.
   return (
-    <>
-      <section className="site-section home-board-section block-amber">
-        <h2>Bảng xếp hạng các tổ</h2>
-        <div className="home-board home-board-rank">
-          <p className="home-board-kicker">{kicker}</p>
-          {board.firstPlace ? <p className="home-board-lead">Hạng nhất: {board.firstPlace}</p> : null}
-          <TeamPodium teams={board.teams} />
-          <TeamList teams={board.teams} />
-        </div>
-      </section>
+    <section className="site-section home-board-section block-amber hp-span" id="tuan-nay">
+      <h2>Tuần này của lớp</h2>
+      <div className="home-board home-board-rank">
+        <p className="home-board-kicker">{kicker}</p>
+        {board.firstPlace ? <p className="home-board-lead">🏆 Hạng nhất: {board.firstPlace}</p> : null}
+        <TeamPodium teams={board.teams} />
+        <TeamList teams={board.teams} />
+      </div>
 
-      <section className="site-section home-board-section block-rose">
-        <h2>Học sinh tiêu biểu tuần qua</h2>
-        <div className="home-board home-board-stars">
-          <p className="home-board-kicker">Điểm tốt và phát biểu nhiều nhất được ghi nhận lên bảng vàng lớp.</p>
-          {board.stars.length ? (
-            <div className="home-star-grid">
-              {board.stars.map((student) => (
-                <StarCard key={`${student.fullName}-${student.teamNumber}`} student={student} />
-              ))}
-            </div>
-          ) : (
-            <div className="home-board-empty">
-              Chưa có em nào được ghi điểm tốt hoặc phát biểu tuần này. Tổ trưởng ghi nhận để lên trang chủ.
-            </div>
-          )}
-        </div>
-      </section>
-    </>
+      <h3 className="hp-board-sub">Học sinh tiêu biểu</h3>
+      <div className="home-board home-board-stars">
+        {board.stars.length ? (
+          <div className="home-star-grid">
+            {board.stars.map((student) => (
+              <StarCard key={`${student.fullName}-${student.teamNumber}`} student={student} />
+            ))}
+          </div>
+        ) : (
+          <div className="home-board-empty">
+            Chưa có em nào được ghi điểm tốt hoặc phát biểu tuần này. Tổ trưởng ghi nhận để lên trang chủ.
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

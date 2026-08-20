@@ -172,9 +172,12 @@ export function subjectStyle(raw: string): TimetableCell {
   if (name === "-") return { subject: "-" };
   const canonical = SUBJECT_ALIAS[foldSubject(name)] || name;
   return {
-    subject: name,
+    // Display the canonical name. The uploaded Excel abbreviates ("T", "V",
+    // "CC"), and showing the raw cell made the timetable unreadable even though
+    // SUBJECT_ALIAS already knew what each letter meant.
+    subject: canonical,
     teacher: SUBJECT_TEACHERS[canonical] || SUBJECT_TEACHERS[name],
-    className: SUBJECT_CLASS[canonical] || SUBJECT_CLASS[name] || subjectTone(name),
+    className: SUBJECT_CLASS[canonical] || SUBJECT_CLASS[name] || subjectTone(canonical),
   };
 }
 
@@ -205,24 +208,25 @@ export const AFTERNOON_TIMETABLE: Record<number, TimetableCell[]> = {
   5: [subjectStyle("-"), subjectStyle("GDKT&PL"), subjectStyle("Địa"), subjectStyle("Anh"), subjectStyle("GDQP"), subjectStyle("-")],
 };
 
+/** icon là emoji hiển thị trong ô — nhận ra vai trò nhanh hơn đọc chữ. */
 export const OFFICER_LINKS = [
-  { href: "/bao-cao/lop-truong", label: "Lớp Trưởng", code: "lt", icon: "crown", className: "link-8" },
-  { href: "/bao-cao/hoc-tap", label: "Lớp Phó Học Tập", code: "lpht", icon: "book", className: "link-7" },
-  { href: "/bao-cao/lao-dong", label: "Lao Động", code: "lpld", icon: "broom", className: "link-4" },
-  { href: "/bao-cao/phong-trao", label: "Phong Trào", code: "lppt", icon: "music", className: "link-5" },
-  { href: "/bao-cao/trat-tu", label: "Trật Tự", code: "lptt", icon: "gavel", className: "link-6" },
-  { href: "/bao-cao/to-truong", label: "Tổ Trưởng", code: "tt", icon: "user", className: "link-2" },
-  { href: "/bao-cao/thu-quy", label: "Thủ Quỹ", code: "thuquy", icon: "wallet", className: "link-3" },
+  { href: "/bao-cao/lop-truong", label: "Lớp Trưởng", code: "lt", icon: "👑", className: "link-8" },
+  { href: "/bao-cao/hoc-tap", label: "Lớp Phó Học Tập", code: "lpht", icon: "📚", className: "link-7" },
+  { href: "/bao-cao/lao-dong", label: "Lao Động", code: "lpld", icon: "🧹", className: "link-4" },
+  { href: "/bao-cao/phong-trao", label: "Phong Trào", code: "lppt", icon: "🎵", className: "link-5" },
+  { href: "/bao-cao/trat-tu", label: "Trật Tự", code: "lptt", icon: "🔔", className: "link-6" },
+  { href: "/bao-cao/to-truong", label: "Tổ Trưởng", code: "tt", icon: "🧑‍🤝‍🧑", className: "link-2" },
+  { href: "/bao-cao/thu-quy", label: "Thủ Quỹ", code: "thuquy", icon: "💰", className: "link-3" },
 ];
 
 export const GVCN_HOME_LINKS = [
-  { href: "/tong-ket", label: "Tổng kết lớp theo tuần", className: "link-gvcn-2" },
-  { href: "/chi-tieu", label: "Chỉ tiêu năm học", className: "link-gvcn-1" },
-  { href: "/tra-cuu-hs", label: "Tra cứu học sinh", className: "link-gvcn-3" },
-  { href: "/lien-he", label: "Liên hệ nhanh PH & HS", className: "link-gvcn-4" },
-  { href: "/lich-day", label: "Lịch dạy giáo viên", className: "link-gvcn-7" },
-  { href: "/bao-giang", label: "Phân phối chương trình", className: "link-gvcn-8" },
-  { href: "/dashboard", label: "⚙️ Khu vực setup GVCN", className: "link-gvcn-setup" },
+  { href: "/tong-ket", label: "Tổng kết lớp theo tuần", icon: "📊", className: "link-gvcn-2" },
+  { href: "/chi-tieu", label: "Chỉ tiêu năm học", icon: "🎯", className: "link-gvcn-1" },
+  { href: "/tra-cuu-hs", label: "Tra cứu học sinh", icon: "🔍", className: "link-gvcn-3" },
+  { href: "/lien-he", label: "Liên hệ nhanh PH & HS", icon: "📞", className: "link-gvcn-4" },
+  { href: "/lich-day", label: "Lịch dạy giáo viên", icon: "📋", className: "link-gvcn-7" },
+  { href: "/bao-giang", label: "Phân phối chương trình", icon: "📖", className: "link-gvcn-8" },
+  { href: "/dashboard", label: "Khu vực setup GVCN", icon: "⚙️", className: "link-gvcn-setup" },
 ];
 
 export const LEARNING_LINKS = [

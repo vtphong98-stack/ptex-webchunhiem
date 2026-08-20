@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Timetable } from "@/components/home/Timetable";
 import type { TimetableCell } from "@/lib/class-site";
@@ -22,6 +22,15 @@ export function TimetablePanel({
   versions: TimetableSnapshot[];
 }) {
   const [selectedId, setSelectedId] = useState("current");
+  // Set after mount so the server-rendered HTML has no weekday in it — otherwise
+  // the highlight would differ between server and client across midnight.
+  const [todayIndex, setTodayIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    const weekday = new Date().getDay(); // 0 = CN
+    setTodayIndex(weekday === 0 ? null : weekday - 1);
+  }, []);
+
   const options = useMemo(() => {
     const rows: Array<{ id: string; label: string }> = [];
     if (current?.createdAt) {
@@ -38,6 +47,7 @@ export function TimetablePanel({
   const selected =
     selectedId === "current" ? current : versions.find((item) => item.id === selectedId) || current;
   const viewingOld = selectedId !== "current";
+  const stamp = selected?.createdAt || current?.createdAt || "";
 
   if (!current) {
     return (
@@ -49,25 +59,34 @@ export function TimetablePanel({
 
   return (
     <div className="tkb-panel">
-      <div className="tkb-toolbar">
-        <p className="tkb-updated">
-          {viewingOld ? "Đang xem bản cũ" : "Cập nhật"}:{" "}
-          <strong>{formatDateTime(selected?.createdAt || current.createdAt)}</strong>
-        </p>
-        {options.length > 1 ? (
-          <label className="tkb-version">
-            Phiên bản
-            <select onChange={(event) => setSelectedId(event.target.value)} value={selectedId}>
-              {options.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-      </div>
-      {selected ? <Timetable afternoon={selected.afternoon} morning={selected.morning} /> : null}
+      {(stamp || options.length > 1) ? (
+        <div className="tkb-toolbar">
+          {/* Chỉ hiện nhãn khi thật sự có mốc thời gian — trước đây nó luôn in
+              "Cập nhật:" rồi để trống. */}
+          {stamp ? (
+            <p className="tkb-updated">
+              {viewingOld ? "Đang xem bản cũ" : "Cập nhật"} <strong>{formatDateTime(stamp)}</strong>
+            </p>
+          ) : (
+            <span />
+          )}
+          {options.length > 1 ? (
+            <label className="tkb-version">
+              Phiên bản
+              <select onChange={(event) => setSelectedId(event.target.value)} value={selectedId}>
+                {options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
+      ) : null}
+      {selected ? (
+        <Timetable afternoon={selected.afternoon} morning={selected.morning} todayIndex={todayIndex} />
+      ) : null}
     </div>
   );
 }

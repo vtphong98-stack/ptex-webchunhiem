@@ -9,8 +9,8 @@ function initials(name: string) {
 
 export function GvcnNotices({ notices }: { notices: PublicNotice[] }) {
   return (
-    <section className="site-section block-violet">
-      <h2>Thông báo từ giáo viên chủ nhiệm</h2>
+    <section className="site-section block-violet" id="thong-bao">
+      <h2>Thông báo từ GVCN</h2>
       {!notices.length ? (
         <div className="gvcn-notice-empty">Chưa có thông báo mới.</div>
       ) : (
