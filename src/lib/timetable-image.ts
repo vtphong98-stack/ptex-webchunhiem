@@ -1,9 +1,12 @@
 import { DAY_LABELS, shortTeacherName, subjectStyle, type TimetableCell } from "@/lib/class-site";
 
+/** Ô có thể tự mang màu — lịch dạy tô theo tên lớp chứ không theo môn. */
+export type ImageCell = TimetableCell & { tone?: { bg: string; ink: string } };
+
 export type TimetableSession = {
   title: string;
   periods: number[];
-  rows: Record<number, TimetableCell[]>;
+  rows: Record<number, ImageCell[]>;
 };
 
 /** Màu lấy từ CSS thật nên ảnh luôn khớp với những gì đang thấy trên trang. */
@@ -60,6 +63,8 @@ function drawSession(
   palette: Palette,
   top: number,
   left: number,
+  days: string[],
+  colDay: number,
 ) {
   ctx.textBaseline = "middle";
 
@@ -73,10 +78,10 @@ function drawSession(
   // hàng tiêu đề
   ctx.font = `700 12px ${FONT}`;
   ctx.textAlign = "center";
-  const headers = ["Tiết", ...DAY_LABELS];
+  const headers = ["Tiết", ...days];
   let x = left;
   headers.forEach((label, index) => {
-    const w = index === 0 ? COL_PERIOD : COL_DAY;
+    const w = index === 0 ? COL_PERIOD : colDay;
     ctx.fillStyle = index === 0 ? PERIOD_BG : HEAD_BG;
     roundRect(ctx, x, y, w - 3, HEAD_H - 3, RADIUS);
     ctx.fill();
@@ -98,27 +103,28 @@ function drawSession(
 
     cells.forEach((cell, dayIndex) => {
       if (cell.skip) return;
-      const cx = left + COL_PERIOD + dayIndex * COL_DAY;
+      const cx = left + COL_PERIOD + dayIndex * colDay;
       const span = Math.max(1, cell.rowspan ?? 1);
       const ch = span * ROW_H - 3;
       const empty = !cell.subject || cell.subject === "-";
       const style = subjectStyle(cell.subject);
       const key = (cell.className || style.className || "").split(/\s+/).find((n) => n.startsWith("subject-"));
-      const tone = (key && palette[key]) || null;
+      // Ô tự mang màu thì dùng luôn; còn lại tra bảng màu đọc từ CSS.
+      const tone = cell.tone || (key && palette[key]) || null;
 
       ctx.fillStyle = empty ? EMPTY_BG : tone?.bg || HEAD_BG;
-      roundRect(ctx, cx, y, COL_DAY - 3, ch, RADIUS);
+      roundRect(ctx, cx, y, colDay - 3, ch, RADIUS);
       ctx.fill();
 
       if (empty) {
         ctx.fillStyle = EMPTY_INK;
         ctx.font = `600 13px ${FONT}`;
-        ctx.fillText("–", cx + (COL_DAY - 3) / 2, y + ch / 2);
+        ctx.fillText("–", cx + (colDay - 3) / 2, y + ch / 2);
         return;
       }
 
       const teacher = shortTeacherName(cell.teacher || style.teacher);
-      const midX = cx + (COL_DAY - 3) / 2;
+      const midX = cx + (colDay - 3) / 2;
       ctx.fillStyle = tone?.ink || INK;
       ctx.font = `700 14px ${FONT}`;
       ctx.fillText(cell.subject, midX, y + ch / 2 - (teacher ? 8 : 0));
@@ -154,9 +160,15 @@ export async function renderTimetablePng(input: {
   schoolYear: string;
   gvcnName: string;
   updatedAt?: string;
+  /** Lịch dạy có thêm cột CN nên số ngày không cố định. */
+  days?: string[];
+  title?: string;
 }): Promise<Blob | null> {
   const { sessions, palette, className, schoolYear, gvcnName, updatedAt } = input;
-  const width = PAD * 2 + COL_PERIOD + COL_DAY * DAY_LABELS.length;
+  const days = input.days ?? [...DAY_LABELS];
+  // Bảy cột mà giữ nguyên bề rộng thì ảnh quá to; co lại cho vừa khung cũ.
+  const colDay = Math.round((COL_DAY * DAY_LABELS.length) / days.length);
+  const width = PAD * 2 + COL_PERIOD + colDay * days.length;
   const height =
     PAD * 2 +
     TITLE_H +
@@ -187,17 +199,17 @@ export async function renderTimetablePng(input: {
   ctx.textAlign = "left";
   ctx.fillStyle = INK;
   ctx.font = `700 24px ${FONT}`;
-  ctx.fillText("Thời khóa biểu", PAD, PAD + 18);
+  ctx.fillText(input.title ?? "Thời khóa biểu", PAD, PAD + 18);
   ctx.fillStyle = INK_3;
   ctx.font = `600 14px ${FONT}`;
-  ctx.fillText(`Lớp ${className} · Năm học ${schoolYear}`, PAD, PAD + 46);
+  ctx.fillText(className ? `Lớp ${className} · Năm học ${schoolYear}` : `Năm học ${schoolYear}`, PAD, PAD + 46);
 
   ctx.fillStyle = "#e6e9f2";
   ctx.fillRect(PAD, PAD + TITLE_H - 14, width - PAD * 2, 1);
 
   let y = PAD + TITLE_H;
   sessions.forEach((session, index) => {
-    y = drawSession(ctx, session, palette, y, PAD);
+    y = drawSession(ctx, session, palette, y, PAD, days, colDay);
     if (index < sessions.length - 1) y += GAP;
   });
 
@@ -205,7 +217,7 @@ export async function renderTimetablePng(input: {
   ctx.fillStyle = INK_3;
   ctx.font = `500 11px ${FONT}`;
   const stamp = updatedAt ? `Cập nhật ${updatedAt} · ` : "";
-  ctx.fillText(`${stamp}GVCN ${gvcnName}`, PAD, y + FOOT_H / 2 + 6);
+  ctx.fillText(`${stamp}GVCN ${gvcnName}`.trim(), PAD, y + FOOT_H / 2 + 6);
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
 }

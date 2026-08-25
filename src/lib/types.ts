@@ -68,6 +68,7 @@ export type ClassConfig = {
   timetableHistory?: TimetableVersion[];
   teacherTimetableJson?: string;
   teacherTimetableUpdatedAt?: string;
+  teacherTimetableHistory?: TimetableVersion[];
   teachingPlanJson?: string;
   teachingPlanUpdatedAt?: string;
   targetsJson?: string;

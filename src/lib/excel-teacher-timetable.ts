@@ -6,10 +6,61 @@ export type TeacherTimetableGrid = {
   evening: Record<number, string[]>;
 };
 
-const MORNING_PERIODS = [1, 2, 3, 4, 5];
-const AFTERNOON_PERIODS = [1, 2, 3, 4, 5];
-const EVENING_PERIODS = [1, 2, 3];
-const DAY_LABELS_7 = ["Hai", "Ba", "Tư", "Năm", "Sáu", "Bảy", "CN"];
+export const TEACHER_MORNING_PERIODS = [1, 2, 3, 4, 5];
+export const TEACHER_AFTERNOON_PERIODS = [1, 2, 3, 4, 5];
+export const TEACHER_EVENING_PERIODS = [1, 2, 3];
+/** Lịch dạy có cả chủ nhật — dạy thêm, bồi dưỡng HSG hay rơi vào cuối tuần. */
+export const TEACHER_DAY_LABELS = ["Hai", "Ba", "Tư", "Năm", "Sáu", "Bảy", "CN"];
+
+const MORNING_PERIODS = TEACHER_MORNING_PERIODS;
+const AFTERNOON_PERIODS = TEACHER_AFTERNOON_PERIODS;
+const EVENING_PERIODS = TEACHER_EVENING_PERIODS;
+const DAY_LABELS_7 = TEACHER_DAY_LABELS;
+const MAX_CELL = 40;
+
+/**
+ * Lọc lưới lịch dạy do màn hình gõ trực tiếp gửi lên: đúng số tiết, đúng bảy
+ * ngày, chuỗi cắt ngắn — để dữ liệu gõ tay và dữ liệu từ Excel cùng một khuôn.
+ */
+export function sanitizeTeacherTimetableGrid(raw: unknown): TeacherTimetableGrid | null {
+  if (!raw || typeof raw !== "object") return null;
+  const input = raw as Partial<TeacherTimetableGrid>;
+  if (!input.morning || !input.afternoon || !input.evening) return null;
+
+  const session = (source: Record<number, string[]> | undefined, periods: number[]) =>
+    Object.fromEntries(
+      periods.map((period) => {
+        const cells = (source ?? {})[period] ?? [];
+        return [
+          period,
+          DAY_LABELS_7.map((_, day) => {
+            const value = String((Array.isArray(cells) ? cells[day] : "") ?? "")
+              .replace(/\s+/g, " ")
+              .trim()
+              .slice(0, MAX_CELL);
+            return value || "-";
+          }),
+        ];
+      }),
+    );
+
+  return {
+    morning: session(input.morning, MORNING_PERIODS),
+    afternoon: session(input.afternoon, AFTERNOON_PERIODS),
+    evening: session(input.evening, EVENING_PERIODS),
+  };
+}
+
+export function parseStoredTeacherTimetable(raw?: string | null): TeacherTimetableGrid | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as TeacherTimetableGrid;
+    if (!parsed?.morning || !parsed?.afternoon || !parsed?.evening) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
 function parseSheet(
   workbook: XLSX.WorkBook,

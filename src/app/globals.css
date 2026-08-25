@@ -5181,3 +5181,16 @@ button {
   font-weight: 600;
   color: var(--accent);
 }
+
+/* Lịch dạy có 7 cột (thêm CN) nên ô hẹp hơn bảng TKB lớp */
+.tkb-edit-table-7 input {
+  min-width: 60px;
+}
+
+@media (max-width: 640px) {
+  .tkb-edit-table-7 input {
+    min-width: 0;
+    padding: 8px 1px;
+    font-size: 11px;
+  }
+}

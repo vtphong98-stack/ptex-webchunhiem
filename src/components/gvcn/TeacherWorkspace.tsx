@@ -3,6 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { buildWeeks2026 } from "@/lib/academic-calendar";
+import { CLASS_SITE } from "@/lib/class-site";
+import {
+  TEACHER_AFTERNOON_PERIODS,
+  TEACHER_DAY_LABELS,
+  TEACHER_EVENING_PERIODS,
+  TEACHER_MORNING_PERIODS,
+} from "@/lib/excel-teacher-timetable";
+import { downloadBlob, renderTimetablePng, type TimetableSession } from "@/lib/timetable-image";
 import { formatDateTime } from "@/lib/utils";
 
 /* ─── Color generator (consistent per class name) ─── */
@@ -21,41 +29,191 @@ function classColor(name: string) {
 
 type TimetableGrid = { morning: Record<number, string[]>; afternoon: Record<number, string[]>; evening: Record<number, string[]> };
 
-/* ─── TeacherTimetable (upload + view) ───── */
+type VersionRow = { id: string; createdAt: string; createdByName?: string };
+
+const SESSIONS: Array<{ key: keyof TimetableGrid; title: string; periods: number[] }> = [
+  { key: "morning", title: "Buổi Sáng", periods: TEACHER_MORNING_PERIODS },
+  { key: "afternoon", title: "Buổi Chiều", periods: TEACHER_AFTERNOON_PERIODS },
+  { key: "evening", title: "Buổi Tối", periods: TEACHER_EVENING_PERIODS },
+];
+
+function emptyGrid(): TimetableGrid {
+  const session = (periods: number[]) =>
+    Object.fromEntries(periods.map((p) => [p, TEACHER_DAY_LABELS.map(() => "-")]));
+  return {
+    morning: session(TEACHER_MORNING_PERIODS),
+    afternoon: session(TEACHER_AFTERNOON_PERIODS),
+    evening: session(TEACHER_EVENING_PERIODS),
+  };
+}
+
+/* ─── TeacherTimetable (gõ trực tiếp / upload / phiên bản / xuất ảnh) ───── */
 export function TeacherTimetable() {
   const [grid, setGrid] = useState<TimetableGrid | null>(null);
+  const [draft, setDraft] = useState<TimetableGrid>(() => emptyGrid());
+  const [dirty, setDirty] = useState(false);
+  const [mode, setMode] = useState<"type" | "excel">("type");
   const [updatedAt, setUpdatedAt] = useState("");
   const [status, setStatus] = useState("Đang tải…");
   const [open, setOpen] = useState(true);
-  const [uploading, setUploading] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [versions, setVersions] = useState<VersionRow[]>([]);
+  /** Đang xem một bản cũ — chỉ để xem và xuất ảnh, không ghi đè bản đang dùng. */
+  const [viewing, setViewing] = useState<{ id: string; createdAt: string; data: TimetableGrid } | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch("/api/gvcn/teacher-timetable");
+      if (!r.ok) throw new Error("load");
+      const d = await r.json();
+      setVersions(Array.isArray(d.versions) ? d.versions : []);
+      setUpdatedAt(d.updatedAt || "");
+      if (d.data) {
+        setGrid(d.data);
+        setDraft(d.data);
+        setStatus("");
+      } else {
+        setGrid(null);
+        setDraft(emptyGrid());
+        setStatus("Chưa có lịch dạy. Gõ thẳng vào bảng bên dưới, hoặc tải mẫu Excel rồi upload.");
+      }
+      setDirty(false);
+    } catch {
+      setStatus("Không tải được dữ liệu.");
+    }
+  }, []);
 
   useEffect(() => {
-    fetch("/api/gvcn/teacher-timetable")
-      .then(async (r) => r.ok ? r.json() : null)
-      .then((d) => {
-        if (d?.data) { setGrid(d.data); setUpdatedAt(d.updatedAt || ""); setStatus(""); }
-        else setStatus("Chưa có lịch dạy. Tải mẫu Excel, điền rồi upload.");
-      })
-      .catch(() => setStatus("Không tải được dữ liệu."));
-  }, []);
+    void load();
+  }, [load]);
+
+  function applySaved(d: { updatedAt?: string; data?: TimetableGrid; versions?: VersionRow[] }, done: string) {
+    setUpdatedAt(d.updatedAt || "");
+    if (d.data) {
+      setGrid(d.data);
+      setDraft(d.data);
+      setStatus("");
+    }
+    setVersions(Array.isArray(d.versions) ? d.versions : []);
+    setViewing(null);
+    setDirty(false);
+    setMsg(done);
+  }
 
   async function upload(file: File | undefined) {
     if (!file) return;
-    setUploading(true); setMsg("");
+    setBusy(true);
+    setMsg("");
     const form = new FormData();
     form.set("file", file);
     const r = await fetch("/api/gvcn/teacher-timetable", { method: "POST", body: form });
     const d = await r.json().catch(() => ({}));
-    setUploading(false);
-    if (!r.ok) { setMsg(d.error || "Upload thất bại."); return; }
-    setUpdatedAt(d.updatedAt || "");
-    setMsg("Đã cập nhật lịch dạy!");
-    // Reload data
-    const r2 = await fetch("/api/gvcn/teacher-timetable");
-    const d2 = await r2.json().catch(() => null);
-    if (d2?.data) { setGrid(d2.data); setStatus(""); }
+    setBusy(false);
+    if (!r.ok) {
+      setMsg(d.error || "Upload thất bại.");
+      return;
+    }
+    // Đổ luôn sang bảng gõ trực tiếp để sửa tiếp, khỏi mở lại Excel.
+    applySaved(d, "Đã cập nhật lịch dạy. Bảng gõ trực tiếp đã lấy sẵn dữ liệu này.");
   }
+
+  async function saveDraft() {
+    setBusy(true);
+    setMsg("");
+    const r = await fetch("/api/gvcn/teacher-timetable", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ grid: draft }),
+    });
+    const d = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) {
+      setMsg(d.error || "Không lưu được lịch dạy.");
+      return;
+    }
+    applySaved(d, "Đã lưu lịch dạy. Bản trước được giữ lại để xem lại.");
+  }
+
+  async function openVersion(id: string, createdAt: string) {
+    setBusy(true);
+    setMsg("");
+    const r = await fetch(`/api/gvcn/teacher-timetable/${id}`);
+    const d = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok || !d.data) {
+      setMsg(d.error || "Không mở được phiên bản cũ.");
+      return;
+    }
+    setViewing({ id, createdAt, data: d.data });
+  }
+
+  async function removeVersion(id: string) {
+    if (!window.confirm("Xóa phiên bản lịch dạy cũ này? Không thể hoàn tác.")) return;
+    setBusy(true);
+    const r = await fetch(`/api/gvcn/teacher-timetable/${id}`, { method: "DELETE" });
+    const d = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) {
+      setMsg(d.error || "Không xóa được phiên bản cũ.");
+      return;
+    }
+    setVersions(Array.isArray(d.versions) ? d.versions : []);
+    if (viewing?.id === id) setViewing(null);
+    setMsg("Đã xóa phiên bản cũ.");
+  }
+
+  async function saveImage() {
+    const shown = viewing?.data ?? grid;
+    if (!shown) return;
+    setBusy(true);
+    try {
+      const sessions: TimetableSession[] = SESSIONS.map(({ key, title, periods }) => ({
+        title,
+        periods,
+        rows: Object.fromEntries(
+          periods.map((p) => [
+            p,
+            (shown[key]?.[p] ?? TEACHER_DAY_LABELS.map(() => "-")).map((cell) => {
+              const name = (cell ?? "").trim();
+              const empty = !name || name === "-";
+              // Ô lịch dạy tô theo tên lớp, không theo môn, nên tự mang màu.
+              return empty
+                ? { subject: "-" }
+                : { subject: name, tone: { bg: classColor(name), ink: "#ffffff" } };
+            }),
+          ]),
+        ),
+      }));
+      const blob = await renderTimetablePng({
+        sessions,
+        palette: {},
+        className: "",
+        schoolYear: CLASS_SITE.schoolYear,
+        gvcnName: CLASS_SITE.gvcnName,
+        updatedAt: formatDateTime(viewing?.createdAt || updatedAt),
+        days: TEACHER_DAY_LABELS,
+        title: "Lịch dạy giáo viên",
+      });
+      if (!blob) {
+        setMsg("Không tạo được ảnh.");
+        return;
+      }
+      downloadBlob(blob, `lich-day-${(viewing?.createdAt || updatedAt || "").slice(0, 10) || "hien-tai"}.png`);
+      setMsg("Đã lưu ảnh lịch dạy.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function setCell(key: keyof TimetableGrid, period: number, day: number, value: string) {
+    const cells = [...(draft[key]?.[period] ?? TEACHER_DAY_LABELS.map(() => "-"))];
+    cells[day] = value;
+    setDraft({ ...draft, [key]: { ...draft[key], [period]: cells } });
+    setDirty(true);
+  }
+
+  const shown = viewing?.data ?? grid;
 
   return (
     <section className="tt-section">
@@ -65,23 +223,165 @@ export function TeacherTimetable() {
       </h3>
       {open && (
         <div className="tt-body">
-          <div className="mt-2 flex flex-wrap gap-2 mb-3">
-            <a className="button-secondary" href="/api/gvcn/teacher-timetable/template">Tải mẫu Excel</a>
-            <label className={`button-primary ${uploading ? "opacity-50" : ""}`} style={{ cursor: "pointer" }}>
-              {uploading ? "Đang tải…" : "Upload lịch dạy"}
-              <input type="file" accept=".xlsx,.xls" hidden disabled={uploading} onChange={(e) => upload(e.target.files?.[0])} />
-            </label>
+          <p className="text-sm leading-6 text-slate-600">
+            Hai cách nhập: <b>gõ trực tiếp</b> ngay dưới đây, hoặc <b>file Excel</b>. Mỗi lần lưu, bản trước được
+            giữ lại để xem lại và xuất ảnh.
+          </p>
+
+          <div className="tkb-mode">
+            <button
+              className={mode === "type" ? "button-primary" : "button-secondary"}
+              onClick={() => setMode("type")}
+              type="button"
+            >
+              Gõ trực tiếp
+            </button>
+            <button
+              className={mode === "excel" ? "button-primary" : "button-secondary"}
+              onClick={() => setMode("excel")}
+              type="button"
+            >
+              File Excel
+            </button>
           </div>
-          {updatedAt ? <p className="text-sm text-indigo-700 font-semibold mb-2">Cập nhật: {formatDateTime(updatedAt)}</p> : null}
-          {msg ? <p className={`text-sm mb-2 ${msg.includes("thất bại") || msg.includes("Lỗi") ? "text-red-600" : "text-green-700"}`}>{msg}</p> : null}
+
+          {mode === "excel" ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a className="button-secondary" href="/api/gvcn/teacher-timetable/template">
+                Tải mẫu Excel
+              </a>
+              <label className="button-primary" style={{ cursor: "pointer" }}>
+                {busy ? "Đang tải…" : "Tải lên"}
+                <input
+                  accept=".xlsx,.xls"
+                  disabled={busy}
+                  hidden
+                  onChange={(e) => {
+                    void upload(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                  type="file"
+                />
+              </label>
+            </div>
+          ) : (
+            <div className="mt-3">
+              <p className="mb-2 text-sm text-slate-600">
+                Mỗi ô ghi tên lớp đang dạy tiết đó (12A1, 11A1, HSG, 12TT…). Ô trống là không có tiết.
+              </p>
+              {SESSIONS.map(({ key, title, periods }) => (
+                <div className="tkb-edit-block" key={key}>
+                  <h4>{title}</h4>
+                  <div className="tkb-edit-scroll">
+                    <table className="tkb-edit-table tkb-edit-table-7">
+                      <thead>
+                        <tr>
+                          <th scope="col">Tiết</th>
+                          {TEACHER_DAY_LABELS.map((d) => (
+                            <th key={d} scope="col">
+                              {d}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {periods.map((p) => (
+                          <tr key={p}>
+                            <th scope="row">{p}</th>
+                            {TEACHER_DAY_LABELS.map((d, i) => {
+                              const value = draft[key]?.[p]?.[i] ?? "";
+                              return (
+                                <td key={d}>
+                                  <input
+                                    aria-label={`${title}, thứ ${d}, tiết ${p}`}
+                                    autoComplete="off"
+                                    onChange={(e) => setCell(key, p, i, e.target.value)}
+                                    placeholder="—"
+                                    value={value === "-" ? "" : value}
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button className="button-primary" disabled={busy || !dirty} onClick={() => void saveDraft()} type="button">
+                  {busy ? "Đang lưu…" : "Lưu lịch dạy"}
+                </button>
+                <button className="button-secondary" disabled={busy || !dirty} onClick={() => void load()} type="button">
+                  Hoàn tác
+                </button>
+                {dirty ? <span className="text-sm text-amber-700">Có thay đổi chưa lưu.</span> : null}
+              </div>
+            </div>
+          )}
+
+          {updatedAt ? (
+            <p className="mt-3 text-sm font-semibold text-indigo-700">Cập nhật: {formatDateTime(updatedAt)}</p>
+          ) : null}
+          {msg ? (
+            <p className={`mt-2 text-sm ${msg.includes("Không") || msg.includes("thất bại") ? "text-red-600" : "text-green-700"}`}>
+              {msg}
+            </p>
+          ) : null}
           {status ? <p className="tt-status">{status}</p> : null}
-          {grid ? (
+
+          {shown ? (
             <>
-              <TimetableTable title="Buổi Sáng" data={grid.morning} />
-              <TimetableTable title="Buổi Chiều" data={grid.afternoon} />
-              <TimetableTable title="Buổi Tối" data={grid.evening} />
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button className="button-secondary" disabled={busy} onClick={() => void saveImage()} type="button">
+                  🖼️ Lưu ảnh lịch dạy
+                </button>
+                {viewing ? (
+                  <>
+                    <span className="text-sm text-amber-700">
+                      Đang xem bản {formatDateTime(viewing.createdAt)}
+                    </span>
+                    <button className="button-secondary" onClick={() => setViewing(null)} type="button">
+                      Về bản hiện hành
+                    </button>
+                  </>
+                ) : null}
+              </div>
+              {SESSIONS.map(({ key, title }) => (
+                <TimetableTable data={shown[key] ?? {}} key={key} title={title} />
+              ))}
             </>
           ) : null}
+
+          <h4 className="mt-4 text-base font-semibold">Phiên bản cũ</h4>
+          {!versions.length ? (
+            <p className="mt-1 text-sm text-slate-500">Chưa có bản cũ. Lưu lịch mới thì bản đang dùng sẽ vào đây.</p>
+          ) : (
+            <ul className="tkb-history">
+              {versions.map((v) => (
+                <li key={v.id}>
+                  <div>
+                    <strong>{formatDateTime(v.createdAt)}</strong>
+                    {v.createdByName ? <span> · {v.createdByName}</span> : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="button-secondary"
+                      disabled={busy}
+                      onClick={() => void openVersion(v.id, v.createdAt)}
+                      type="button"
+                    >
+                      Xem
+                    </button>
+                    <button className="button-secondary" disabled={busy} onClick={() => void removeVersion(v.id)} type="button">
+                      Xóa
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </section>
