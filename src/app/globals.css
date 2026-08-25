@@ -2362,6 +2362,14 @@ a.site-hero-teacher:hover strong {
   text-transform: uppercase;
 }
 
+/* Dòng đếm ngược, nhỏ hơn chữ trạng thái vì nó chỉ là chi tiết đi kèm. */
+.year-milestone-count {
+  margin: 2px 0 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.82);
+}
+
 /* Đã qua: xám hẳn, chỉ còn để tra lại — mốc này cũng tụt xuống cuối hàng. */
 .year-milestone.is-done {
   border-color: #e6ebf4;

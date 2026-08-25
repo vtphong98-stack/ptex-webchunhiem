@@ -17,12 +17,17 @@ function startOfDay(iso: string) {
  */
 type MilestoneState = "done" | "today" | "next" | "upcoming";
 
-function stateLabel(state: MilestoneState, daysLeft: number) {
+function stateLabel(state: MilestoneState) {
   if (state === "done") return "Đã thực hiện";
   if (state === "today") return "Hôm nay";
-  if (state !== "next") return "";
-  if (daysLeft <= 1) return "Ngày mai";
-  return `Còn ${daysLeft} ngày`;
+  if (state === "next") return "Sắp tới";
+  return "";
+}
+
+/** Đếm ngược, chỉ hiện ở mốc sắp tới ngay sau chữ "Sắp tới". */
+function countdown(daysLeft: number) {
+  if (daysLeft <= 1) return "ngày mai";
+  return `còn ${daysLeft} ngày`;
 }
 
 export function YearTimeline({ milestones }: { milestones?: Milestone[] }) {
@@ -57,13 +62,14 @@ export function YearTimeline({ milestones }: { milestones?: Milestone[] }) {
             : entry.item.id === nextId
               ? "next"
               : "upcoming";
-        const note = stateLabel(state, entry.daysLeft);
+        const note = stateLabel(state);
         return (
           <article className={`year-milestone is-${state}`} key={entry.item.id}>
             <span className="year-milestone-dot" />
             <p className="year-milestone-date">{entry.item.date}</p>
             <p className="year-milestone-label">{entry.item.label}</p>
             {note ? <p className="year-milestone-state">{note}</p> : null}
+            {state === "next" ? <p className="year-milestone-count">{countdown(entry.daysLeft)}</p> : null}
           </article>
         );
       })}
