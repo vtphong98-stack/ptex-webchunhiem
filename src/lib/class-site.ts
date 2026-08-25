@@ -288,6 +288,9 @@ export const OFFICER_LINKS = [
 ];
 
 export const GVCN_HOME_LINKS = [
+  // Điểm danh đứng đầu: dịp nào cũng phải mở ra ngay tại sân trường, không nên
+  // bắt thầy cô đi vòng qua khu vực setup mới tới.
+  { href: "/diem-danh", label: "Điểm danh theo dịp", icon: "✅", className: "link-gvcn-6" },
   { href: "/tong-ket", label: "Tổng kết lớp theo tuần", icon: "📊", className: "link-gvcn-2" },
   { href: "/chi-tieu", label: "Chỉ tiêu năm học", icon: "🎯", className: "link-gvcn-1" },
   { href: "/tra-cuu-hs", label: "Tra cứu học sinh", icon: "🔍", className: "link-gvcn-3" },

@@ -16,6 +16,7 @@ export type Area = "gvcn" | "officer";
 /** Every page inside the teacher area. Keep in sync with GVCN_HOME_LINKS. */
 export const GVCN_PATHS = [
   "/dashboard",
+  "/diem-danh",
   "/tong-ket",
   "/chi-tieu",
   "/tra-cuu-hs",
