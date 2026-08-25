@@ -86,6 +86,21 @@ function dutyMessage(
   return seat ? `Đã xếp vào ${seatLabel(seat)}.` : "Đã bỏ chỗ ngồi.";
 }
 
+function RemoveButton({ onRemove, readOnly }: { onRemove: () => void; readOnly: boolean }) {
+  if (readOnly) return null;
+  return (
+    <button
+      aria-label="Xóa học sinh khỏi dữ liệu lớp"
+      className="text-xs font-semibold text-red-600 hover:underline"
+      onClick={onRemove}
+      title="Xóa khỏi dữ liệu lớp"
+      type="button"
+    >
+      Xóa
+    </button>
+  );
+}
+
 function shortName(fullName: string) {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
   return parts.length <= 2 ? fullName : parts.slice(-2).join(" ");
@@ -112,6 +127,8 @@ export function SyllManager({ yearName = "" }: { yearName?: string }) {
   const [openSeat, setOpenSeat] = useState("");
   const [blankRows, setBlankRows] = useState(50);
   const [tab, setTab] = useState<"progress" | "seats">("progress");
+  /** Em có trong web nhưng không còn trong file GVCN vừa nhập. */
+  const [stale, setStale] = useState<Array<{ _id: string; fullName: string }>>([]);
 
   const qs = yearName ? `?year=${encodeURIComponent(yearName)}` : "";
   const templateHref = `/api/gvcn/syll/template?${new URLSearchParams({
@@ -213,6 +230,41 @@ export function SyllManager({ yearName = "" }: { yearName?: string }) {
     await patchSeat(studentId, student ? seatOf(student) : null, duty);
   }
 
+  /**
+   * Xoá hẳn học sinh khỏi dữ liệu lớp: hồ sơ, liên hệ phụ huynh, chỗ ngồi và
+   * chức vụ. Không hoàn tác được nên hỏi lại bằng đúng tên em đó.
+   */
+  async function removeStudents(targets: Array<{ _id: string; fullName: string }>) {
+    if (!targets.length) return;
+    const names = targets.map((item) => item.fullName);
+    const shown = names.slice(0, 10).join("\n");
+    const question =
+      targets.length === 1
+        ? `Xóa ${names[0]} khỏi dữ liệu lớp?\n\nMất luôn sơ yếu lý lịch, chỗ ngồi và liên hệ phụ huynh của em. Không hoàn tác được.`
+        : `Xóa ${targets.length} em khỏi dữ liệu lớp?\n\n${shown}${
+            names.length > 10 ? `\n… và ${names.length - 10} em nữa` : ""
+          }\n\nMất luôn sơ yếu lý lịch, chỗ ngồi và liên hệ phụ huynh của các em. Không hoàn tác được.`;
+    if (!window.confirm(question)) return;
+
+    setBusy(true);
+    setMessage("");
+    setError("");
+    try {
+      const failed: string[] = [];
+      for (const target of targets) {
+        const response = await fetch(`/api/gvcn/students/${target._id}`, { method: "DELETE" });
+        if (!response.ok) failed.push(target.fullName);
+      }
+      setStale((current) => current.filter((item) => targets.every((target) => target._id !== item._id)));
+      if (failed.length) setError(`Không xóa được: ${failed.join(", ")}.`);
+      else setMessage(targets.length === 1 ? `Đã xóa ${names[0]}.` : `Đã xóa ${targets.length} em.`);
+      setLoading(true);
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function changeDeskCount(next: number) {
     setBusy(true);
     setError("");
@@ -248,16 +300,14 @@ export function SyllManager({ yearName = "" }: { yearName?: string }) {
         setError(payload.error || "Nhập danh sách thất bại.");
         return;
       }
-      // Danh sách "thiếu" có thể dài cả lớp — nêu vài tên đầu cho GVCN nhận ra,
-      // đủ để biết phải kiểm lại file chứ không đổ nguyên đoạn văn ra màn hình.
-      const missingNames: string[] = (payload.missing ?? []).map((item: { fullName: string }) => item.fullName);
-      const shown = missingNames.slice(0, 6).join(", ");
-      const extra = missingNames.length
-        ? ` Có ${missingNames.length} em trong web không còn trong file: ${shown}${
-            missingNames.length > 6 ? `… (+${missingNames.length - 6} em)` : ""
-          }.`
-        : "";
-      setMessage(`Đã nhận ${payload.total} em: thêm ${payload.created}, cập nhật ${payload.updated}.${extra}`);
+      // Em nào không còn trong file thì liệt kê riêng bên dưới kèm nút xoá,
+      // chứ nhồi hết vào một dòng thông báo thì đọc không nổi mà cũng không
+      // làm gì được.
+      setStale(payload.missing ?? []);
+      setMessage(
+        `Đã nhận ${payload.total} em: thêm ${payload.created}, cập nhật ${payload.updated}.` +
+          (payload.missing?.length ? ` Còn ${payload.missing.length} em không có trong file — xem bên dưới.` : ""),
+      );
       setLoading(true);
       await load();
     } finally {
@@ -457,6 +507,38 @@ export function SyllManager({ yearName = "" }: { yearName?: string }) {
         {readOnly ? <p className="mt-3 text-sm text-amber-700">Năm cũ chỉ xem, không sửa được.</p> : null}
       </div>
 
+      {stale.length ? (
+        <div className="card border-2 border-amber-300 bg-amber-50 p-4">
+          <h3 className="font-semibold text-amber-900">
+            {stale.length} em có trong web nhưng không có trong file vừa nhập
+          </h3>
+          <p className="mt-1 text-sm text-amber-800">
+            Thường là em đã chuyển lớp, hoặc file thiếu dòng. Kiểm lại rồi xóa nếu đúng là các em không còn học ở
+            lớp mình.
+          </p>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {stale.map((student) => (
+              <li className="rounded-full bg-white px-3 py-1 text-sm" key={student._id}>
+                {student.fullName}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              className="button-primary"
+              disabled={readOnly || busy}
+              onClick={() => void removeStudents(stale)}
+              type="button"
+            >
+              Xóa {stale.length} em này
+            </button>
+            <button className="button-secondary" onClick={() => setStale([])} type="button">
+              Giữ lại
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex gap-2">
         <button
           className={tab === "progress" ? "button-primary" : "button-secondary"}
@@ -489,11 +571,14 @@ export function SyllManager({ yearName = "" }: { yearName?: string }) {
                     <span>
                       <b>{student.tt ?? "–"}.</b> {student.fullName}
                     </span>
-                    {student.contactPhone ? (
-                      <a className="text-xs font-semibold text-red-700" href={`tel:${student.contactPhone}`}>
-                        {student.contactPhone}
-                      </a>
-                    ) : null}
+                    <span className="flex items-center gap-3">
+                      {student.contactPhone ? (
+                        <a className="text-xs font-semibold text-red-700" href={`tel:${student.contactPhone}`}>
+                          {student.contactPhone}
+                        </a>
+                      ) : null}
+                      <RemoveButton onRemove={() => removeStudents([student])} readOnly={readOnly || busy} />
+                    </span>
                   </li>
                 ))}
               </ol>
@@ -514,7 +599,10 @@ export function SyllManager({ yearName = "" }: { yearName?: string }) {
                     <span>
                       <b>{student.tt ?? "–"}.</b> {student.fullName}
                     </span>
-                    <span className="text-xs text-emerald-700">{formatDate(student.submittedAt)}</span>
+                    <span className="flex items-center gap-3">
+                      <span className="text-xs text-emerald-700">{formatDate(student.submittedAt)}</span>
+                      <RemoveButton onRemove={() => removeStudents([student])} readOnly={readOnly || busy} />
+                    </span>
                   </li>
                 ))}
               </ol>

@@ -165,7 +165,15 @@ export function TeamManager({ readOnly = false, yearName = "" }: { readOnly?: bo
   }
 
   async function removeStudent(id: string, fullName: string) {
-    if (!window.confirm(`Xóa ${fullName} khỏi danh sách lớp?`)) return;
+    if (
+      !window.confirm(
+        `Xóa ${fullName} khỏi dữ liệu lớp?
+
+Mất luôn sơ yếu lý lịch, chỗ ngồi và liên hệ phụ huynh của em. Không hoàn tác được.`,
+      )
+    ) {
+      return;
+    }
     const snapshot = studentsRef.current;
     setStudents((current) => current.filter((student) => student._id !== id));
     const response = await fetch(`/api/gvcn/students/${id}`, { method: "DELETE" });
@@ -321,19 +329,32 @@ export function TeamManager({ readOnly = false, yearName = "" }: { readOnly?: bo
             {unassigned.map((student) => (
               <li className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-slate-50 p-3" key={student._id}>
                 <span>{student.fullName}</span>
-                <select
-                  disabled={readOnly}
-                  onChange={(event) =>
-                    patchStudent(student._id, { teamNumber: event.target.value ? Number(event.target.value) : null })
-                  }
-                  value=""
-                >
-                  <option value="">Chuyển vào tổ…</option>
-                  <option value="1">Tổ 1</option>
-                  <option value="2">Tổ 2</option>
-                  <option value="3">Tổ 3</option>
-                  <option value="4">Tổ 4</option>
-                </select>
+                <span className="flex items-center gap-3">
+                  <select
+                    disabled={readOnly}
+                    onChange={(event) =>
+                      patchStudent(student._id, { teamNumber: event.target.value ? Number(event.target.value) : null })
+                    }
+                    value=""
+                  >
+                    <option value="">Chuyển vào tổ…</option>
+                    <option value="1">Tổ 1</option>
+                    <option value="2">Tổ 2</option>
+                    <option value="3">Tổ 3</option>
+                    <option value="4">Tổ 4</option>
+                  </select>
+                  {/* Nút xoá trước đây chỉ có ở danh sách trong tổ, nên em nào
+                      chưa gán tổ là không có cách nào bỏ khỏi lớp. */}
+                  {readOnly ? null : (
+                    <button
+                      className="text-xs font-semibold text-red-600"
+                      onClick={() => removeStudent(student._id, student.fullName)}
+                      type="button"
+                    >
+                      Xóa
+                    </button>
+                  )}
+                </span>
               </li>
             ))}
           </ul>
