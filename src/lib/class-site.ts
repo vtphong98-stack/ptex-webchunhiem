@@ -152,6 +152,25 @@ const SUBJECT_ALIAS: Record<string, string> = {
   chaoco: "Chào cờ",
 };
 
+/**
+ * Môn chuẩn → những cách gõ tắt web hiểu được, để in vào mẫu TKB cho thầy cô
+ * biết gõ gì là đúng. Đảo ngược từ SUBJECT_ALIAS nên không bao giờ lệch với
+ * bảng thật.
+ */
+export function subjectAliasTable() {
+  const table = new Map<string, string[]>();
+  for (const [alias, subject] of Object.entries(SUBJECT_ALIAS)) {
+    const list = table.get(subject) ?? [];
+    list.push(alias.toUpperCase());
+    table.set(subject, list);
+  }
+  return table;
+}
+
+export function subjectAliases(subject: string) {
+  return subjectAliasTable().get(subject) ?? [];
+}
+
 function foldSubject(raw: string) {
   return raw
     .normalize("NFD")
@@ -214,6 +233,8 @@ export const DAY_LABELS = ["Hai", "Ba", "Tư", "Năm", "Sáu", "Bảy"];
 export type TimetableCell = {
   subject: string;
   teacher?: string;
+  /** SĐT giáo viên bộ môn, để bấm vào ô là gọi hoặc nhắn Zalo được. */
+  phone?: string;
   className?: string;
   rowspan?: number;
   skip?: boolean;

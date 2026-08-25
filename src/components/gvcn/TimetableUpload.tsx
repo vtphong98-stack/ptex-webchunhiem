@@ -75,8 +75,10 @@ export function TimetableUpload({ readOnly, yearName }: { readOnly: boolean; yea
       <h2 className="text-lg font-semibold">Thời khóa biểu</h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">
         Tải mẫu Excel, gõ môn theo cột thứ Hai–Bảy (sheet Sáng tiết 1–5, sheet Chiều tiết 2–5), điền tên thầy cô
-        từng môn ở sheet <b>Giáo viên</b>, rồi tải lên — trang chủ sẽ hiện cả tên môn lẫn tên giáo viên. Mẫu tải về
-        đã có sẵn thời khóa biểu và phân công đang dùng. Mỗi lần cập nhật, bản cũ được lưu để xem lại.
+        từng môn ở sheet <b>Giáo viên</b>, rồi tải lên — trang chủ sẽ hiện cả tên môn lẫn tên giáo viên. Sheet đó
+        có sẵn cột <b>Gõ tắt được</b> liệt kê mọi cách viết tắt web hiểu (T, TOAN → Toán…), gõ theo đó là không sai
+        môn. Mẫu tải về đã có sẵn thời khóa biểu và phân công đang dùng. Mỗi lần cập nhật, bản cũ được lưu để xem
+        lại.
       </p>
       {updatedAt ? (
         <p className="mt-3 text-sm font-semibold text-indigo-700">Bản hiện hành cập nhật {formatDateTime(updatedAt)}</p>

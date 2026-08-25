@@ -4831,3 +4831,93 @@ button {
 .syll-done-lock {
   background: linear-gradient(135deg, #64748b, #334155);
 }
+
+/* Bấm vào ô TKB để gọi / Zalo giáo viên bộ môn */
+.site-table td.is-callable {
+  cursor: pointer;
+}
+
+.site-table td.is-callable:hover {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: -2px;
+}
+
+.tkb-teacher i {
+  margin-left: 3px;
+  font-size: 9px;
+  font-style: normal;
+  opacity: 0.75;
+}
+
+.tkb-call {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.tkb-call-card {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: min(320px, 100%);
+  padding: 22px 20px 18px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.tkb-call-when {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.tkb-call-card h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.tkb-call-teacher {
+  margin: 0;
+  font-weight: 600;
+  color: #334155;
+}
+
+.tkb-call-phone {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+}
+
+.tkb-call-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.tkb-call-actions a {
+  text-align: center;
+}
+
+.tkb-call-close {
+  margin-top: 2px;
+  padding: 6px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: #64748b;
+  cursor: pointer;
+}

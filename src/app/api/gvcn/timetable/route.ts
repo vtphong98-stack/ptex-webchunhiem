@@ -1,5 +1,5 @@
 import { ObjectId } from "mongodb";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { CURRENT_CLASS_NAME, CURRENT_SCHOOL_YEAR } from "@/lib/academic-calendar";
@@ -83,6 +83,10 @@ export async function POST(request: Request) {
     });
   }
 
+  // Trang chủ đọc TKB qua unstable_cache; chỉ revalidatePath thì phải chờ hết
+  // 60 giây mới thấy bản vừa tải lên.
+  revalidateTag("timetable", "max");
+  revalidateTag("public-site", "max");
   revalidatePath("/");
   return NextResponse.json({
     ok: true,

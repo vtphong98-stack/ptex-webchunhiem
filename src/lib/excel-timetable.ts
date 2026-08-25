@@ -1,6 +1,13 @@
 import * as XLSX from "xlsx";
 
-import { DAY_LABELS, SUBJECT_TEACHERS, canonicalSubject, subjectStyle, type TimetableCell } from "@/lib/class-site";
+import {
+  DAY_LABELS,
+  SUBJECT_TEACHERS,
+  canonicalSubject,
+  subjectAliasTable,
+  subjectStyle,
+  type TimetableCell,
+} from "@/lib/class-site";
 
 export type TimetableGrid = {
   morning: Record<number, string[]>;
@@ -11,6 +18,8 @@ export type TimetableGrid = {
    * sửa code; giờ nằm cùng thời khóa biểu và theo từng năm học.
    */
   teachers?: Record<string, string>;
+  /** Môn → SĐT giáo viên bộ môn, dùng cho nút gọi và Zalo trên thời khóa biểu. */
+  teacherPhones?: Record<string, string>;
 };
 
 const MORNING_PERIODS = [1, 2, 3, 4, 5];
@@ -39,13 +48,20 @@ export function splitSubjectTeacher(raw: string) {
   return { subject: match[1].trim(), teacher: match[2].trim() };
 }
 
-function cellsFromSubjects(subjects: unknown[], teachers: Record<string, string>): TimetableCell[] {
+function cellsFromSubjects(
+  subjects: unknown[],
+  teachers: Record<string, string>,
+  phones: Record<string, string>,
+): TimetableCell[] {
   return subjects.map((subject) => {
     const { subject: name, teacher } = splitSubjectTeacher(subjectLabel(subject));
     const style = subjectStyle(name);
+    const key = canonicalSubject(name);
     // Tên giáo viên trong file luôn thắng bảng mặc định trong mã nguồn.
-    const assigned = teacher || teachers[canonicalSubject(name)] || "";
-    return assigned ? { ...style, teacher: assigned } : style;
+    const assigned = teacher || teachers[key] || "";
+    const phone = phones[key] || "";
+    if (!assigned && !phone) return style;
+    return { ...style, ...(assigned ? { teacher: assigned } : {}), ...(phone ? { phone } : {}) };
   });
 }
 
@@ -76,16 +92,27 @@ export function emptyTimetableGrid(): TimetableGrid {
     morning: Object.fromEntries(MORNING_PERIODS.map((period) => [period, Array.from({ length: 6 }, () => "")])),
     afternoon: Object.fromEntries(AFTERNOON_PERIODS.map((period) => [period, Array.from({ length: 6 }, () => "")])),
     teachers: {},
+    teacherPhones: {},
   };
 }
 
-/** Bảng phân công trong sheet "Giáo viên": cột 1 tên môn, cột 2 tên thầy cô. */
+/** Số điện thoại chỉ giữ chữ số và dấu + đầu, để ghép được vào tel: và zalo.me. */
+export function normalizePhone(raw: string) {
+  const value = raw.trim().replace(/[^\d+]/g, "");
+  return value.startsWith("+") ? `+${value.slice(1).replace(/\D/g, "")}` : value;
+}
+
+/**
+ * Bảng phân công trong sheet "Giáo viên": cột 1 tên môn, cột 2 tên thầy cô,
+ * cột 3 số điện thoại.
+ */
 function parseTeacherSheet(workbook: XLSX.WorkBook) {
   const sheetName = workbook.SheetNames.find((name) =>
     /giáo\s*viên|giao\s*vien|phân\s*công|phan\s*cong/i.test(name),
   );
   const teachers: Record<string, string> = {};
-  if (!sheetName) return teachers;
+  const phones: Record<string, string> = {};
+  if (!sheetName) return { teachers, phones };
 
   const rows = XLSX.utils.sheet_to_json<(string | number)[]>(workbook.Sheets[sheetName], {
     header: 1,
@@ -93,12 +120,14 @@ function parseTeacherSheet(workbook: XLSX.WorkBook) {
   });
   for (const row of rows) {
     const subject = String(row[0] ?? "").trim();
+    if (!subject || /^môn$|^mon$/i.test(subject)) continue; // dòng tiêu đề
+    const key = canonicalSubject(subject);
     const teacher = String(row[1] ?? "").trim();
-    if (!subject || !teacher) continue;
-    if (/^môn$|^mon$/i.test(subject)) continue; // dòng tiêu đề
-    teachers[canonicalSubject(subject)] = teacher;
+    const phone = normalizePhone(String(row[2] ?? ""));
+    if (teacher) teachers[key] = teacher;
+    if (phone) phones[key] = phone;
   }
-  return teachers;
+  return { teachers, phones };
 }
 
 export function parseTimetableWorkbook(buffer: ArrayBuffer): TimetableGrid {
@@ -107,7 +136,7 @@ export function parseTimetableWorkbook(buffer: ArrayBuffer): TimetableGrid {
   parseSheet(workbook, ["Sáng", "Sang", "Buổi Sáng"], grid.morning, MORNING_PERIODS);
   parseSheet(workbook, ["Chiều", "Chieu", "Trái Buổi"], grid.afternoon, AFTERNOON_PERIODS);
 
-  const teachers = parseTeacherSheet(workbook);
+  const { teachers, phones } = parseTeacherSheet(workbook);
   // Ô gõ kiểu "Toán: Võ Thanh Phong" cũng tính là một dòng phân công, và ô thì
   // chỉ giữ lại tên môn cho gọn.
   for (const session of [grid.morning, grid.afternoon]) {
@@ -120,6 +149,7 @@ export function parseTimetableWorkbook(buffer: ArrayBuffer): TimetableGrid {
     }
   }
   grid.teachers = teachers;
+  grid.teacherPhones = phones;
   return grid;
 }
 
@@ -183,27 +213,43 @@ export function buildTimetableTemplate(current?: TimetableGrid | null) {
 
   const morning = [["Tiết", ...DAY_LABELS], ...sessionRows(grid, "morning", MORNING_PERIODS)];
   const afternoon = [["Tiết", ...DAY_LABELS], ...sessionRows(grid, "afternoon", AFTERNOON_PERIODS)];
+  // Cột viết tắt để thầy cô gõ đúng ngay từ đầu: bảng này đảo từ chính bảng web
+  // dùng để hiểu ô, nên gõ theo đây là chắc chắn nhận.
+  const aliases = subjectAliasTable();
+  const phones = grid?.teacherPhones ?? {};
   const teacherRows = [
-    ["Môn", "Giáo viên dạy"],
-    ...templateSubjects(grid).map((subject) => [subject, teachers[subject] ?? SUBJECT_TEACHERS[subject] ?? ""]),
+    ["Môn", "Giáo viên dạy", "SĐT (gọi & Zalo)", "Gõ tắt được (gõ chữ nào cũng ra môn này)"],
+    ...templateSubjects(grid).map((subject) => [
+      subject,
+      teachers[subject] ?? SUBJECT_TEACHERS[subject] ?? "",
+      phones[subject] ?? "",
+      (aliases.get(subject) ?? []).join(", "),
+    ]),
   ];
 
   const guide = [
     ["Hướng dẫn"],
-    ["1. Gõ môn vào ô (Toán, Văn, Anh, Sử, Địa, Tin, GDTC, GDQP, ...)."],
+    ["1. Gõ môn vào ô. Gõ đủ chữ (Toán, Văn, Anh...) hay gõ tắt (T, V, A...) đều được."],
+    ["   Xem cột \"Gõ tắt được\" ở sheet Giáo viên để biết môn nào gõ tắt thế nào."],
+    ["   Gõ chữ lạ ngoài bảng thì web giữ nguyên chữ đó, TKB sẽ hiện đúng chữ mình gõ."],
     ["2. Ô trống hoặc '-' = không có tiết."],
     ["3. Sheet Sáng: tiết 1–5. Sheet Chiều: tiết 2–5."],
-    ["4. Sheet \"Giáo viên\": mỗi dòng một môn kèm tên thầy cô dạy môn đó."],
-    ["   Tải lên xong, thời khóa biểu trên trang chủ hiện cả tên môn lẫn tên giáo viên."],
+    ["4. Sheet \"Giáo viên\": mỗi dòng một môn kèm tên thầy cô và số điện thoại."],
+    ["   Tải lên xong, thời khóa biểu trên trang chủ hiện cả tên môn lẫn tên giáo viên,"],
+    ["   bấm vào ô là gọi điện hoặc nhắn Zalo cho thầy cô dạy tiết đó."],
+    ["   Số điện thoại gõ liền, ví dụ 0912345678. Bỏ trống thì ô đó chỉ hiện tên."],
     ["   Thêm dòng mới nếu lớp có môn chưa có trong bảng."],
     ["5. Hoặc gõ thẳng vào ô theo kiểu \"Toán: Võ Thanh Phong\" — web tự tách môn và tên."],
     ["6. Lưu file .xlsx rồi tải lên trang GVCN."],
+    [""],
+    ["BẢNG GÕ TẮT — gõ chữ bên phải là ra môn bên trái"],
+    ...[...subjectAliasTable()].map(([subject, list]) => [`   ${subject}: ${list.join(", ")}`]),
   ];
 
   const guideSheet = XLSX.utils.aoa_to_sheet(guide);
   guideSheet["!cols"] = [{ wch: 96 }];
   const teacherSheet = XLSX.utils.aoa_to_sheet(teacherRows);
-  teacherSheet["!cols"] = [{ wch: 16 }, { wch: 28 }];
+  teacherSheet["!cols"] = [{ wch: 16 }, { wch: 28 }, { wch: 18 }, { wch: 42 }];
   const dayCols = [{ wch: 6 }, ...DAY_LABELS.map(() => ({ wch: 14 }))];
   const morningSheet = XLSX.utils.aoa_to_sheet(morning);
   morningSheet["!cols"] = dayCols;
@@ -219,16 +265,17 @@ export function buildTimetableTemplate(current?: TimetableGrid | null) {
 
 export function timetableDisplayFromGrid(grid: TimetableGrid) {
   const teachers = grid.teachers ?? {};
+  const phones = grid.teacherPhones ?? {};
   const morningRows = Object.fromEntries(
     MORNING_PERIODS.map((period) => [
       period,
-      cellsFromSubjects(grid.morning[period] ?? Array.from({ length: 6 }, () => "-"), teachers),
+      cellsFromSubjects(grid.morning[period] ?? Array.from({ length: 6 }, () => "-"), teachers, phones),
     ]),
   );
   const afternoonRows = Object.fromEntries(
     AFTERNOON_PERIODS.map((period) => [
       period,
-      cellsFromSubjects(grid.afternoon[period] ?? Array.from({ length: 6 }, () => "-"), teachers),
+      cellsFromSubjects(grid.afternoon[period] ?? Array.from({ length: 6 }, () => "-"), teachers, phones),
     ]),
   );
   return {

@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { getDb } from "@/lib/db";
@@ -36,6 +36,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     { _id: existing._id },
     { $set: { timetableHistory: nextHistory, updatedAt: new Date().toISOString() } },
   );
+  // Trang chủ đọc TKB qua unstable_cache; chỉ revalidatePath thì phải chờ hết
+  // 60 giây mới thấy bản vừa tải lên.
+  revalidateTag("timetable", "max");
+  revalidateTag("public-site", "max");
   revalidatePath("/");
   return NextResponse.json({ ok: true, versions: nextHistory.map(versionMeta) });
 }
