@@ -4775,3 +4775,59 @@ button {
   cursor: not-allowed;
   opacity: 0.65;
 }
+
+/* Cổng mật khẩu của trang khai sơ yếu lý lịch */
+.syll-gate {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  max-width: 380px;
+  margin: 8px auto;
+  padding: 28px 22px;
+  border: 1px solid #e5e9f5;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #f5f7ff, #fff 60%);
+  text-align: center;
+}
+
+.syll-gate-mark {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  font-size: 26px;
+}
+
+.syll-gate h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.syll-gate p {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #64748b;
+}
+
+.syll-gate .syll-field {
+  width: 100%;
+  text-align: left;
+}
+
+.syll-gate .syll-err {
+  width: 100%;
+}
+
+.syll-gate button {
+  width: 100%;
+}
+
+.syll-done-lock {
+  background: linear-gradient(135deg, #64748b, #334155);
+}

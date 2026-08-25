@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { getDb } from "@/lib/db";
 import { applyDutyChange, findDutyConflict } from "@/lib/duty-store";
+import { hasSyllPass } from "@/lib/syll-access";
 import { SEAT_TEAMS, findSeatHolder, seatLabel, type Seat } from "@/lib/syll-seats";
 import { resolveSyllContext } from "@/lib/syll-store";
 import { normalizePersonName } from "@/lib/team-roster";
@@ -59,6 +60,11 @@ export async function GET() {
   if (!context) {
     return NextResponse.json({ className: "", yearName: "", students: [] });
   }
+  // Danh sách lớp kèm chỗ ngồi chỉ mở sau cổng mật khẩu, cùng một mức bảo vệ
+  // với hồ sơ đã khai mà form lấy về để điền sẵn.
+  if (!(await hasSyllPass(context.schoolYearId))) {
+    return NextResponse.json({ error: "Cần nhập mật khẩu của lớp." }, { status: 401 });
+  }
 
   const db = await getDb();
   const students = await db
@@ -111,6 +117,15 @@ export async function POST(request: Request) {
   const context = await resolveSyllContext();
   if (!context) {
     return NextResponse.json({ error: "Chưa có năm học hiện hành." }, { status: 400 });
+  }
+  if (!(await hasSyllPass(context.schoolYearId))) {
+    return NextResponse.json({ error: "Cần nhập mật khẩu của lớp." }, { status: 401 });
+  }
+  if (context.syllLocked) {
+    return NextResponse.json(
+      { error: "GVCN đã chốt sổ sơ yếu lý lịch. Cần sửa thì báo thầy cô mở lại." },
+      { status: 423 },
+    );
   }
 
   const db = await getDb();

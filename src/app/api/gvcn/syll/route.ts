@@ -27,6 +27,8 @@ export async function GET(request: Request) {
       yearName: context.yearName,
       isCurrent: context.isCurrent,
       deskCount: context.deskCount,
+      syllPassword: context.syllPassword,
+      syllLocked: context.syllLocked,
       schoolName: context.info.schoolName,
       className: context.info.className,
       gvcnName: context.info.gvcnName,
@@ -73,7 +75,12 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Năm cũ chỉ xem." }, { status: 400 });
   }
 
-  const body = (await request.json()) as { deskCount?: number; schoolName?: string };
+  const body = (await request.json()) as {
+    deskCount?: number;
+    schoolName?: string;
+    syllPassword?: string;
+    syllLocked?: boolean;
+  };
   const update: Partial<ClassConfig> = { updatedAt: new Date().toISOString() };
 
   if (body.deskCount !== undefined) {
@@ -84,6 +91,17 @@ export async function PATCH(request: Request) {
   }
   if (body.schoolName !== undefined) {
     update.schoolName = String(body.schoolName).trim();
+  }
+  if (body.syllPassword !== undefined) {
+    const password = String(body.syllPassword).trim();
+    if (password && password.length < 3) {
+      return NextResponse.json({ error: "Mật khẩu cần ít nhất 3 ký tự." }, { status: 400 });
+    }
+    // Để trống nghĩa là quay về mặc định (tên lớp viết thường).
+    update.syllPassword = password;
+  }
+  if (body.syllLocked !== undefined) {
+    update.syllLocked = Boolean(body.syllLocked);
   }
 
   const db = await getDb();

@@ -35,6 +35,8 @@ type SyllData = {
   yearName: string;
   isCurrent: boolean;
   deskCount: number;
+  syllPassword: string;
+  syllLocked: boolean;
   schoolName: string;
   className: string;
   gvcnName: string;
@@ -129,6 +131,7 @@ export function SyllManager({ yearName = "" }: { yearName?: string }) {
   const [tab, setTab] = useState<"progress" | "seats">("progress");
   /** Em có trong web nhưng không còn trong file GVCN vừa nhập. */
   const [stale, setStale] = useState<Array<{ _id: string; fullName: string }>>([]);
+  const [passwordDraft, setPasswordDraft] = useState("");
 
   const qs = yearName ? `?year=${encodeURIComponent(yearName)}` : "";
   const templateHref = `/api/gvcn/syll/template?${new URLSearchParams({
@@ -146,6 +149,7 @@ export function SyllManager({ yearName = "" }: { yearName?: string }) {
         return;
       }
       setData(payload as SyllData);
+      setPasswordDraft(payload.syllPassword ?? "");
       setError("");
     } catch {
       setError("Chưa tải được sơ yếu lý lịch.");
@@ -265,25 +269,31 @@ export function SyllManager({ yearName = "" }: { yearName?: string }) {
     }
   }
 
-  async function changeDeskCount(next: number) {
+  async function saveConfig(patch: Partial<SyllData>, ok: string) {
     setBusy(true);
     setError("");
     try {
       const response = await fetch(`/api/gvcn/syll${qs}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deskCount: next }),
+        body: JSON.stringify(patch),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setError(payload.error || "Không đổi được số bàn.");
+        setError(payload.error || "Không lưu được thay đổi.");
         return;
       }
-      setData((current) => (current ? { ...current, deskCount: next } : current));
-      setMessage(`Mỗi tổ còn ${next} bàn.`);
+      setData((current) => (current ? { ...current, ...patch } : current));
+      setMessage(ok);
+      // Bỏ trống mật khẩu là quay về mặc định, phải đọc lại để biết nó là gì.
+      if (patch.syllPassword !== undefined) await load();
     } finally {
       setBusy(false);
     }
+  }
+
+  async function changeDeskCount(next: number) {
+    await saveConfig({ deskCount: next }, `Mỗi tổ còn ${next} bàn.`);
   }
 
   async function importFile(file: File | undefined) {
@@ -499,6 +509,58 @@ export function SyllManager({ yearName = "" }: { yearName?: string }) {
           </label>
           <p className="text-xs text-slate-500">
             4 tổ × {deskCount} bàn × 2 chỗ = <b>{deskCount * 8} chỗ</b> cho {students.length} em.
+          </p>
+        </div>
+
+        <div className="mt-4 border-t border-slate-200 pt-4">
+          <h3 className="font-semibold">Khóa trang khai của học sinh</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-600">
+            Học sinh vào <code>/syll</code> phải gõ mật khẩu này mới thấy danh sách và form. Khai xong cả lớp thì
+            bấm <b>Chốt sổ</b> — lúc đó không ai khai mới hay sửa được nữa.
+          </p>
+          <div className="mt-3 flex flex-wrap items-end gap-2">
+            <label className="text-sm font-medium text-slate-700">
+              <span className="mb-1 block">Mật khẩu của lớp</span>
+              <input
+                className="w-48 rounded-xl border-2 border-slate-200 px-3 py-2"
+                disabled={readOnly || busy}
+                onChange={(event) => setPasswordDraft(event.target.value)}
+                placeholder="Để trống = tên lớp"
+                value={passwordDraft}
+              />
+            </label>
+            <button
+              className="button-secondary"
+              disabled={readOnly || busy || passwordDraft === (data?.syllPassword ?? "")}
+              onClick={() => void saveConfig({ syllPassword: passwordDraft }, "Đã đổi mật khẩu trang khai.")}
+              type="button"
+            >
+              Lưu mật khẩu
+            </button>
+            <button
+              className={data?.syllLocked ? "button-secondary" : "button-primary"}
+              disabled={readOnly || busy}
+              onClick={() =>
+                void saveConfig(
+                  { syllLocked: !data?.syllLocked },
+                  data?.syllLocked
+                    ? "Đã mở lại — học sinh khai và sửa được."
+                    : "Đã chốt sổ — học sinh không khai hay sửa được nữa.",
+                )
+              }
+              type="button"
+            >
+              {data?.syllLocked ? "Mở lại cho khai" : "Chốt sổ, không cho sửa nữa"}
+            </button>
+          </div>
+          <p className="mt-2 text-sm">
+            {data?.syllLocked ? (
+              <span className="font-semibold text-red-600">🔒 Đang chốt sổ — học sinh chỉ thấy thông báo đã khóa.</span>
+            ) : (
+              <span className="text-slate-600">
+                Đang mở. Nhắc học sinh: vào <code>/syll</code>, mật khẩu <b>{data?.syllPassword || "—"}</b>.
+              </span>
+            )}
           </p>
         </div>
 

@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import type { SyllClassInfo, SyllStudent } from "@/lib/excel-syll";
 import { resolveClassConfig, resolveSchoolYear } from "@/lib/school-year-scope";
+import { resolveSyllPassword } from "@/lib/syll-access";
 import { normalizeDeskCount } from "@/lib/syll-seats";
 import type { ClassConfig, Student } from "@/lib/types";
 
@@ -14,6 +15,8 @@ const SYLL_CONFIG_FIELDS = {
   gvcnDisplayName: 1,
   schoolName: 1,
   seatDeskCount: 1,
+  syllPassword: 1,
+  syllLocked: 1,
 } as const;
 
 /** Mọi cột hai sheet LyLich cần, cộng thêm phần xếp chỗ và trạng thái điền. */
@@ -64,6 +67,10 @@ export type SyllContext = {
   isCurrent: boolean;
   info: SyllClassInfo;
   deskCount: number;
+  /** Mật khẩu học sinh gõ để mở trang khai. */
+  syllPassword: string;
+  /** GVCN đã chốt sổ — không nhận khai mới, không cho sửa. */
+  syllLocked: boolean;
 };
 
 export async function resolveSyllContext(yearName?: string | null): Promise<SyllContext | null> {
@@ -72,14 +79,18 @@ export async function resolveSyllContext(yearName?: string | null): Promise<Syll
   const schoolYearId = String(year._id);
   const config = (await resolveClassConfig(schoolYearId, { ...SYLL_CONFIG_FIELDS })) as ClassConfig | null;
 
+  const className = config?.className?.trim() || "";
+
   return {
     schoolYearId,
     yearName: year.name,
     isCurrent: Boolean(year.isCurrent),
     deskCount: normalizeDeskCount(config?.seatDeskCount),
+    syllPassword: resolveSyllPassword(config?.syllPassword, className),
+    syllLocked: Boolean(config?.syllLocked),
     info: {
       schoolName: config?.schoolName?.trim() || DEFAULT_SCHOOL_NAME,
-      className: config?.className?.trim() || "",
+      className,
       yearName: year.name,
       gvcnName: config?.gvcnName?.trim() || "",
     },

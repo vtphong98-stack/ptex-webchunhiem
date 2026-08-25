@@ -52,6 +52,10 @@ export type ClassConfig = {
   schoolName?: string;
   /** Số bàn mỗi tổ trong sơ đồ chỗ ngồi (mặc định 6). */
   seatDeskCount?: number;
+  /** Mật khẩu học sinh gõ để vào trang khai sơ yếu lý lịch. */
+  syllPassword?: string;
+  /** GVCN chốt sổ: không cho khai mới, không cho sửa nữa. */
+  syllLocked?: boolean;
   gvcnName: string;
   gvcnDisplayName: string;
   gvcnPhone: string;

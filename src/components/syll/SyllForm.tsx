@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type HTMLAttributes, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
 
 import {
   SEAT_SIDES,
@@ -37,6 +45,43 @@ const DUTY_OPTIONS: Array<{ value: string; label: string }> = [
  */
 const POLICY_OPTIONS = ["", "HN", "CN", "KK"];
 
+/** Hồ sơ em đã khai lần trước, dùng để điền sẵn lại toàn bộ form. */
+type SyllProfile = {
+  birthDate: string;
+  birthPlace: string;
+  gender: string;
+  ethnicity: string;
+  policy: string;
+  conduct: string;
+  academic: string;
+  addressGroup: string;
+  addressWard: string;
+  addressProvince: string;
+  fatherName: string;
+  fatherJob: string;
+  motherName: string;
+  motherJob: string;
+  contactPhone: string;
+  motherPhone: string;
+  studentPhone: string;
+  email: string;
+  idNumber: string;
+  weight: string;
+  height: string;
+  canSwim: string;
+  eyeDisease: string;
+  medicalHistory: string;
+  transport: string;
+  onlineLearning: string;
+  notes: string;
+  classDuty: ClassDuty | null;
+  teamRole: TeamRole | null;
+  teamNumber: number | null;
+  seatDesk: number | null;
+  seatSide: SeatSide | null;
+  submittedAt: string;
+};
+
 function foldVi(value: string) {
   return value
     .normalize("NFD")
@@ -54,6 +99,7 @@ function Field({
   placeholder,
   inputMode,
   wide,
+  defaultValue,
 }: {
   label: string;
   name: string;
@@ -63,6 +109,7 @@ function Field({
   placeholder?: string;
   inputMode?: HTMLAttributes<HTMLInputElement>["inputMode"];
   wide?: boolean;
+  defaultValue?: string;
 }) {
   return (
     <label className={`syll-field${wide ? " syll-span" : ""}`}>
@@ -71,6 +118,7 @@ function Field({
         {required ? <b aria-hidden="true"> *</b> : null}
       </span>
       <input
+        defaultValue={defaultValue}
         inputMode={inputMode}
         name={name}
         placeholder={placeholder}
@@ -123,12 +171,14 @@ function RadioGroup({
   options,
   columns,
   wide,
+  value,
 }: {
   label: string;
   name: string;
   options: Array<{ value: string; label: string; icon?: string }>;
   columns?: number;
   wide?: boolean;
+  value?: string;
 }) {
   return (
     <div className={`syll-field${wide ? " syll-span" : ""}`}>
@@ -136,7 +186,7 @@ function RadioGroup({
       <div className="syll-seg" style={{ "--seg-cols": columns ?? options.length } as React.CSSProperties}>
         {options.map((option) => (
           <label className="syll-seg-item" key={option.value}>
-            <input name={name} type="radio" value={option.value} />
+            <input defaultChecked={value === option.value} name={name} type="radio" value={option.value} />
             <span>
               {option.icon ? <i aria-hidden="true">{option.icon}</i> : null}
               {option.label}
@@ -148,13 +198,23 @@ function RadioGroup({
   );
 }
 
-function ToggleField({ label, name, text }: { label: string; name: string; text: string }) {
+function ToggleField({
+  label,
+  name,
+  text,
+  checked,
+}: {
+  label: string;
+  name: string;
+  text: string;
+  checked?: boolean;
+}) {
   return (
     <div className="syll-field">
       <span className="syll-label">{label}</span>
       <div className="syll-seg" style={{ "--seg-cols": 1 } as React.CSSProperties}>
         <label className="syll-seg-item">
-          <input name={name} type="checkbox" value="x" />
+          <input defaultChecked={checked} name={name} type="checkbox" value="x" />
           <span>{text}</span>
         </label>
       </div>
@@ -187,27 +247,101 @@ export function SyllForm({ siteName }: { siteName: string }) {
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState("");
   const [error, setError] = useState("");
+  const [gate, setGate] = useState<"checking" | "closed" | "open">("checking");
+  const [locked, setLocked] = useState(false);
+  const [password, setPassword] = useState("");
+  const [gateError, setGateError] = useState("");
+  const [profile, setProfile] = useState<SyllProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+
+  const loadRoster = useCallback(async () => {
+    setLoadingRoster(true);
+    try {
+      const response = await fetch("/api/syll");
+      if (!response.ok) throw new Error("roster");
+      const data = (await response.json()) as { students?: RosterStudent[]; deskCount?: number };
+      setRoster(data.students ?? []);
+      if (data.deskCount) setDeskCount(data.deskCount);
+      setRosterError("");
+    } catch {
+      setRosterError("Chưa tải được danh sách lớp. Tải lại trang giúp thầy cô nhé.");
+    } finally {
+      setLoadingRoster(false);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/syll")
-      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("roster"))))
-      .then((data: { students?: RosterStudent[]; deskCount?: number }) => {
+    (async () => {
+      try {
+        const response = await fetch("/api/syll/unlock");
+        const data = (await response.json()) as { unlocked?: boolean; locked?: boolean };
         if (cancelled) return;
-        setRoster(data.students ?? []);
-        if (data.deskCount) setDeskCount(data.deskCount);
-      })
-      .catch(() => {
-        if (!cancelled) setRosterError("Chưa tải được danh sách lớp. Tải lại trang giúp thầy cô nhé.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingRoster(false);
-      });
+        setLocked(Boolean(data.locked));
+        setGate(data.unlocked ? "open" : "closed");
+        if (data.unlocked) await loadRoster();
+      } catch {
+        if (!cancelled) setGate("closed");
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadRoster]);
+
+  /**
+   * Chọn tên xong thì kéo về hồ sơ em đã khai lần trước. Form dùng ô không điều
+   * khiển nên phải gắn key theo mã học sinh để React dựng lại, nếu không giá trị
+   * mặc định mới sẽ không được áp vào ô đang hiện.
+   */
+  async function pickStudent(nextId: string) {
+    setStudentId(nextId);
+    setProfile(null);
+    setDuty("");
+    setTeam("");
+    setSeat("");
+    setError("");
+    if (!nextId) return;
+
+    setLoadingProfile(true);
+    try {
+      const response = await fetch(`/api/syll/profile?studentId=${encodeURIComponent(nextId)}`);
+      if (!response.ok) return;
+      const data = (await response.json()) as { profile?: SyllProfile };
+      if (!data.profile) return;
+      setProfile(data.profile);
+      setDuty(data.profile.classDuty ?? (data.profile.teamRole === "toTruong" || data.profile.teamRole === "toPho" ? data.profile.teamRole : ""));
+      setTeam(data.profile.teamNumber ? String(data.profile.teamNumber) : "");
+      setSeat(data.profile.seatDesk && data.profile.seatSide ? `${data.profile.seatDesk}-${data.profile.seatSide}` : "");
+    } finally {
+      setLoadingProfile(false);
+    }
+  }
+
+  async function unlock(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setGateError("");
+    try {
+      const body = new FormData();
+      body.set("password", password);
+      const response = await fetch("/api/syll/unlock", { method: "POST", body });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setGateError(data.error || "Không mở được. Thử lại nhé.");
+        return;
+      }
+      setLocked(Boolean(data.locked));
+      setGate("open");
+      setPassword("");
+      await loadRoster();
+    } catch {
+      setGateError("Không mở được. Kiểm tra mạng rồi thử lại.");
+    } finally {
+      setPending(false);
+    }
+  }
 
   const filtered = useMemo(() => {
     const needle = foldVi(query.trim());
@@ -299,6 +433,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
     setDuty("");
     setTeam("");
     setSeat("");
+    setProfile(null);
     formRef.current?.reset();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -320,6 +455,50 @@ export function SyllForm({ siteName }: { siteName: string }) {
         <button className="button-primary" onClick={startAnother} type="button">
           Khai cho bạn khác
         </button>
+      </div>
+    );
+  }
+
+  if (gate !== "open") {
+    return (
+      <form className="syll-gate" onSubmit={(event) => void unlock(event)}>
+        <div className="syll-gate-mark" aria-hidden="true">
+          🔒
+        </div>
+        <h2>Nhập mật khẩu của lớp</h2>
+        <p>Thầy cô cho lớp mật khẩu này. Nhập một lần là khai được cả buổi.</p>
+        <label className="syll-field">
+          <span className="syll-label">Mật khẩu</span>
+          <input
+            autoFocus
+            disabled={gate === "checking"}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Mật khẩu thầy cô cho"
+            type="password"
+            value={password}
+          />
+        </label>
+        {gateError ? <p className="syll-err">{gateError}</p> : null}
+        <button className="button-primary" disabled={pending || gate === "checking"} type="submit">
+          {gate === "checking" ? "Đang kiểm tra…" : pending ? "Đang mở…" : "Vào khai"}
+        </button>
+        <p className="syll-foot">{siteName}</p>
+      </form>
+    );
+  }
+
+  if (locked) {
+    return (
+      <div className="syll-done">
+        <div className="syll-done-mark syll-done-lock" aria-hidden="true">
+          🔒
+        </div>
+        <h2>GVCN đã chốt sổ sơ yếu lý lịch</h2>
+        <p>
+          Danh sách đã khóa nên không nhận khai mới và cũng không sửa được nữa. Cần chỉnh chỗ nào thì em báo trực
+          tiếp với thầy cô nhé.
+        </p>
+        <p className="syll-done-count">{siteName}</p>
       </div>
     );
   }
@@ -350,7 +529,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
             </span>
             <select
               disabled={loadingRoster || !roster.length}
-              onChange={(event) => setStudentId(event.target.value)}
+              onChange={(event) => void pickStudent(event.target.value)}
               required
               value={studentId}
             >
@@ -374,9 +553,12 @@ export function SyllForm({ siteName }: { siteName: string }) {
           </p>
         ) : null}
 
-        {selected?.submitted ? (
+        {loadingProfile ? <p className="syll-note">Đang lấy lại thông tin em đã khai…</p> : null}
+
+        {selected?.submitted && !loadingProfile ? (
           <p className="syll-note syll-note-warn">
-            {selected.fullName} đã khai rồi. Gửi lần nữa sẽ <b>ghi đè</b> thông tin cũ.
+            {selected.fullName} đã khai rồi — form bên dưới đã điền sẵn thông tin cũ. Em chỉ cần sửa chỗ nào thay
+            đổi rồi gửi lại.
           </p>
         ) : null}
 
@@ -387,7 +569,14 @@ export function SyllForm({ siteName }: { siteName: string }) {
         ) : null}
       </section>
 
-      <fieldset className="syll-fieldset" disabled={!studentId}>
+      {/* Khoá React theo cả hồ sơ chứ không chỉ theo học sinh: hồ sơ về sau lúc
+          chọn tên, mà <select> và radio chỉ nhận defaultValue lúc dựng — không
+          dựng lại thì dân tộc, diện chính sách, giới tính vẫn nằm ở giá trị rỗng. */}
+      <fieldset
+        className="syll-fieldset"
+        disabled={!studentId || loadingProfile}
+        key={`${studentId || "empty"}-${profile ? "filled" : "blank"}`}
+      >
         <legend className="sr-only">Thông tin sơ yếu lý lịch</legend>
 
         <Section title="2. Thông tin học sinh">
@@ -398,17 +587,21 @@ export function SyllForm({ siteName }: { siteName: string }) {
             name="birthDate"
             placeholder="24/08/2010"
             required
+            defaultValue={profile?.birthDate ?? ""}
           />
-          <Field label="Nơi sinh (tỉnh)" name="birthPlace" placeholder="An Giang" required />
+          <Field label="Nơi sinh (tỉnh)" name="birthPlace" placeholder="An Giang" required
+            defaultValue={profile?.birthPlace ?? ""}
+          />
           <SelectField
             label="Dân tộc"
             name="ethnicity"
-            defaultValue="Kinh"
+            defaultValue={profile?.ethnicity || "Kinh"}
             options={["Kinh", "Hoa", "Khmer", "Chăm", "Khác"]}
           />
           <RadioGroup
             label="Giới tính"
             name="gender"
+            value={profile?.gender ?? ""}
             options={[
               { value: "Nam", label: "Nam" },
               { value: "Nữ", label: "Nữ" },
@@ -416,7 +609,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
           />
           <label className="syll-field">
             <span className="syll-label">Diện chính sách</span>
-            <select defaultValue="" name="policy">
+            <select defaultValue={profile?.policy ?? ""} name="policy">
               {POLICY_OPTIONS.map((code) => (
                 <option key={code} value={code}>
                   {code || "Không"}
@@ -428,13 +621,13 @@ export function SyllForm({ siteName }: { siteName: string }) {
           <SelectField
             label="Rèn luyện năm trước"
             name="conduct"
-            defaultValue=""
+            defaultValue={profile?.conduct ?? ""}
             options={["", "Tốt", "Khá", "Đạt", "Chưa đạt"]}
           />
           <SelectField
             label="Học tập năm trước"
             name="academic"
-            defaultValue=""
+            defaultValue={profile?.academic ?? ""}
             options={["", "Tốt", "Khá", "Đạt", "Chưa đạt"]}
           />
 
@@ -497,7 +690,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
                             type="button"
                           >
                             <b>{SEAT_SIDE_LABELS[side].replace("Chỗ phía ", "")}</b>
-                            <span>{holder ?? "còn trống"}</span>
+                            <span>{holder ?? (seat === value ? "chỗ của em" : "còn trống")}</span>
                           </button>
                         );
                       })}
@@ -511,16 +704,30 @@ export function SyllForm({ siteName }: { siteName: string }) {
         </Section>
 
         <Section title="3. Chỗ ở hiện nay" note="Ghi rõ, không viết tắt — đây là mục nhà trường kiểm tra kỹ nhất.">
-          <Field label="Tổ / ấp / khóm" name="addressGroup" placeholder="Tổ 8, ấp An Ninh" required />
-          <Field label="Xã / phường" name="addressWard" placeholder="Mỹ An Hưng" required />
-          <Field label="Tỉnh / thành phố" name="addressProvince" placeholder="Đồng Tháp" required />
+          <Field label="Tổ / ấp / khóm" name="addressGroup" placeholder="Tổ 8, ấp An Ninh" required
+            defaultValue={profile?.addressGroup ?? ""}
+          />
+          <Field label="Xã / phường" name="addressWard" placeholder="Mỹ An Hưng" required
+            defaultValue={profile?.addressWard ?? ""}
+          />
+          <Field label="Tỉnh / thành phố" name="addressProvince" placeholder="Đồng Tháp" required
+            defaultValue={profile?.addressProvince ?? ""}
+          />
         </Section>
 
         <Section title="4. Cha mẹ">
-          <Field label="Họ và tên cha" name="fatherName" placeholder="Nguyễn Văn A" />
-          <Field label="Nghề nghiệp cha" name="fatherJob" placeholder="Nông dân" />
-          <Field label="Họ và tên mẹ" name="motherName" placeholder="Trần Thị B" />
-          <Field label="Nghề nghiệp mẹ" name="motherJob" placeholder="Nội trợ" />
+          <Field label="Họ và tên cha" name="fatherName" placeholder="Nguyễn Văn A"
+            defaultValue={profile?.fatherName ?? ""}
+          />
+          <Field label="Nghề nghiệp cha" name="fatherJob" placeholder="Nông dân"
+            defaultValue={profile?.fatherJob ?? ""}
+          />
+          <Field label="Họ và tên mẹ" name="motherName" placeholder="Trần Thị B"
+            defaultValue={profile?.motherName ?? ""}
+          />
+          <Field label="Nghề nghiệp mẹ" name="motherJob" placeholder="Nội trợ"
+            defaultValue={profile?.motherJob ?? ""}
+          />
           <Field
             hint="Số GVCN gọi khi cần — thường là số của cha hoặc mẹ"
             inputMode="tel"
@@ -528,6 +735,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
             name="contactPhone"
             placeholder="09xxxxxxxx"
             required
+            defaultValue={profile?.contactPhone ?? ""}
           />
           <Field
             hint="Số riêng của mẹ, chỉ dùng để tra cứu — không in vào biểu mẫu"
@@ -535,25 +743,39 @@ export function SyllForm({ siteName }: { siteName: string }) {
             label="SĐT của mẹ"
             name="motherPhone"
             placeholder="09xxxxxxxx"
+            defaultValue={profile?.motherPhone ?? ""}
           />
         </Section>
 
         <Section title="5. Liên hệ của em">
-          <Field inputMode="tel" label="SĐT của em" name="studentPhone" placeholder="09xxxxxxxx" />
-          <Field label="Địa chỉ email" name="email" placeholder="ten@gmail.com" type="email" />
-          <Field inputMode="numeric" label="Số CCCD / CMND" name="idNumber" placeholder="0892090…" />
+          <Field inputMode="tel" label="SĐT của em" name="studentPhone" placeholder="09xxxxxxxx"
+            defaultValue={profile?.studentPhone ?? ""}
+          />
+          <Field label="Địa chỉ email" name="email" placeholder="ten@gmail.com" type="email"
+            defaultValue={profile?.email ?? ""}
+          />
+          <Field inputMode="numeric" label="Số CCCD / CMND" name="idNumber" placeholder="0892090…"
+            defaultValue={profile?.idNumber ?? ""}
+          />
         </Section>
 
         <Section title="6. Sức khỏe">
-          <Field inputMode="decimal" label="Cân nặng (kg)" name="weight" placeholder="48" />
-          <Field inputMode="decimal" label="Chiều cao (cm)" name="height" placeholder="160" />
-          <ToggleField label="Biết bơi" name="canSwim" text="Em biết bơi" />
-          <Field label="Bệnh về mắt" name="eyeDisease" placeholder="Cận thị, loạn thị… (nếu có)" />
+          <Field inputMode="decimal" label="Cân nặng (kg)" name="weight" placeholder="48"
+            defaultValue={profile?.weight ?? ""}
+          />
+          <Field inputMode="decimal" label="Chiều cao (cm)" name="height" placeholder="160"
+            defaultValue={profile?.height ?? ""}
+          />
+          <ToggleField checked={Boolean(profile?.canSwim)} label="Biết bơi" name="canSwim" text="Em biết bơi" />
+          <Field label="Bệnh về mắt" name="eyeDisease" placeholder="Cận thị, loạn thị… (nếu có)"
+            defaultValue={profile?.eyeDisease ?? ""}
+          />
           <Field
             label="Tiền sử bệnh cần theo dõi"
             name="medicalHistory"
             placeholder="Hen suyễn, tim mạch… (nếu có)"
             wide
+            defaultValue={profile?.medicalHistory ?? ""}
           />
         </Section>
 
@@ -561,6 +783,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
           <RadioGroup
             label="Phương tiện đến trường"
             name="transport"
+            value={profile?.transport ?? ""}
             options={[
               { value: "Xe đạp", label: "Xe đạp", icon: "🚲" },
               { value: "Xe máy / máy điện", label: "Xe máy / điện", icon: "🛵" },
@@ -571,6 +794,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
           <RadioGroup
             label="Điều kiện học trực tuyến"
             name="onlineLearning"
+            value={profile?.onlineLearning ?? ""}
             options={[
               { value: "Đủ đk học", label: "Đủ điều kiện" },
               { value: "Không đủ đk học", label: "Không đủ" },
@@ -578,7 +802,9 @@ export function SyllForm({ siteName }: { siteName: string }) {
             ]}
             wide
           />
-          <Field label="Ghi chú thêm" name="notes" placeholder="Điều gì thầy cô cần biết thêm (nếu có)" wide />
+          <Field label="Ghi chú thêm" name="notes" placeholder="Điều gì thầy cô cần biết thêm (nếu có)" wide
+            defaultValue={profile?.notes ?? ""}
+          />
         </Section>
       </fieldset>
 
