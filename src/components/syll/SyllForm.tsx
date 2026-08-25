@@ -248,6 +248,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
   const [loadingRoster, setLoadingRoster] = useState(true);
   const [query, setQuery] = useState("");
   const [studentId, setStudentId] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [deskCount, setDeskCount] = useState(6);
   const [duty, setDuty] = useState("");
   const [team, setTeam] = useState("");
@@ -305,6 +306,9 @@ export function SyllForm({ siteName }: { siteName: string }) {
    */
   async function pickStudent(nextId: string) {
     setStudentId(nextId);
+    // Chọn xong là gấp danh sách lại, ô chỉ còn đúng một dòng tên.
+    setPickerOpen(false);
+    setQuery("");
     setProfile(null);
     setDuty("");
     setTeam("");
@@ -447,6 +451,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
   function startAnother() {
     setDone("");
     setStudentId("");
+    setPickerOpen(false);
     setQuery("");
     setDuty("");
     setTeam("");
@@ -536,47 +541,62 @@ export function SyllForm({ siteName }: { siteName: string }) {
 
         {rosterError ? <p className="syll-err">{rosterError}</p> : null}
 
-        <div className="syll-picker-row">
-          <label className="syll-field">
-            <span className="syll-label">Tìm nhanh</span>
-            <input
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Gõ vài chữ trong tên…"
-              type="search"
-              value={query}
-            />
-          </label>
-          {/* Danh sách mở sẵn thay cho ô chọn xổ xuống: 43 dòng xổ ra là che
-              gần hết màn hình điện thoại và tên dài bị cắt. Khung này cao vừa
-              mười dòng, còn lại cuộn trong khung. */}
-          <div className="syll-field syll-picker-names">
-            <span className="syll-label">
-              Họ và tên<b aria-hidden="true"> *</b>
-            </span>
-            {loadingRoster ? (
-              <p className="syll-note">Đang tải danh sách…</p>
-            ) : !roster.length ? (
-              <p className="syll-note">Lớp chưa có danh sách.</p>
-            ) : (
-              <ul className="syll-names">
-                {filtered.map((student) => (
-                  <li key={student._id}>
-                    <button
-                      aria-pressed={studentId === student._id}
-                      className={`syll-name${studentId === student._id ? " is-picked" : ""}`}
-                      onClick={() => void pickStudent(student._id)}
-                      type="button"
-                    >
-                      <b>{student.tt ? `${student.tt}.` : "•"}</b>
-                      <span>{student.fullName}</span>
-                      {student.submitted ? <em title="đã khai">✓</em> : null}
-                    </button>
-                  </li>
-                ))}
-                {!filtered.length ? <li className="syll-names-empty">Không có tên nào khớp.</li> : null}
-              </ul>
-            )}
-          </div>
+        {/* Đóng lại chỉ còn một dòng tên đã chọn; bấm vào mới xổ danh sách ra.
+            Khung xổ cao đúng mười dòng rồi cuộn trong khung, thay vì đổ cả 42
+            dòng che hết màn hình như ô chọn của trình duyệt. */}
+        <div className="syll-field syll-picker-names">
+          <span className="syll-label">
+            Họ và tên<b aria-hidden="true"> *</b>
+          </span>
+          {loadingRoster ? (
+            <p className="syll-note">Đang tải danh sách…</p>
+          ) : !roster.length ? (
+            <p className="syll-note">Lớp chưa có danh sách.</p>
+          ) : (
+            <>
+              <button
+                aria-expanded={pickerOpen}
+                className={`syll-pick-toggle${selected ? " has-name" : ""}`}
+                onClick={() => setPickerOpen((open) => !open)}
+                type="button"
+              >
+                <span>
+                  {selected ? `${selected.tt ? `${selected.tt}. ` : ""}${selected.fullName}` : "— Chọn tên em —"}
+                </span>
+                <em aria-hidden="true">{pickerOpen ? "▲" : "▼"}</em>
+              </button>
+
+              {pickerOpen ? (
+                <div className="syll-pick-panel">
+                  <input
+                    autoComplete="off"
+                    className="syll-pick-search"
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Gõ vài chữ trong tên…"
+                    type="search"
+                    value={query}
+                  />
+                  <ul className="syll-names">
+                    {filtered.map((student) => (
+                      <li key={student._id}>
+                        <button
+                          aria-pressed={studentId === student._id}
+                          className={`syll-name${studentId === student._id ? " is-picked" : ""}`}
+                          onClick={() => void pickStudent(student._id)}
+                          type="button"
+                        >
+                          <b>{student.tt ? `${student.tt}.` : "•"}</b>
+                          <span>{student.fullName}</span>
+                          {student.submitted ? <em title="đã khai">✓</em> : null}
+                        </button>
+                      </li>
+                    ))}
+                    {!filtered.length ? <li className="syll-names-empty">Không có tên nào khớp.</li> : null}
+                  </ul>
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
 
         {!loadingRoster && !roster.length ? (
