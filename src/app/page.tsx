@@ -186,7 +186,7 @@ export default async function HomePage() {
 
           <section className="site-section block-amber hp-span" id="lich-nam">
             <h2>Lịch năm học {site.yearName}</h2>
-            <p className="sec-note">Mốc đang tới được tô đậm — kéo ngang để xem cả năm.</p>
+            <p className="sec-note">Mốc sắp tới tô đậm, mốc đã qua xám lại và lùi xuống cuối — kéo ngang để xem cả năm.</p>
             <YearTimeline milestones={site.milestones} />
           </section>
 

@@ -2353,32 +2353,91 @@ a.site-hero-teacher:hover strong {
   color: var(--ink-3);
 }
 
-.year-milestone.is-past {
-  background: #fafbfe;
-  opacity: 0.62;
+/* Dòng trạng thái dưới mỗi mốc: "Đã thực hiện", "Hôm nay", "Còn 5 ngày". */
+.year-milestone-state {
+  margin: 7px 0 0;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
-.year-milestone.is-past .year-milestone-dot {
-  background: #e2e8f0;
+/* Đã qua: xám hẳn, chỉ còn để tra lại — mốc này cũng tụt xuống cuối hàng. */
+.year-milestone.is-done {
+  border-color: #e6ebf4;
+  background: #f5f7fb;
 }
 
-.year-milestone.is-active {
+.year-milestone.is-done .year-milestone-dot {
+  background: #cbd5e1;
+}
+
+.year-milestone.is-done .year-milestone-date {
+  color: #94a3b8;
+}
+
+.year-milestone.is-done .year-milestone-label,
+.year-milestone.is-done .year-milestone-state {
+  color: #a3aec0;
+}
+
+/* Sắp tới: mốc kế tiếp, tô màu nhấn và thở nhẹ cho mắt bắt được ngay. */
+.year-milestone.is-next {
   border-color: transparent;
   background: linear-gradient(150deg, var(--accent), var(--accent-2));
   box-shadow: 0 12px 26px -16px rgba(79, 70, 229, 0.85);
+  animation: year-breathe 2.8s ease-in-out infinite;
 }
 
-.year-milestone.is-active .year-milestone-dot {
+.year-milestone.is-next .year-milestone-dot {
   background: #fff;
   box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.28);
 }
 
-.year-milestone.is-active .year-milestone-date {
+/* Đúng hôm nay: màu khác hẳn mốc sắp tới, chấm nhấp nháy. */
+.year-milestone.is-today {
+  border-color: transparent;
+  background: linear-gradient(150deg, #f59e0b, #ef4444);
+  box-shadow: 0 12px 26px -14px rgba(239, 68, 68, 0.75);
+}
+
+.year-milestone.is-today .year-milestone-dot {
+  background: #fff;
+  animation: year-pulse 1.6s ease-out infinite;
+}
+
+.year-milestone.is-next .year-milestone-date,
+.year-milestone.is-today .year-milestone-date,
+.year-milestone.is-next .year-milestone-state,
+.year-milestone.is-today .year-milestone-state {
   color: #fff;
 }
 
-.year-milestone.is-active .year-milestone-label {
+.year-milestone.is-next .year-milestone-label,
+.year-milestone.is-today .year-milestone-label {
   color: rgba(255, 255, 255, 0.85);
+}
+
+@keyframes year-breathe {
+  0%,
+  100% {
+    box-shadow: 0 12px 26px -16px rgba(79, 70, 229, 0.85);
+  }
+  50% {
+    box-shadow: 0 14px 30px -12px rgba(79, 70, 229, 1);
+  }
+}
+
+@keyframes year-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 9px rgba(255, 255, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
 }
 
 .syll-page,
@@ -3171,6 +3230,12 @@ a.site-hero-teacher:hover strong {
 @media (prefers-reduced-motion: reduce) {
   .desk-tab:hover {
     transform: none;
+  }
+
+  /* Máy nào cài giảm chuyển động thì mốc năm học đứng yên, màu vẫn giữ. */
+  .year-milestone.is-next,
+  .year-milestone.is-today .year-milestone-dot {
+    animation: none;
   }
 }
 
