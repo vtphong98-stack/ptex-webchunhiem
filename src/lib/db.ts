@@ -20,16 +20,28 @@ function getClientPromise() {
       maxPoolSize: 10,
       minPoolSize: 1,
       maxIdleTimeMS: 30000,
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
-      socketTimeoutMS: 10000,
+      // Atlas bầu lại primary mất chừng 5–10 giây. Để cửa sổ 5s thì đúng lúc
+      // đó mọi trang dựng ở máy chủ đều gãy — đã gặp thật, trang tra cứu học
+      // sinh đổ ra "Minified React error #441". 12s vẫn nằm trong hạn mức của
+      // hàm trên Vercel mà đủ qua một lần bầu lại.
+      serverSelectionTimeoutMS: 12000,
+      connectTimeoutMS: 12000,
+      socketTimeoutMS: 20000,
       // zlib ships with Node, so it always negotiates. snappy/zstd need native
       // add-ons that are not installed here, so asking for them silently gave
       // us no compression at all.
       compressors: ["zlib"],
       zlibCompressionLevel: 6,
     });
-    global.__mongoClientPromise = client.connect();
+    // Giữ lại một lời hứa đã hỏng là hỏng luôn cả tiến trình: Atlas chớp một
+    // nhịp lúc kết nối đầu tiên, thế là mọi lượt dựng trang sau đó đều ném lại
+    // đúng lỗi cũ cho tới khi khởi động lại máy chủ. Hỏng thì bỏ đi để lượt sau
+    // nối lại từ đầu.
+    global.__mongoClientPromise = client.connect().catch((error: unknown) => {
+      global.__mongoClientPromise = undefined;
+      void client.close().catch(() => {});
+      throw error;
+    });
   }
 
   return global.__mongoClientPromise;
