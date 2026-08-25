@@ -4,12 +4,18 @@ import { NextResponse } from "next/server";
 
 import { CURRENT_CLASS_NAME, CURRENT_SCHOOL_YEAR } from "@/lib/academic-calendar";
 import { getDb } from "@/lib/db";
-import { parseStoredTimetable, parseTimetableWorkbook } from "@/lib/excel-timetable";
+import {
+  emptyTimetableGrid,
+  parseStoredTimetable,
+  parseTimetableWorkbook,
+  sanitizeTimetableGrid,
+  type TimetableGrid,
+} from "@/lib/excel-timetable";
 import { canManageStudents } from "@/lib/permissions";
 import { CLASS_CONFIG_FIELDS, resolveClassConfig, resolveSchoolYear, resolveSchoolYearFromRequest } from "@/lib/school-year-scope";
 import { getVerifiedSessionUser } from "@/lib/session";
 import { archiveCurrentTimetable, versionMeta } from "@/lib/timetable-versions";
-import type { ClassConfig } from "@/lib/types";
+import type { ClassConfig, SessionUser } from "@/lib/types";
 
 export async function GET(request: Request) {
   const session = await getVerifiedSessionUser();
@@ -22,12 +28,17 @@ export async function GET(request: Request) {
     ...CLASS_CONFIG_FIELDS.timetable,
     updatedAt: 1,
   });
+  const stored = parseStoredTimetable(config?.timetableJson);
   return NextResponse.json({
     yearName: year?.name ?? "",
     isCurrent: Boolean(year?.isCurrent),
     updatedAt: config?.timetableUpdatedAt || (config?.timetableJson ? config.updatedAt : ""),
     versions: (config?.timetableHistory ?? []).map(versionMeta),
-    teachers: parseStoredTimetable(config?.timetableJson)?.teachers ?? {},
+    teachers: stored?.teachers ?? {},
+    teacherPhones: stored?.teacherPhones ?? {},
+    // Lưới đang dùng, để bảng gõ trực tiếp mở ra là sửa được ngay chứ không
+    // phải gõ lại từ đầu.
+    grid: stored ?? emptyTimetableGrid(),
   });
 }
 
@@ -52,7 +63,19 @@ export async function POST(request: Request) {
   }
 
   const grid = parseTimetableWorkbook(await file.arrayBuffer());
-  const schoolYearId = String(year._id);
+  return saveTimetable(grid, String(year._id), year.name, session);
+}
+
+/**
+ * Ghi một lưới TKB, dùng chung cho hai đường nhập: tải file Excel và gõ thẳng
+ * trên web. Bản đang dùng được lưu lại thành phiên bản cũ trước khi ghi đè.
+ */
+async function saveTimetable(
+  grid: TimetableGrid,
+  schoolYearId: string,
+  yearName: string,
+  session: SessionUser,
+) {
   const db = await getDb();
   const now = new Date().toISOString();
   const configs = db.collection<ClassConfig>("classConfigs");
@@ -70,7 +93,7 @@ export async function POST(request: Request) {
       _id: new ObjectId().toHexString(),
       schoolYearId,
       className: CURRENT_CLASS_NAME,
-      fullName: `Lớp ${CURRENT_CLASS_NAME} - ${year.name || CURRENT_SCHOOL_YEAR}`,
+      fullName: `Lớp ${CURRENT_CLASS_NAME} - ${yearName || CURRENT_SCHOOL_YEAR}`,
       gvcnName: "Võ Thanh Phong",
       gvcnDisplayName: "Thầy Võ Thanh Phong",
       gvcnPhone: "0382311919",
@@ -90,9 +113,35 @@ export async function POST(request: Request) {
   revalidatePath("/");
   return NextResponse.json({
     ok: true,
-    yearName: year.name,
+    yearName,
     updatedAt: now,
     versions: timetableHistory.map(versionMeta),
     teachers: grid.teachers ?? {},
+    teacherPhones: grid.teacherPhones ?? {},
+    grid,
   });
+}
+
+/** Gõ thẳng trên web: nhận lưới dạng JSON thay vì file Excel. */
+export async function PUT(request: Request) {
+  const session = await getVerifiedSessionUser();
+  if (!session || !canManageStudents(session.role)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const body = (await request.json()) as { year?: string; grid?: unknown };
+  const year = await resolveSchoolYear(body.year || new URL(request.url).searchParams.get("year"));
+  if (!year?._id) {
+    return NextResponse.json({ error: "Không có năm học." }, { status: 400 });
+  }
+  if (!year.isCurrent) {
+    return NextResponse.json({ error: "Năm cũ chỉ xem. Chỉ sửa TKB của năm hiện hành." }, { status: 400 });
+  }
+
+  const grid = sanitizeTimetableGrid(body.grid);
+  if (!grid) {
+    return NextResponse.json({ error: "Bảng thời khóa biểu không hợp lệ." }, { status: 400 });
+  }
+
+  return saveTimetable(grid, String(year._id), year.name, session);
 }

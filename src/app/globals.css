@@ -1026,6 +1026,10 @@ button {
 .subject-gdktpl { --sj-soft: #e0f5f6; --sj-ink: #0e7490; }
 .subject-tin { --sj-soft: #ede9fe; --sj-ink: #6d28d9; }
 .subject-cn { --sj-soft: #fdeee2; --sj-ink: #b45309; }
+.subject-cnnn { --sj-soft: #eaf7e0; --sj-ink: #3f6212; }
+.subject-ly { --sj-soft: #e0f0fb; --sj-ink: #075985; }
+.subject-hoa { --sj-soft: #fdf0e3; --sj-ink: #9a3412; }
+.subject-sinh { --sj-soft: #e4f7e8; --sj-ink: #15803d; }
 .subject-gdtc { --sj-soft: #eef7dd; --sj-ink: #4d7c0f; }
 .subject-gdqp { --sj-soft: #fce9e2; --sj-ink: #c2410c; }
 .subject-gdhn { --sj-soft: #e2f6f1; --sj-ink: #0f766e; }
@@ -4920,4 +4924,129 @@ button {
   font-size: 13px;
   color: #64748b;
   cursor: pointer;
+}
+
+/* Gõ thẳng thời khóa biểu trong khu vực GVCN */
+.tkb-edit {
+  display: grid;
+  gap: 14px;
+}
+
+.tkb-edit-block h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #4338ca;
+}
+
+.tkb-edit-scroll {
+  overflow-x: auto;
+}
+
+.tkb-edit-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: separate;
+  border-spacing: 4px;
+}
+
+.tkb-edit-table th {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.tkb-edit-table th[scope="row"] {
+  width: 34px;
+}
+
+.tkb-edit-table input {
+  width: 100%;
+  min-width: 74px;
+  padding: 8px 6px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  font: inherit;
+  font-size: 13px;
+  text-align: center;
+}
+
+.tkb-edit-table input:focus {
+  outline: none;
+  border-color: #667eea;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.tkb-edit-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.tkb-edit-copy select {
+  /* Trang setup có quy tắc select { width: 100% }, không ghi đè thì sáu ô chép
+     ngày mỗi ô một hàng. */
+  width: auto;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #f8fafc;
+  font: inherit;
+  font-size: 12px;
+}
+
+.tkb-edit-teachers {
+  display: grid;
+  grid-template-columns: minmax(84px, 1fr) minmax(120px, 2fr) minmax(110px, 1.4fr);
+  gap: 6px;
+  align-items: center;
+}
+
+.tkb-edit-head {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.tkb-edit-subject {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.tkb-edit-teachers input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  font: inherit;
+  font-size: 13px;
+}
+
+.tkb-edit-teachers input:focus {
+  outline: none;
+  border-color: #667eea;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+/* Chấm nhỏ đánh dấu môn lớp đang có tiết trong bảng giáo viên bộ môn */
+.tkb-edit-subject em {
+  margin-left: 4px;
+  font-size: 14px;
+  font-style: normal;
+  line-height: 0;
+  color: #10b981;
+}
+
+.tkb-edit-subject:not(.is-scheduled) {
+  color: #64748b;
+  font-weight: 600;
 }

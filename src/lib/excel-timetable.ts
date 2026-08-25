@@ -196,7 +196,10 @@ function templateSubjects(grid: TimetableGrid | null) {
     }
   }
   for (const name of Object.keys(grid?.teachers ?? {})) used.add(name);
+  for (const name of Object.keys(grid?.teacherPhones ?? {})) used.add(name);
   for (const name of Object.keys(SUBJECT_TEACHERS)) used.add(name);
+  // Kể cả môn chưa xếp tiết cũng có dòng, để điền trước tên và SĐT thầy cô.
+  for (const name of subjectAliasTable().keys()) used.add(name);
   return [...used].sort((a, b) => a.localeCompare(b, "vi"));
 }
 
@@ -281,6 +284,52 @@ export function timetableDisplayFromGrid(grid: TimetableGrid) {
   return {
     morning: applyRowspan(morningRows, MORNING_PERIODS),
     afternoon: applyRowspan(afternoonRows, AFTERNOON_PERIODS),
+  };
+}
+
+const MAX_CELL = 60;
+const MAX_NAME = 60;
+
+function cleanCell(raw: unknown) {
+  return String(raw ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_CELL);
+}
+
+/**
+ * Lọc lưới TKB do màn hình gõ trực tiếp gửi lên.
+ *
+ * Chỉ giữ đúng số tiết và số ngày biểu mẫu có, cắt chuỗi quá dài, quy tên môn
+ * về tên chuẩn cho bảng phân công — để dữ liệu gõ tay và dữ liệu từ Excel nằm
+ * cùng một khuôn.
+ */
+export function sanitizeTimetableGrid(raw: unknown): TimetableGrid | null {
+  if (!raw || typeof raw !== "object") return null;
+  const input = raw as Partial<TimetableGrid>;
+  if (!input.morning || !input.afternoon) return null;
+
+  const session = (source: Record<number, string[]> | undefined, periods: number[]) =>
+    Object.fromEntries(
+      periods.map((period) => {
+        const cells = (source ?? {})[period] ?? [];
+        return [period, DAY_LABELS.map((_, day) => cleanCell(Array.isArray(cells) ? cells[day] : ""))];
+      }),
+    );
+
+  const names = (source: unknown, transform: (value: string) => string) => {
+    const out: Record<string, string> = {};
+    if (!source || typeof source !== "object") return out;
+    for (const [subject, value] of Object.entries(source as Record<string, unknown>)) {
+      const key = canonicalSubject(String(subject));
+      const clean = transform(String(value ?? "").trim().slice(0, MAX_NAME));
+      if (key && key !== "-" && clean) out[key] = clean;
+    }
+    return out;
+  };
+
+  return {
+    morning: session(input.morning, MORNING_PERIODS),
+    afternoon: session(input.afternoon, AFTERNOON_PERIODS),
+    teachers: names(input.teachers, (value) => value.replace(/\s+/g, " ")),
+    teacherPhones: names(input.teacherPhones, normalizePhone),
   };
 }
 
