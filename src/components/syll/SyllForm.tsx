@@ -43,7 +43,18 @@ const DUTY_OPTIONS: Array<{ value: string; label: string }> = [
  * Đúng bốn diện nhà trường thống kê, lưu bằng mã viết tắt như trong sổ để cột
  * "Diện chính sách" của biểu mẫu ra đúng chữ trường quen đọc.
  */
-const POLICY_OPTIONS = ["", "HN", "CN", "KK"];
+const POLICY_OPTIONS = [
+  { value: "Không", label: "Không thuộc diện nào" },
+  { value: "HN", label: "HN — Hộ nghèo" },
+  { value: "CN", label: "CN — Cận nghèo" },
+  { value: "KK", label: "KK — Hoàn cảnh khó khăn" },
+];
+
+/** "on" là giá trị ô tick của bản cũ; mọi thứ khác chữ "không" đều tính là biết bơi. */
+function swimValue(raw: string | undefined) {
+  if (!raw) return "";
+  return /^(kh[oô]ng|no)/i.test(raw.trim()) ? "Không" : "x";
+}
 
 /** Hồ sơ em đã khai lần trước, dùng để điền sẵn lại toàn bộ form. */
 type SyllProfile = {
@@ -118,6 +129,7 @@ function Field({
         {required ? <b aria-hidden="true"> *</b> : null}
       </span>
       <input
+        autoComplete="off"
         defaultValue={defaultValue}
         inputMode={inputMode}
         name={name}
@@ -149,10 +161,12 @@ function SelectField({
         {label}
         {required ? <b aria-hidden="true"> *</b> : null}
       </span>
-      <select defaultValue={defaultValue ?? ""} name={name} required={required}>
+      <select autoComplete="off" defaultValue={defaultValue ?? ""} name={name} required={required}>
         {options.map((option) => (
-          <option key={option} value={option}>
-            {option || "— Chưa có —"}
+          // Dòng trống để làm lời nhắc chứ không phải một câu trả lời: khoá lại
+          // thì trình duyệt bắt em phải chọn một mức thật.
+          <option disabled={required && !option} key={option} value={option}>
+            {option || "— Chọn —"}
           </option>
         ))}
       </select>
@@ -172,6 +186,7 @@ function RadioGroup({
   columns,
   wide,
   value,
+  required,
 }: {
   label: string;
   name: string;
@@ -179,44 +194,30 @@ function RadioGroup({
   columns?: number;
   wide?: boolean;
   value?: string;
+  required?: boolean;
 }) {
   return (
     <div className={`syll-field${wide ? " syll-span" : ""}`}>
-      <span className="syll-label">{label}</span>
+      <span className="syll-label">
+        {label}
+        {required ? <b aria-hidden="true"> *</b> : null}
+      </span>
       <div className="syll-seg" style={{ "--seg-cols": columns ?? options.length } as React.CSSProperties}>
         {options.map((option) => (
           <label className="syll-seg-item" key={option.value}>
-            <input defaultChecked={value === option.value} name={name} type="radio" value={option.value} />
+            <input
+              defaultChecked={value === option.value}
+              name={name}
+              required={required}
+              type="radio"
+              value={option.value}
+            />
             <span>
               {option.icon ? <i aria-hidden="true">{option.icon}</i> : null}
               {option.label}
             </span>
           </label>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function ToggleField({
-  label,
-  name,
-  text,
-  checked,
-}: {
-  label: string;
-  name: string;
-  text: string;
-  checked?: boolean;
-}) {
-  return (
-    <div className="syll-field">
-      <span className="syll-label">{label}</span>
-      <div className="syll-seg" style={{ "--seg-cols": 1 } as React.CSSProperties}>
-        <label className="syll-seg-item">
-          <input defaultChecked={checked} name={name} type="checkbox" value="x" />
-          <span>{text}</span>
-        </label>
       </div>
     </div>
   );
@@ -392,6 +393,15 @@ export function SyllForm({ siteName }: { siteName: string }) {
       setError("Chọn tên em trong danh sách lớp trước đã.");
       return;
     }
+    // Ô chỗ ngồi là nút bấm nên trình duyệt không tự kiểm được như các ô khác.
+    if (!team) {
+      setError("Chọn tổ của em giúp thầy cô nhé.");
+      return;
+    }
+    if (!seat) {
+      setError("Chọn chỗ ngồi của em trong sơ đồ bên trên nhé.");
+      return;
+    }
     const form = event.currentTarget;
     setPending(true);
     setError("");
@@ -504,7 +514,12 @@ export function SyllForm({ siteName }: { siteName: string }) {
   }
 
   return (
-    <form className="syll-form" onSubmit={(event) => void handleSubmit(event)} ref={formRef}>
+    <form
+      autoComplete="off"
+      className="syll-form"
+      onSubmit={(event) => void handleSubmit(event)}
+      ref={formRef}
+    >
       <section className="syll-picker">
         <header className="syll-block-head">
           <h2>1. Chọn tên em</h2>
@@ -527,7 +542,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
             <span className="syll-label">
               Họ và tên<b aria-hidden="true"> *</b>
             </span>
-            <select
+            <select autoComplete="off"
               disabled={loadingRoster || !roster.length}
               onChange={(event) => void pickStudent(event.target.value)}
               required
@@ -570,7 +585,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
       </section>
 
       {/* Khoá React theo cả hồ sơ chứ không chỉ theo học sinh: hồ sơ về sau lúc
-          chọn tên, mà <select> và radio chỉ nhận defaultValue lúc dựng — không
+          chọn tên, mà <select autoComplete="off"> và radio chỉ nhận defaultValue lúc dựng — không
           dựng lại thì dân tộc, diện chính sách, giới tính vẫn nằm ở giá trị rỗng. */}
       <fieldset
         className="syll-fieldset"
@@ -597,10 +612,12 @@ export function SyllForm({ siteName }: { siteName: string }) {
             name="ethnicity"
             defaultValue={profile?.ethnicity || "Kinh"}
             options={["Kinh", "Hoa", "Khmer", "Chăm", "Khác"]}
+            required
           />
           <RadioGroup
             label="Giới tính"
             name="gender"
+            required
             value={profile?.gender ?? ""}
             options={[
               { value: "Nam", label: "Nam" },
@@ -608,11 +625,16 @@ export function SyllForm({ siteName }: { siteName: string }) {
             ]}
           />
           <label className="syll-field">
-            <span className="syll-label">Diện chính sách</span>
-            <select defaultValue={profile?.policy ?? ""} name="policy">
-              {POLICY_OPTIONS.map((code) => (
-                <option key={code} value={code}>
-                  {code || "Không"}
+            <span className="syll-label">
+              Diện chính sách<b aria-hidden="true"> *</b>
+            </span>
+            <select autoComplete="off" defaultValue={profile?.policy ?? ""} name="policy" required>
+              <option disabled value="">
+                — Chọn —
+              </option>
+              {POLICY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -623,17 +645,19 @@ export function SyllForm({ siteName }: { siteName: string }) {
             name="conduct"
             defaultValue={profile?.conduct ?? ""}
             options={["", "Tốt", "Khá", "Đạt", "Chưa đạt"]}
+            required
           />
           <SelectField
             label="Học tập năm trước"
             name="academic"
             defaultValue={profile?.academic ?? ""}
             options={["", "Tốt", "Khá", "Đạt", "Chưa đạt"]}
+            required
           />
 
           <label className="syll-field">
             <span className="syll-label">Chức vụ</span>
-            <select onChange={(event) => setDuty(event.target.value)} value={duty}>
+            <select autoComplete="off" onChange={(event) => setDuty(event.target.value)} value={duty}>
               <option value="">Không giữ chức vụ</option>
               {DUTY_OPTIONS.map((option) => {
                 const holder = dutyHolder(option.value);
@@ -650,13 +674,9 @@ export function SyllForm({ siteName }: { siteName: string }) {
 
           <label className="syll-field">
             <span className="syll-label">
-              Tổ{duty === "toTruong" || duty === "toPho" ? <b aria-hidden="true"> *</b> : null}
+              Tổ<b aria-hidden="true"> *</b>
             </span>
-            <select
-              onChange={(event) => pickTeam(event.target.value)}
-              required={duty === "toTruong" || duty === "toPho"}
-              value={team}
-            >
+            <select autoComplete="off" onChange={(event) => pickTeam(event.target.value)} required value={team}>
               <option value="">— Chọn tổ —</option>
               {SEAT_TEAMS.map((number) => (
                 <option key={number} value={number}>
@@ -667,7 +687,9 @@ export function SyllForm({ siteName }: { siteName: string }) {
           </label>
 
           <div className="syll-field syll-span">
-            <span className="syll-label">Chỗ ngồi</span>
+            <span className="syll-label">
+              Chỗ ngồi<b aria-hidden="true"> *</b>
+            </span>
             {!team ? (
               <p className="syll-note">Chọn tổ ở trên thì sơ đồ chỗ ngồi của tổ đó hiện ra.</p>
             ) : (
@@ -718,15 +740,19 @@ export function SyllForm({ siteName }: { siteName: string }) {
         <Section title="4. Cha mẹ">
           <Field label="Họ và tên cha" name="fatherName" placeholder="Nguyễn Văn A"
             defaultValue={profile?.fatherName ?? ""}
+            required
           />
           <Field label="Nghề nghiệp cha" name="fatherJob" placeholder="Nông dân"
             defaultValue={profile?.fatherJob ?? ""}
+            required
           />
           <Field label="Họ và tên mẹ" name="motherName" placeholder="Trần Thị B"
             defaultValue={profile?.motherName ?? ""}
+            required
           />
           <Field label="Nghề nghiệp mẹ" name="motherJob" placeholder="Nội trợ"
             defaultValue={profile?.motherJob ?? ""}
+            required
           />
           <Field
             hint="Số GVCN gọi khi cần — thường là số của cha hoặc mẹ"
@@ -744,38 +770,55 @@ export function SyllForm({ siteName }: { siteName: string }) {
             name="motherPhone"
             placeholder="09xxxxxxxx"
             defaultValue={profile?.motherPhone ?? ""}
+            required
           />
         </Section>
 
         <Section title="5. Liên hệ của em">
           <Field inputMode="tel" label="SĐT của em" name="studentPhone" placeholder="09xxxxxxxx"
             defaultValue={profile?.studentPhone ?? ""}
+            required
           />
           <Field label="Địa chỉ email" name="email" placeholder="ten@gmail.com" type="email"
             defaultValue={profile?.email ?? ""}
+            required
           />
           <Field inputMode="numeric" label="Số CCCD / CMND" name="idNumber" placeholder="0892090…"
             defaultValue={profile?.idNumber ?? ""}
+            required
           />
         </Section>
 
         <Section title="6. Sức khỏe">
           <Field inputMode="decimal" label="Cân nặng (kg)" name="weight" placeholder="48"
             defaultValue={profile?.weight ?? ""}
+            required
           />
           <Field inputMode="decimal" label="Chiều cao (cm)" name="height" placeholder="160"
             defaultValue={profile?.height ?? ""}
+            required
           />
-          <ToggleField checked={Boolean(profile?.canSwim)} label="Biết bơi" name="canSwim" text="Em biết bơi" />
-          <Field label="Bệnh về mắt" name="eyeDisease" placeholder="Cận thị, loạn thị… (nếu có)"
+          <RadioGroup
+            label="Biết bơi"
+            name="canSwim"
+            required
+            value={swimValue(profile?.canSwim)}
+            options={[
+              { value: "x", label: "Biết bơi", icon: "🏊" },
+              { value: "Không", label: "Không biết", icon: "🚫" },
+            ]}
+          />
+          <Field label="Bệnh về mắt" name="eyeDisease" placeholder="Không / cận thị / loạn thị…"
             defaultValue={profile?.eyeDisease ?? ""}
+            required
           />
           <Field
             label="Tiền sử bệnh cần theo dõi"
             name="medicalHistory"
-            placeholder="Hen suyễn, tim mạch… (nếu có)"
+            placeholder="Không / hen suyễn, tim mạch…"
             wide
             defaultValue={profile?.medicalHistory ?? ""}
+            required
           />
         </Section>
 
@@ -783,6 +826,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
           <RadioGroup
             label="Phương tiện đến trường"
             name="transport"
+            required
             value={profile?.transport ?? ""}
             options={[
               { value: "Xe đạp", label: "Xe đạp", icon: "🚲" },
@@ -794,6 +838,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
           <RadioGroup
             label="Điều kiện học trực tuyến"
             name="onlineLearning"
+            required
             value={profile?.onlineLearning ?? ""}
             options={[
               { value: "Đủ đk học", label: "Đủ điều kiện" },

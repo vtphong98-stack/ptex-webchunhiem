@@ -109,6 +109,25 @@ function isFemale(student: SyllStudent) {
   return /^n(ữ|u)$/i.test(text(student.gender));
 }
 
+/**
+ * Cột "Biết bơi" chỉ đánh x cho em biết bơi. Form cũ dùng ô tick nên lưu "on",
+ * form mới có thêm lựa chọn "Không" — chữ "Không" mà đánh x là sai hẳn nghĩa.
+ */
+function canSwim(student: SyllStudent) {
+  const raw = text(student.canSwim);
+  return Boolean(raw) && !/^(kh[ôo]ng|no)/i.test(raw);
+}
+
+/**
+ * Biểu mẫu của trường để trống ô "Diện chính sách" cho em không thuộc diện nào,
+ * còn form thì bắt chọn hẳn "Không" để không ai bỏ sót. Quy về đúng cách trường
+ * ghi khi xuất ra.
+ */
+function policyCode(student: SyllStudent) {
+  const raw = text(student.policy);
+  return /^kh[ôo]ng$/i.test(raw) ? "" : raw;
+}
+
 function transportIs(student: SyllStudent, kind: "xd" | "xemay" | "khac") {
   const raw = text(student.transport).toLowerCase();
   if (!raw) return false;
@@ -205,7 +224,7 @@ function fillLyLich1(sheet: ExcelJS.Worksheet, students: SyllStudent[], info: Sy
     row.getCell(4).value = text(student.birthPlace) || null;
     row.getCell(5).value = mark(isFemale(student));
     row.getCell(6).value = text(student.ethnicity) || null;
-    row.getCell(7).value = text(student.policy) || null;
+    row.getCell(7).value = policyCode(student) || null;
     row.getCell(8).value = text(student.addressGroup) || null;
     row.getCell(9).value = text(student.addressWard) || null;
     row.getCell(10).value = text(student.addressProvince) || null;
@@ -239,7 +258,7 @@ function fillLyLich2(sheet: ExcelJS.Worksheet, students: SyllStudent[], info: Sy
     row.getCell(7).value = text(student.studentPhone) || null;
     row.getCell(8).value = numberOrText(student.weight);
     row.getCell(9).value = numberOrText(student.height);
-    row.getCell(10).value = mark(text(student.canSwim));
+    row.getCell(10).value = mark(canSwim(student));
     row.getCell(11).value = text(student.eyeDisease) || null;
     row.getCell(12).value = text(student.medicalHistory) || null;
     row.getCell(13).value = mark(transportIs(student, "xd"));
@@ -248,7 +267,7 @@ function fillLyLich2(sheet: ExcelJS.Worksheet, students: SyllStudent[], info: Sy
     row.getCell(16).value = mark(onlineIs(student, "du"));
     row.getCell(17).value = mark(onlineIs(student, "khong"));
     row.getCell(18).value = mark(onlineIs(student, "nho"));
-    row.getCell(19).value = text(student.notes) || text(student.policy) || null;
+    row.getCell(19).value = text(student.notes) || policyCode(student) || null;
   });
 
   writeSignature(sheet, "LyLich2", FIRST_DATA_ROW + Math.max(students.length, 1) - 1, info.gvcnName);
