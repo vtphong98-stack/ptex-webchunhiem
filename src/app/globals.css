@@ -2506,11 +2506,22 @@ a.site-hero-teacher:hover strong {
   color: #e11d48;
 }
 
+/* Dòng gợi ý dưới mỗi ô. Trước là #94a3b8 — mờ quá, em đọc lướt là bỏ qua,
+   rồi để trống luôn cái ô. */
 .syll-hint-inline {
-  font-size: 12px;
+  font-size: 12.5px;
   font-style: normal;
   line-height: 1.4;
-  color: #94a3b8;
+  color: #64748b;
+}
+
+/* Chữ mẫu trong ô để nghiêng và nhạt hơn hẳn chữ thật: em nhìn vào biết ngay
+   đó là ví dụ chứ không phải ô đã có sẵn đáp án. */
+.syll-field input::placeholder,
+.syll-field textarea::placeholder,
+.syll-pick-search::placeholder {
+  color: #aab4c4;
+  font-style: italic;
 }
 
 .syll-field input,

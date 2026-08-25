@@ -685,7 +685,12 @@ export function SyllForm({ siteName }: { siteName: string }) {
             </div>
             <em className="syll-hint-inline">Thầy cô đã điền sẵn theo sổ lớp — em xem lại, sai thì sửa.</em>
           </div>
-          <Field label="Nơi sinh (tỉnh)" name="birthPlace" placeholder="An Giang" required
+          <Field
+            hint="Các em có thể gõ: An Giang, Đồng Tháp…"
+            label="Nơi sinh (tỉnh)"
+            name="birthPlace"
+            placeholder="VD: An Giang"
+            required
             defaultValue={profile?.birthPlace ?? ""}
           />
           <SelectField
@@ -807,31 +812,62 @@ export function SyllForm({ siteName }: { siteName: string }) {
         </Section>
 
         <Section title="3. Chỗ ở hiện nay" note="Ghi rõ, không viết tắt — đây là mục nhà trường kiểm tra kỹ nhất.">
-          <Field label="Tổ / ấp / khóm" name="addressGroup" placeholder="Tổ 8, ấp An Ninh" required
+          <Field
+            hint="Các em có thể gõ: Tổ 8, ấp An Ninh…"
+            label="Tổ / ấp / khóm"
+            name="addressGroup"
+            placeholder="VD: Tổ 8, ấp An Ninh"
+            required
             defaultValue={profile?.addressGroup ?? ""}
           />
-          <Field label="Xã / phường" name="addressWard" placeholder="Mỹ An Hưng" required
+          <Field
+            hint="Các em có thể gõ: Mỹ An Hưng, Vĩnh Thanh Vân…"
+            label="Xã / phường"
+            name="addressWard"
+            placeholder="VD: Mỹ An Hưng"
+            required
             defaultValue={profile?.addressWard ?? ""}
           />
-          <Field label="Tỉnh / thành phố" name="addressProvince" placeholder="Đồng Tháp" required
+          <Field
+            hint="Các em có thể gõ: An Giang, Đồng Tháp…"
+            label="Tỉnh / thành phố"
+            name="addressProvince"
+            placeholder="VD: Đồng Tháp"
+            required
             defaultValue={profile?.addressProvince ?? ""}
           />
         </Section>
 
         <Section title="4. Cha mẹ">
-          <Field label="Họ và tên cha" name="fatherName" placeholder="Nguyễn Văn A"
+          <Field
+            hint="Ghi đủ họ và tên, có dấu"
+            label="Họ và tên cha"
+            name="fatherName"
+            placeholder="VD: Nguyễn Văn A"
             defaultValue={profile?.fatherName ?? ""}
             required
           />
-          <Field label="Nghề nghiệp cha" name="fatherJob" placeholder="Nông dân"
+          <Field
+            hint="Các em có thể gõ: Nông dân, Công nhân, Buôn bán…"
+            label="Nghề nghiệp cha"
+            name="fatherJob"
+            placeholder="VD: Nông dân"
             defaultValue={profile?.fatherJob ?? ""}
             required
           />
-          <Field label="Họ và tên mẹ" name="motherName" placeholder="Trần Thị B"
+          <Field
+            hint="Ghi đủ họ và tên, có dấu"
+            label="Họ và tên mẹ"
+            name="motherName"
+            placeholder="VD: Trần Thị B"
             defaultValue={profile?.motherName ?? ""}
             required
           />
-          <Field label="Nghề nghiệp mẹ" name="motherJob" placeholder="Nội trợ"
+          <Field
+            hint="Các em có thể gõ: Nội trợ, Nông dân, Giáo viên…"
+            label="Nghề nghiệp mẹ"
+            name="motherJob"
+            placeholder="VD: Nội trợ"
             defaultValue={profile?.motherJob ?? ""}
             required
           />
@@ -840,7 +876,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
             inputMode="tel"
             label="SĐT liên lạc"
             name="contactPhone"
-            placeholder="09xxxxxxxx"
+            placeholder="VD: 0912345678"
             required
             defaultValue={profile?.contactPhone ?? ""}
           />
@@ -849,33 +885,58 @@ export function SyllForm({ siteName }: { siteName: string }) {
             inputMode="tel"
             label="SĐT của mẹ"
             name="motherPhone"
-            placeholder="09xxxxxxxx"
+            placeholder="VD: 0912345678"
             defaultValue={profile?.motherPhone ?? ""}
             required
           />
         </Section>
 
         <Section title="5. Liên hệ của em">
-          <Field inputMode="tel" label="SĐT của em" name="studentPhone" placeholder="09xxxxxxxx"
+          <Field
+            hint="Chưa có điện thoại riêng thì gõ: Không"
+            inputMode="tel"
+            label="SĐT của em"
+            name="studentPhone"
+            placeholder="VD: 0912345678"
             defaultValue={profile?.studentPhone ?? ""}
             required
           />
-          <Field label="Địa chỉ email" name="email" placeholder="ten@gmail.com" type="email"
+          <Field
+            hint="Gõ đủ dạng ten@gmail.com — thiếu chữ @ là máy không nhận"
+            label="Địa chỉ email"
+            name="email"
+            placeholder="VD: nhatanh12c5@gmail.com"
+            type="email"
             defaultValue={profile?.email ?? ""}
             required
           />
-          <Field inputMode="numeric" label="Số CCCD / CMND" name="idNumber" placeholder="0892090…"
+          <Field
+            hint="12 số trên thẻ căn cước. Chưa làm thẻ thì gõ: Chưa có"
+            inputMode="numeric"
+            label="Số CCCD / CMND"
+            name="idNumber"
+            placeholder="VD: 089209003958"
             defaultValue={profile?.idNumber ?? ""}
             required
           />
         </Section>
 
         <Section title="6. Sức khỏe">
-          <Field inputMode="decimal" label="Cân nặng (kg)" name="weight" placeholder="48"
+          <Field
+            hint="Chỉ ghi số ki-lô-gam"
+            inputMode="decimal"
+            label="Cân nặng (kg)"
+            name="weight"
+            placeholder="VD: 48"
             defaultValue={profile?.weight ?? ""}
             required
           />
-          <Field inputMode="decimal" label="Chiều cao (cm)" name="height" placeholder="160"
+          <Field
+            hint="Chỉ ghi số xăng-ti-mét"
+            inputMode="decimal"
+            label="Chiều cao (cm)"
+            name="height"
+            placeholder="VD: 160"
             defaultValue={profile?.height ?? ""}
             required
           />
@@ -889,14 +950,19 @@ export function SyllForm({ siteName }: { siteName: string }) {
               { value: "Không", label: "Không biết", icon: "🚫" },
             ]}
           />
-          <Field label="Bệnh về mắt" name="eyeDisease" placeholder="Không / cận thị / loạn thị…"
+          <Field
+            hint="Mắt bình thường thì gõ: Không"
+            label="Bệnh về mắt"
+            name="eyeDisease"
+            placeholder="VD: Cận thị 2 độ"
             defaultValue={profile?.eyeDisease ?? ""}
             required
           />
           <Field
+            hint="Không có bệnh gì cần theo dõi thì gõ: Không"
             label="Tiền sử bệnh cần theo dõi"
             name="medicalHistory"
-            placeholder="Không / hen suyễn, tim mạch…"
+            placeholder="VD: Hen suyễn, tim mạch"
             wide
             defaultValue={profile?.medicalHistory ?? ""}
             required
@@ -928,7 +994,12 @@ export function SyllForm({ siteName }: { siteName: string }) {
             ]}
             wide
           />
-          <Field label="Ghi chú thêm" name="notes" placeholder="Điều gì thầy cô cần biết thêm (nếu có)" wide
+          <Field
+            hint="Mục duy nhất được để trống"
+            label="Ghi chú thêm"
+            name="notes"
+            placeholder="VD: Em ở trọ gần trường"
+            wide
             defaultValue={profile?.notes ?? ""}
           />
         </Section>
