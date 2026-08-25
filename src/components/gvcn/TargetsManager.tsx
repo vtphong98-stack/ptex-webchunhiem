@@ -304,16 +304,16 @@ export function TargetsManager({
   }
 
   return (
-    <section className="card p-6 space-y-8">
+    <section className="card ct-root space-y-8">
       {/* Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">🎯 Thiết Lập Chỉ Tiêu Năm Học {yearName || targets.schoolYear}</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-slate-800">🎯 Thiết Lập Chỉ Tiêu Năm Học {yearName || targets.schoolYear}</h2>
           <p className="text-sm text-slate-500 mt-1">
             <strong>Chủ nhiệm</strong> (Rèn luyện 4 mức · Học lực 4 mức 100% + Xuất sắc xét riêng) và <strong>Bộ môn Toán</strong> (Theo từng lớp · 4 mức Tốt/Khá/Đạt/Chưa đạt).
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <a
             className="button-secondary text-sm"
             href="/chi-tieu"
@@ -348,8 +348,8 @@ export function TargetsManager({
       {/* ======================================================== */}
       {/* PHẦN A: CÔNG TÁC CHỦ NHIỆM                               */}
       {/* ======================================================== */}
-      <div className="border-2 border-indigo-200 rounded-3xl p-6 bg-indigo-50/20 space-y-6 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-100 pb-3">
+      <div className="ct-panel border-2 border-indigo-200 rounded-3xl bg-indigo-50/20 space-y-6 shadow-sm">
+        <div className="ct-head border-b border-indigo-100 pb-3">
           <div>
             <span className="text-xs font-black uppercase tracking-wider text-indigo-600 bg-indigo-100 px-2.5 py-0.5 rounded-full">
               PHẦN A
@@ -358,49 +358,52 @@ export function TargetsManager({
               👑 CHỈ TIÊU CÔNG TÁC CHỦ NHIỆM — LỚP {targets.homeroom?.className || "12A1"}
             </h3>
           </div>
-          <div className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-2xl border border-indigo-200 shadow-sm">
-            <span className="text-xs font-bold text-slate-700">Sĩ số lớp chủ nhiệm:</span>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              disabled={readOnly}
-              value={targets.homeroom?.totalStudents || 48}
-              onChange={(e) => {
-                const num = parseInt(e.target.value) || 0;
-                setTargets((prev) => ({
-                  ...prev,
-                  homeroom: { ...prev.homeroom, totalStudents: num },
-                }));
-                if (num > 0) {
-                  ["tot", "kha", "dat", "chuaDat"].forEach((k) => {
-                    const c = (targets.homeroom.conduct as unknown as Record<string, TargetMetric>)[k]?.count || 0;
-                    updateHomeroomConduct(k as keyof FourLevelMetric, c);
-                  });
-                  ["tot", "kha", "dat", "chuaDat", "xuatSac"].forEach((k) => {
-                    const c = (targets.homeroom.academic as unknown as Record<string, TargetMetric>)[k]?.count || 0;
-                    updateHomeroomAcademic(k as keyof HomeroomAcademicMetric, c);
-                  });
-                }
-              }}
-              className="w-16 px-2 py-0.5 border border-slate-300 rounded-lg text-center font-black text-sm text-indigo-900"
-            />
-            <span className="text-xs font-bold text-slate-500">HS</span>
+          <div className="ct-count">
+            <span>Sĩ số lớp chủ nhiệm:</span>
+            <span className="ct-count-num">
+              <input
+                type="number"
+                min={1}
+                max={100}
+                disabled={readOnly}
+                value={targets.homeroom?.totalStudents || 48}
+                onChange={(e) => {
+                  const num = parseInt(e.target.value) || 0;
+                  setTargets((prev) => ({
+                    ...prev,
+                    homeroom: { ...prev.homeroom, totalStudents: num },
+                  }));
+                  if (num > 0) {
+                    ["tot", "kha", "dat", "chuaDat"].forEach((k) => {
+                      const c = (targets.homeroom.conduct as unknown as Record<string, TargetMetric>)[k]?.count || 0;
+                      updateHomeroomConduct(k as keyof FourLevelMetric, c);
+                    });
+                    ["tot", "kha", "dat", "chuaDat", "xuatSac"].forEach((k) => {
+                      const c = (targets.homeroom.academic as unknown as Record<string, TargetMetric>)[k]?.count || 0;
+                      updateHomeroomAcademic(k as keyof HomeroomAcademicMetric, c);
+                    });
+                  }
+                }}
+                className="ct-num"
+              />
+              HS
+            </span>
           </div>
         </div>
 
         {/* 1. Rèn luyện lớp chủ nhiệm (4 mức: Tốt, Khá, Đạt, Chưa đạt - KHÔNG CÓ XUẤT SẮC) */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
-              <span>🌟</span> 1. Rèn luyện (Hạnh kiểm) — <span className="text-indigo-600 font-bold">4 mức đánh giá (Tổng = 100%)</span>
-            </h4>
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-              Tốt: {targets.homeroom.conduct.tot.percent}%
-            </span>
+        <div className="ct-block bg-white rounded-2xl border border-slate-200 space-y-3">
+          <div className="ct-head border-b border-slate-100 pb-2.5">
+            <div>
+              <h4 className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
+                <span>🌟</span> 1. Rèn luyện (Hạnh kiểm)
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">4 mức đánh giá · Tổng = 100% sĩ số</p>
+            </div>
+            <span className="ct-chip">Tốt: {targets.homeroom.conduct.tot.percent}%</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="ct-metrics">
             {[
               { key: "tot", label: "TỐT", color: "text-emerald-700 bg-emerald-50/80 border-emerald-200" },
               { key: "kha", label: "KHÁ", color: "text-blue-700 bg-blue-50/80 border-blue-200" },
@@ -409,20 +412,20 @@ export function TargetsManager({
             ].map(({ key, label, color }) => {
               const val = targets.homeroom.conduct[key as keyof FourLevelMetric] || { count: 0, percent: 0 };
               return (
-                <div key={key} className={`border-2 rounded-2xl p-3.5 text-center ${color} shadow-sm`}>
-                  <span className="block text-xs font-black uppercase mb-1.5">{label}</span>
-                  <div className="flex items-center justify-center gap-1.5">
+                <div key={key} className={`ct-metric ${color}`}>
+                  <span className="ct-metric-label">{label}</span>
+                  <div className="ct-metric-field">
                     <input
                       type="number"
                       min={0}
                       disabled={readOnly}
                       value={val.count}
                       onChange={(e) => updateHomeroomConduct(key as keyof FourLevelMetric, parseInt(e.target.value) || 0)}
-                      className="w-14 px-2 py-1 bg-white border border-slate-300 rounded-lg text-center font-black text-sm"
+                      className="ct-num"
                     />
-                    <span className="text-xs font-bold">HS</span>
+                    <span>HS</span>
                   </div>
-                  <span className="mt-2 block text-xs font-black opacity-90">
+                  <span className="ct-metric-pct">
                     {val.percent}%
                   </span>
                 </div>
@@ -432,8 +435,8 @@ export function TargetsManager({
         </div>
 
         {/* 2. Học tập lớp chủ nhiệm (4 mức cơ bản 100% + Xuất sắc xét riêng tính % toàn lớp) */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-2.5">
+        <div className="ct-block bg-white rounded-2xl border border-slate-200 space-y-4">
+          <div className="ct-head border-b border-slate-100 pb-2.5">
             <div>
               <h4 className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
                 <span>📚</span> 2. Học tập (Học lực cả năm) — Lớp {targets.homeroom?.className}
@@ -442,40 +445,38 @@ export function TargetsManager({
                 Vốn dĩ 4 mức <strong>Tốt · Khá · Đạt · Chưa đạt</strong> là 100%. Danh hiệu <strong>Xuất sắc</strong> được xét riêng tính % trên toàn bộ {hrTotal} học sinh lớp.
               </p>
             </div>
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+            <span className="ct-chip">
               Tốt + Khá: {((targets.homeroom.academic.tot?.percent || 0) + (targets.homeroom.academic.kha?.percent || 0)).toFixed(1)}%
             </span>
           </div>
 
           {/* KHỐI XUẤT SẮC XÉT RIÊNG */}
-          <div className="bg-gradient-to-r from-purple-50 via-indigo-50/60 to-purple-50 border-2 border-purple-300 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center text-xl shadow-sm">
-                🏆
-              </div>
-              <div>
+          <div className="ct-star bg-gradient-to-r from-purple-50 via-indigo-50/60 to-purple-50 border-2 border-purple-300 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="ct-star-icon">🏆</div>
+              <div className="min-w-0">
                 <span className="text-xs font-black text-purple-950 uppercase tracking-wider block">
                   DANH HIỆU HỌC SINH XUẤT SẮC (XÉT RIÊNG)
                 </span>
-                <span className="text-xs text-purple-700 font-medium">
+                <span className="block text-xs text-purple-700 font-medium leading-snug mt-0.5">
                   Chỉ tiêu khen thưởng tính % trên tổng số {hrTotal} học sinh toàn lớp
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-purple-200 shadow-sm">
-              <span className="text-xs font-bold text-slate-600">Chỉ tiêu Xuất sắc:</span>
-              <input
-                type="number"
-                min={0}
-                disabled={readOnly}
-                value={targets.homeroom.academic.xuatSac?.count ?? 0}
-                onChange={(e) => updateHomeroomAcademic("xuatSac", parseInt(e.target.value) || 0)}
-                className="w-14 px-2 py-1 bg-white border border-purple-400 rounded-lg text-center font-black text-sm text-purple-900"
-              />
-              <span className="text-xs font-bold text-slate-500">HS</span>
-              <span className="text-xs font-black text-purple-800 bg-purple-100 px-2.5 py-1 rounded-lg ml-1">
-                {targets.homeroom.academic.xuatSac?.percent ?? 0}% toàn lớp
+            <div className="ct-count">
+              <span>Chỉ tiêu Xuất sắc:</span>
+              <span className="ct-count-num">
+                <input
+                  type="number"
+                  min={0}
+                  disabled={readOnly}
+                  value={targets.homeroom.academic.xuatSac?.count ?? 0}
+                  onChange={(e) => updateHomeroomAcademic("xuatSac", parseInt(e.target.value) || 0)}
+                  className="ct-num"
+                />
+                HS
               </span>
+              <em className="ct-star-pct">{targets.homeroom.academic.xuatSac?.percent ?? 0}% toàn lớp</em>
             </div>
           </div>
 
@@ -484,7 +485,7 @@ export function TargetsManager({
             <span className="text-xs font-black text-slate-600 uppercase tracking-wider block">
               4 Mức Xếp Loại Học Lực Cơ Bản (Tổng = 100% Sĩ số)
             </span>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="ct-metrics">
               {[
                 { key: "tot", label: "TỐT (GIỎI)", color: "text-emerald-700 bg-emerald-50/80 border-emerald-200" },
                 { key: "kha", label: "KHÁ", color: "text-blue-700 bg-blue-50/80 border-blue-200" },
@@ -493,20 +494,20 @@ export function TargetsManager({
               ].map(({ key, label, color }) => {
                 const val = (targets.homeroom.academic as unknown as Record<string, TargetMetric>)[key] || { count: 0, percent: 0 };
                 return (
-                  <div key={key} className={`border-2 rounded-2xl p-3.5 text-center ${color} shadow-sm`}>
-                    <span className="block text-xs font-black uppercase mb-1.5">{label}</span>
-                    <div className="flex items-center justify-center gap-1.5">
+                  <div key={key} className={`ct-metric ${color}`}>
+                    <span className="ct-metric-label">{label}</span>
+                    <div className="ct-metric-field">
                       <input
                         type="number"
                         min={0}
                         disabled={readOnly}
                         value={val.count}
                         onChange={(e) => updateHomeroomAcademic(key as keyof HomeroomAcademicMetric, parseInt(e.target.value) || 0)}
-                        className="w-14 px-2 py-1 bg-white border border-slate-300 rounded-lg text-center font-black text-sm"
+                        className="ct-num"
                       />
-                      <span className="text-xs font-bold">HS</span>
+                      <span>HS</span>
                     </div>
-                    <span className="mt-2 block text-xs font-black opacity-90">
+                    <span className="ct-metric-pct">
                       {val.percent}%
                     </span>
                   </div>
@@ -520,8 +521,8 @@ export function TargetsManager({
       {/* ======================================================== */}
       {/* PHẦN B: GIẢNG DẠY BỘ MÔN TOÁN                            */}
       {/* ======================================================== */}
-      <div className="border-2 border-sky-200 rounded-3xl p-6 bg-sky-50/20 space-y-6 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100 pb-3">
+      <div className="ct-panel border-2 border-sky-200 rounded-3xl bg-sky-50/20 space-y-6 shadow-sm">
+        <div className="ct-head border-b border-sky-100 pb-3">
           <div>
             <span className="text-xs font-black uppercase tracking-wider text-sky-600 bg-sky-100 px-2.5 py-0.5 rounded-full">
               PHẦN B
@@ -548,21 +549,20 @@ export function TargetsManager({
         <div className="space-y-4">
           {targets.subjectTeaching.classes.map((cls, idx) => (
             <div key={cls.id || idx} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl">
-                <div className="flex items-center gap-3 flex-wrap flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-600">Tên lớp:</span>
-                    <input
-                      type="text"
-                      disabled={readOnly}
-                      value={cls.className}
-                      onChange={(e) => updateSubjectClassField(idx, "className", e.target.value)}
-                      placeholder="VD: 12A1"
-                      className="px-2.5 py-1 border border-slate-300 rounded-lg font-bold text-sm text-slate-800 w-28"
-                    />
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-600">Sĩ số:</span>
+              <div className="ct-class-head">
+                <div className="ct-field">
+                  <span>Tên lớp:</span>
+                  <input
+                    type="text"
+                    disabled={readOnly}
+                    value={cls.className}
+                    onChange={(e) => updateSubjectClassField(idx, "className", e.target.value)}
+                    placeholder="VD: 12A1"
+                  />
+                </div>
+                <div className="ct-field">
+                  <span>Sĩ số:</span>
+                  <span className="ct-count-num">
                     <input
                       type="number"
                       min={1}
@@ -578,15 +578,15 @@ export function TargetsManager({
                           });
                         }
                       }}
-                      className="w-16 px-2 py-1 border border-slate-300 rounded-lg text-center font-bold text-sm text-slate-800"
+                      className="ct-num"
                     />
-                    <span className="text-xs text-slate-500">HS</span>
-                  </div>
+                    HS
+                  </span>
                 </div>
 
                 {!readOnly && targets.subjectTeaching.classes.length > 1 && (
                   <button
-                    className="text-xs text-rose-600 hover:text-rose-800 font-semibold px-2.5 py-1 hover:bg-rose-50 rounded-lg transition"
+                    className="ct-remove"
                     onClick={() => removeSubjectClass(idx)}
                     type="button"
                     title="Xóa lớp này"
@@ -597,7 +597,7 @@ export function TargetsManager({
               </div>
 
               {/* 4 mức: Tốt, Khá, Đạt, Chưa đạt */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="ct-metrics">
                 {[
                   { key: "tot", label: "TỐT", color: "text-emerald-700 bg-emerald-50/80 border-emerald-200" },
                   { key: "kha", label: "KHÁ", color: "text-blue-700 bg-blue-50/80 border-blue-200" },
@@ -606,20 +606,20 @@ export function TargetsManager({
                 ].map(({ key, label, color }) => {
                   const val = cls[key as keyof FourLevelMetric] || { count: 0, percent: 0 };
                   return (
-                    <div key={key} className={`border-2 rounded-xl p-2.5 text-center ${color}`}>
-                      <span className="block text-[11px] font-black uppercase mb-1">{label}</span>
-                      <div className="flex items-center justify-center gap-1">
+                    <div key={key} className={`ct-metric ${color}`}>
+                      <span className="ct-metric-label">{label}</span>
+                      <div className="ct-metric-field">
                         <input
                           type="number"
                           min={0}
                           disabled={readOnly}
                           value={val.count}
                           onChange={(e) => updateSubjectClassMetric(idx, key as keyof FourLevelMetric, parseInt(e.target.value) || 0)}
-                          className="w-12 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-center font-bold text-xs"
+                          className="ct-num"
                         />
-                        <span className="text-[11px] font-semibold">HS</span>
+                        <span>HS</span>
                       </div>
-                      <span className="mt-1 block text-xs font-extrabold opacity-90">
+                      <span className="ct-metric-pct">
                         {val.percent}%
                       </span>
                     </div>
@@ -631,8 +631,8 @@ export function TargetsManager({
         </div>
 
         {/* BẢNG TỔNG HỢP BỘ MÔN TOÁN */}
-        <div className="bg-gradient-to-r from-slate-900 to-sky-950 text-white rounded-2xl p-5 shadow-md space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2 border-b border-white/10 pb-2.5">
+        <div className="ct-block bg-gradient-to-r from-slate-900 to-sky-950 text-white rounded-2xl shadow-md space-y-3">
+          <div className="ct-head border-b border-white/10 pb-2.5">
             <h4 className="font-extrabold text-sm uppercase tracking-wider text-sky-300 flex items-center gap-2">
               <span>📊</span> TỔNG HỢP BỘ MÔN TOÁN ({overallSubject.classCount} LỚP · {overallSubject.totalAll} HỌC SINH)
             </h4>
@@ -641,17 +641,17 @@ export function TargetsManager({
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="ct-metrics">
             {[
               { label: "TỐT", val: overallSubject.tot, color: "text-emerald-300 bg-emerald-500/15" },
               { label: "KHÁ", val: overallSubject.kha, color: "text-sky-300 bg-sky-500/15" },
               { label: "ĐẠT", val: overallSubject.dat, color: "text-amber-300 bg-amber-500/15" },
               { label: "CHƯA ĐẠT", val: overallSubject.chuaDat, color: "text-rose-300 bg-rose-500/15" },
             ].map(({ label, val, color }) => (
-              <div key={label} className={`rounded-xl p-3 border border-white/10 text-center ${color}`}>
-                <span className="block text-[11px] font-black opacity-80 uppercase">{label}</span>
+              <div key={label} className={`ct-metric border-white/10 ${color}`}>
+                <span className="ct-metric-label opacity-80">{label}</span>
                 <span className="text-xl font-black block my-1">{val.count} <span className="text-xs font-normal opacity-70">HS</span></span>
-                <span className="text-xs font-extrabold text-white">{val.percent}%</span>
+                <span className="ct-metric-pct text-white">{val.percent}%</span>
               </div>
             ))}
           </div>
@@ -661,7 +661,7 @@ export function TargetsManager({
       {/* ======================================================== */}
       {/* PHẦN C: DANH HIỆU, THI CỬ & PHONG TRÀO                   */}
       {/* ======================================================== */}
-      <div className="border border-amber-200 rounded-3xl p-6 bg-amber-50/20 space-y-4">
+      <div className="ct-panel border border-amber-200 rounded-3xl bg-amber-50/20 space-y-4">
         <h3 className="text-base font-bold text-amber-900 flex items-center gap-2 border-b border-amber-100 pb-2">
           <span>🏆</span> PHẦN C: Danh hiệu, Thi tốt nghiệp & Phong trào
         </h3>

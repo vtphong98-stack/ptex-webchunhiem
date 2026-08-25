@@ -5194,3 +5194,579 @@ button {
     font-size: 11px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   CHỈ TIÊU NĂM HỌC (tab GVCN)
+
+   Màn này lồng ba lớp hộp: thẻ ngoài → khối PHẦN → khối trắng. Mỗi lớp
+   một khoảng đệm 20–24px nên trên điện thoại 375px bốn ô số chỉ còn
+   ~80px mỗi ô, ô nhập bề ngang cố định (w-14) tràn hẳn ra ngoài viền.
+   Bố cục quy về đây để bóp đúng một nấc theo bề ngang, và để ô nhập co
+   theo cột thay vì giữ số đo cứng.
+   ═══════════════════════════════════════════════════════════════ */
+
+.ct-root,
+.ct-panel {
+  padding: 1.5rem;
+}
+
+.ct-block {
+  padding: 1.25rem;
+}
+
+/* Hàng tiêu đề: tên mục bên trái, huy hiệu % bên phải, hẹp thì xuống dòng
+   chứ không bóp tiêu đề thành từng chữ một. */
+.ct-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ct-head > * {
+  min-width: 0;
+}
+
+/* Huy hiệu % — trước đây mỗi chỗ một bộ tiện ích, giờ chung một khuôn. */
+.ct-chip {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid #a7f3d0;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* Cụm "Sĩ số lớp: [48] HS" */
+.ct-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid #c7d2fe;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  white-space: nowrap;
+}
+
+.ct-count > span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.ct-count .ct-num,
+.ct-field .ct-num {
+  flex: none;
+  width: 64px;
+}
+
+/* Ô số và chữ "HS" đi liền một cụm — để dòng không bẻ ngay giữa hai thứ, và
+   để mép phải của cụm thẳng hàng với các ô nhập khác. */
+.ct-count-num {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ct-num {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
+  color: inherit;
+}
+
+.ct-num:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.ct-num:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Bốn mức đánh giá: 4 cột trên máy tính, 2×2 trên điện thoại. */
+.ct-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ct-metric {
+  min-width: 0;
+  padding: 12px 10px;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+/* "CHƯA ĐẠT" xuống hai dòng còn "TỐT" một dòng — chốt chiều cao nhãn để
+   đáy bốn ô vẫn thẳng hàng, canh giữa để nhãn một dòng không bị hụt lên trên. */
+.ct-metric-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 2.1em;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ct-metric-field {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.ct-metric-field > span {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ct-metric-pct {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 900;
+  opacity: 0.9;
+}
+
+/* Khối "Học sinh Xuất sắc" — biểu tượng, chữ, ô nhập cùng một hàng khi
+   còn chỗ, hết chỗ thì rớt xuống nguyên cụm. */
+.ct-star {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ct-star-icon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #9333ea;
+  color: #fff;
+  font-size: 20px;
+}
+
+.ct-star .ct-count {
+  border-color: #d8b4fe;
+}
+
+.ct-star .ct-num {
+  border-color: #a855f7;
+  color: #581c87;
+}
+
+.ct-star-pct {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 9px;
+  background: #f3e8ff;
+  color: #6b21a8;
+  font-size: 11px;
+  font-weight: 900;
+  font-style: normal;
+}
+
+/* Hàng "Tên lớp / Sĩ số / Xóa" của từng lớp dạy bộ môn */
+.ct-class-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.ct-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ct-field > span {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.ct-field input[type="text"] {
+  width: 110px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ct-field .ct-num {
+  width: 64px;
+  flex: none;
+}
+
+.ct-remove {
+  margin-left: auto;
+  padding: 6px 10px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e11d48;
+}
+
+.ct-remove:hover {
+  background: #fff1f2;
+}
+
+@media (max-width: 640px) {
+  .ct-root,
+  .ct-panel,
+  .ct-block {
+    padding: 0.75rem;
+  }
+
+  /* Bốn mức dồn lên một hàng như trang Chỉ tiêu công khai. Mỗi ô còn chừng
+     48px nên ô nhập lấy trọn bề ngang và chữ "HS" phải giấu đi — nhãn mức ở
+     trên với % ở dưới đã đủ hiểu đó là số học sinh. */
+  .ct-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .ct-metric {
+    padding: 7px 4px;
+    border-width: 1px;
+    border-radius: 10px;
+  }
+
+  .ct-metric-label {
+    min-height: 2.2em;
+    font-size: 8.5px;
+    letter-spacing: 0;
+  }
+
+  .ct-metric-field {
+    gap: 0;
+    margin-top: 3px;
+  }
+
+  .ct-metric-field > span {
+    display: none;
+  }
+
+  .ct-metric .ct-num {
+    padding: 5px 2px;
+  }
+
+  .ct-metric-pct {
+    margin-top: 4px;
+    font-size: 9.5px;
+  }
+
+  /* Cụm sĩ số chiếm trọn hàng: nhãn một bên, ô nhập một bên, hết cảnh
+     "Sĩ số lớp chủ nhiệm" bị bẻ làm ba dòng trong một ô hẹp. */
+  .ct-count {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* 16px để iOS không tự phóng to trang khi bấm vào ô nhập. */
+  .ct-num {
+    font-size: 16px;
+  }
+
+  .ct-star .ct-count {
+    justify-content: flex-start;
+  }
+
+  .ct-star-pct {
+    margin-left: auto;
+  }
+
+  /* Hai ô nhập xếp dọc bên trái, nút Xóa nằm cạnh tên lớp — gọn hơn kiểu
+     xếp cả ba thành ba hàng. */
+  .ct-class-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+
+  .ct-class-head > .ct-field {
+    grid-column: 1;
+  }
+
+  /* Nhãn nằm trái, ô nhập dạt về phải — cụm "[48] HS" không bị tách đôi
+     như khi dùng space-between cho cả ba con. */
+  .ct-field > input,
+  .ct-field > .ct-count-num {
+    margin-left: auto;
+  }
+
+  .ct-field input[type="text"] {
+    width: 120px;
+    padding: 6px 8px;
+  }
+
+  .ct-remove {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    margin-left: 0;
+  }
+}
+
+/* Hàng tiêu đề PHẦN A/B/C ở trang Chỉ tiêu công khai.
+
+   Trước đây là một hàng flex ba con không cho xuống dòng: nhãn "PHẦN A",
+   tiêu đề, và dòng sĩ số. Trên điện thoại cả ba cùng bị bóp — nhãn bẻ làm
+   hai dòng, tiêu đề thành một cột hẹp ba dòng. Hẹp thì xếp dọc hẳn. */
+.ct-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ct-section-title > .ct-section-tag {
+  flex: none;
+}
+
+.ct-section-title > h2 {
+  min-width: 0;
+}
+
+.ct-section-title > .ct-section-meta {
+  flex: none;
+  margin-left: auto;
+  text-align: right;
+}
+
+/* Khung nội dung rộng nhất 896px; dòng phụ của PHẦN B dài gần 380px nên chỉ
+   dưới ~900px là tiêu đề đã bị ép còn một cột hẹp. Xếp dọc từ mốc đó. */
+@media (max-width: 900px) {
+  .ct-section-title {
+    display: block;
+  }
+
+  .ct-section-title > .ct-section-tag {
+    display: inline-block;
+    margin-bottom: 6px;
+  }
+
+  .ct-section-title > .ct-section-meta {
+    display: block;
+    margin: 4px 0 0;
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  .ct-section-title > h2 {
+    font-size: 1.05rem;
+    line-height: 1.25;
+  }
+}
+
+/* Bốn ô mức đánh giá ở trang Chỉ tiêu công khai.
+
+   Số đo đi qua biến để một chỗ đổi là cả bốn kiểu ô đổi theo: ô lớn (rèn
+   luyện, bảng tổng hợp), ô nhỏ .ct-stat-sm (học lực, từng lớp), và bản rút
+   gọn trên điện thoại ở cuối khối. */
+.ct-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ct-stat {
+  --stat-pad: 14px 12px;
+  --stat-num: 1.5rem;
+  --stat-bar: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  padding: var(--stat-pad);
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.ct-stat-sm {
+  --stat-pad: 11px 10px;
+  --stat-num: 1.25rem;
+  --stat-bar: 6px;
+}
+
+/* Mỗi mức một màu chữ riêng, lại có ô nền tối, nên nhãn và đơn vị chỉ giảm
+   độ đậm chứ không đặt màu cứng. */
+.ct-stat-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.2em;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: inherit;
+  opacity: 0.72;
+}
+
+.ct-stat-value {
+  margin: 8px 0;
+  white-space: nowrap;
+}
+
+.ct-stat-num {
+  font-size: var(--stat-num);
+  font-weight: 900;
+}
+
+.ct-stat-unit {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.65;
+}
+
+.ct-stat-bar {
+  width: 100%;
+  height: var(--stat-bar);
+  margin-bottom: 4px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.ct-stat-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.ct-stat-pct {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+@media (max-width: 640px) {
+  /* Xếp 2×2 thì riêng bốn ô đã cao gần 250px, mỗi mục phải cuộn một màn hình.
+     Dồn cả bốn lên một hàng, bóp chữ lại — cao còn khoảng 75px. */
+  .ct-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .ct-stat {
+    --stat-pad: 7px 3px;
+    --stat-num: 1.05rem;
+    --stat-bar: 4px;
+    border-width: 1px;
+    border-radius: 10px;
+  }
+
+  .ct-stat-label {
+    font-size: 8.5px;
+    letter-spacing: 0;
+  }
+
+  .ct-stat-value {
+    margin: 3px 0;
+  }
+
+  .ct-stat-unit {
+    margin-left: 2px;
+    font-size: 8px;
+  }
+
+  .ct-stat-bar {
+    margin-bottom: 3px;
+  }
+
+  .ct-stat-pct {
+    font-size: 9.5px;
+  }
+
+  .ct-hero {
+    padding: 1rem;
+  }
+
+  .ct-hero-title {
+    font-size: 1.35rem;
+    line-height: 1.2;
+  }
+
+  .ct-card {
+    padding: 0.85rem;
+  }
+
+  .ct-card-title {
+    font-size: 0.95rem;
+    line-height: 1.25;
+  }
+}
+
+@media (max-width: 400px) {
+  /* Máy hẹp cỡ 320px: kê nút Xóa cạnh tên lớp thì ô nhập chỉ còn hơn 20px,
+     tên lớp bị cắt. Hẹp tới mức này thì trả nút về hàng riêng. */
+  .ct-class-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ct-remove {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: end;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Cụm "12 HS / 25% toàn lớp" rớt xuống dòng riêng thì canh phải trông như
+     bị thụt vào giữa — trải ngang cho số và huy hiệu % đứng cạnh nhau. */
+  .ct-award-value {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+  }
+
+  .ct-award-value > * {
+    margin-top: 0;
+  }
+}

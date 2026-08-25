@@ -171,12 +171,12 @@ export default async function ChiTieuPage() {
         </div>
 
         {/* Hero Header */}
-        <section className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+        <section className="ct-hero bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
           <div className="relative z-10">
             <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold uppercase tracking-wider mb-3">
               Kế hoạch & Mục tiêu năm học {site.schoolYear}
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+            <h1 className="ct-hero-title text-2xl sm:text-3xl font-black tracking-tight">
               🎯 Chỉ Tiêu Chủ Nhiệm & Giảng Dạy Bộ Môn
             </h1>
             <p className="text-indigo-200 text-sm sm:text-base mt-2 font-medium">
@@ -190,57 +190,58 @@ export default async function ChiTieuPage() {
         {/* PHẦN A: CÔNG TÁC CHỦ NHIỆM                               */}
         {/* ======================================================== */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 border-b-2 border-indigo-600 pb-2">
-            <span className="bg-indigo-600 text-white text-xs font-black px-2.5 py-1 rounded-md uppercase">
+          <div className="ct-section-title border-b-2 border-indigo-600 pb-2">
+            <span className="ct-section-tag bg-indigo-600 text-white text-xs font-black px-2.5 py-1 rounded-md uppercase">
               PHẦN A
             </span>
             <h2 className="text-xl font-black text-slate-800">
               CHỈ TIÊU CÔNG TÁC CHỦ NHIỆM — LỚP {homeroomClass}
             </h2>
-            <span className="text-xs font-semibold text-slate-500 ml-auto">
+            <span className="ct-section-meta text-xs font-semibold text-slate-500">
               Sĩ số: <strong>{targets.homeroom?.totalStudents}</strong> HS
             </span>
           </div>
 
           {/* 1. Rèn luyện lớp chủ nhiệm (4 mức: Tốt, Khá, Đạt, Chưa đạt = 100%) */}
-          <section className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
-              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                <span>🌟</span> 1. Chỉ tiêu Rèn luyện (Hạnh kiểm) — <span className="text-emerald-700 font-bold">4 mức đánh giá (Tổng = 100%)</span>
-              </h3>
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                Tốt: {targets.homeroom.conduct.tot.percent}%
-              </span>
+          <section className="ct-card bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 space-y-4">
+            <div className="ct-head border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <span>🌟</span> 1. Chỉ tiêu Rèn luyện (Hạnh kiểm)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">4 mức đánh giá · Tổng = 100% sĩ số</p>
+              </div>
+              <span className="ct-chip">Tốt: {targets.homeroom.conduct.tot.percent}%</span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="ct-stats">
               {[
                 { label: "TỐT", val: targets.homeroom.conduct.tot, color: "from-emerald-500 to-teal-600", bg: "bg-emerald-50/70 text-emerald-900 border-emerald-200" },
                 { label: "KHÁ", val: targets.homeroom.conduct.kha, color: "from-blue-500 to-cyan-600", bg: "bg-blue-50/70 text-blue-900 border-blue-200" },
                 { label: "ĐẠT", val: targets.homeroom.conduct.dat, color: "from-amber-500 to-orange-600", bg: "bg-amber-50/70 text-amber-900 border-amber-200" },
                 { label: "CHƯA ĐẠT", val: targets.homeroom.conduct.chuaDat, color: "from-rose-500 to-red-600", bg: "bg-rose-50/70 text-rose-900 border-rose-200" },
               ].map(({ label, val, color, bg }) => (
-                <div key={label} className={`border-2 rounded-2xl p-4 text-center ${bg} shadow-sm flex flex-col justify-between`}>
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-600">{label}</span>
-                  <div className="my-2">
-                    <span className="text-2xl font-black">{val?.count ?? 0}</span>
-                    <span className="text-xs font-bold text-slate-500 ml-1">HS</span>
+                <div key={label} className={`ct-stat border-2 ${bg}`}>
+                  <span className="ct-stat-label">{label}</span>
+                  <div className="ct-stat-value">
+                    <span className="ct-stat-num">{val?.count ?? 0}</span>
+                    <span className="ct-stat-unit">HS</span>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden mb-1">
+                  <div className="ct-stat-bar">
                     <div
-                      className={`h-full rounded-full bg-gradient-to-r ${color}`}
+                      className={`ct-stat-fill bg-gradient-to-r ${color}`}
                       style={{ width: `${Math.min(val?.percent ?? 0, 100)}%` }}
                     />
                   </div>
-                  <span className="text-xs font-black">{val?.percent ?? 0}%</span>
+                  <span className="ct-stat-pct">{val?.percent ?? 0}%</span>
                 </div>
               ))}
             </div>
           </section>
 
           {/* 2. Học tập lớp chủ nhiệm (4 mức cơ bản 100% + Xuất sắc xét riêng) */}
-          <section className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+          <section className="ct-card bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 space-y-4">
+            <div className="ct-head border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
                   <span>📚</span> 2. Chỉ tiêu Học tập (Học lực cả năm) — Lớp {homeroomClass}
@@ -249,7 +250,7 @@ export default async function ChiTieuPage() {
                   Vốn dĩ 4 mức <strong>Tốt · Khá · Đạt · Chưa đạt</strong> là 100%. Danh hiệu <strong>Xuất sắc</strong> được xét riêng tính % trên toàn bộ học sinh lớp.
                 </p>
               </div>
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+              <span className="ct-chip">
                 Tốt + Khá: {((targets.homeroom.academic.tot?.percent || 0) + (targets.homeroom.academic.kha?.percent || 0)).toFixed(1)}%
               </span>
             </div>
@@ -264,12 +265,12 @@ export default async function ChiTieuPage() {
                   <span className="text-xs font-black text-purple-950 uppercase tracking-wider block">
                     DANH HIỆU HỌC SINH XUẤT SẮC (XÉT RIÊNG)
                   </span>
-                  <span className="text-xs text-purple-700 font-medium">
+                  <span className="block text-xs text-purple-700 font-medium leading-snug mt-0.5">
                     Chỉ tiêu khen thưởng tính % trên tổng số {targets.homeroom?.totalStudents} học sinh toàn lớp
                   </span>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="ct-award-value text-right">
                 <div className="text-2xl font-black text-purple-950">
                   {targets.homeroom.academic.xuatSac?.count ?? 0} <span className="text-xs font-bold text-purple-700">HS</span>
                 </div>
@@ -284,26 +285,26 @@ export default async function ChiTieuPage() {
               <span className="text-xs font-black text-slate-600 uppercase tracking-wider block">
                 4 Mức Xếp Loại Học Lực Cơ Bản (Tổng = 100% Sĩ số)
               </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="ct-stats">
                 {[
                   { label: "TỐT (GIỎI)", val: targets.homeroom.academic.tot, color: "from-emerald-500 to-green-600", bg: "bg-emerald-50/70 text-emerald-900 border-emerald-200" },
                   { label: "KHÁ", val: targets.homeroom.academic.kha, color: "from-blue-500 to-sky-600", bg: "bg-blue-50/70 text-blue-900 border-blue-200" },
                   { label: "ĐẠT", val: targets.homeroom.academic.dat, color: "from-amber-500 to-yellow-600", bg: "bg-amber-50/70 text-amber-900 border-amber-200" },
                   { label: "CHƯA ĐẠT", val: targets.homeroom.academic.chuaDat, color: "from-rose-500 to-red-600", bg: "bg-rose-50/70 text-rose-900 border-rose-200" },
                 ].map(({ label, val, color, bg }) => (
-                  <div key={label} className={`border-2 rounded-2xl p-3.5 text-center ${bg} shadow-sm flex flex-col justify-between`}>
-                    <span className="text-xs font-black uppercase tracking-wider text-slate-600">{label}</span>
-                    <div className="my-1.5">
-                      <span className="text-xl font-black">{val?.count ?? 0}</span>
-                      <span className="text-xs font-bold text-slate-500 ml-1">HS</span>
+                  <div key={label} className={`ct-stat ct-stat-sm border-2 ${bg}`}>
+                    <span className="ct-stat-label">{label}</span>
+                    <div className="ct-stat-value">
+                      <span className="ct-stat-num">{val?.count ?? 0}</span>
+                      <span className="ct-stat-unit">HS</span>
                     </div>
-                    <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden mb-1">
+                    <div className="ct-stat-bar">
                       <div
-                        className={`h-full rounded-full bg-gradient-to-r ${color}`}
+                        className={`ct-stat-fill bg-gradient-to-r ${color}`}
                         style={{ width: `${Math.min(val?.percent ?? 0, 100)}%` }}
                       />
                     </div>
-                    <span className="text-xs font-black">{val?.percent ?? 0}%</span>
+                    <span className="ct-stat-pct">{val?.percent ?? 0}%</span>
                   </div>
                 ))}
               </div>
@@ -315,23 +316,23 @@ export default async function ChiTieuPage() {
         {/* PHẦN B: GIẢNG DẠY BỘ MÔN TOÁN                            */}
         {/* ======================================================== */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 border-b-2 border-sky-600 pb-2">
-            <span className="bg-sky-600 text-white text-xs font-black px-2.5 py-1 rounded-md uppercase">
+          <div className="ct-section-title border-b-2 border-sky-600 pb-2">
+            <span className="ct-section-tag bg-sky-600 text-white text-xs font-black px-2.5 py-1 rounded-md uppercase">
               PHẦN B
             </span>
             <h2 className="text-xl font-black text-slate-800">
               CHỈ TIÊU GIẢNG DẠY BỘ MÔN TOÁN (THEO TỪNG LỚP)
             </h2>
-            <span className="text-xs font-semibold text-slate-500 ml-auto">
+            <span className="ct-section-meta text-xs font-semibold text-slate-500">
               Đánh giá theo 4 mức: <strong>TỐT, KHÁ, ĐẠT, CHƯA ĐẠT</strong> (mức cao nhất là Tốt)
             </span>
           </div>
 
           {/* BẢNG TỔNG HỢP BỘ MÔN TOÁN */}
-          <section className="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-lg space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-2 border-b border-white/10 pb-3">
+          <section className="ct-card bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-lg space-y-4">
+            <div className="ct-head border-b border-white/10 pb-3">
               <div>
-                <h3 className="text-lg font-black flex items-center gap-2 text-sky-300">
+                <h3 className="ct-card-title text-lg font-black flex items-center gap-2 text-sky-300">
                   <span>📊</span> TỔNG HỢP BỘ MÔN TOÁN ({overallSub.classCount} LỚP DẠY · {overallSub.totalSubStudents} HỌC SINH)
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
@@ -343,19 +344,20 @@ export default async function ChiTieuPage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="ct-stats">
               {[
                 { label: "TỐT", val: overallSub.tot, color: "text-emerald-300 bg-emerald-500/20 border-emerald-500/30" },
                 { label: "KHÁ", val: overallSub.kha, color: "text-sky-300 bg-sky-500/20 border-sky-500/30" },
                 { label: "ĐẠT", val: overallSub.dat, color: "text-amber-300 bg-amber-500/20 border-amber-500/30" },
                 { label: "CHƯA ĐẠT", val: overallSub.chuaDat, color: "text-rose-300 bg-rose-500/20 border-rose-500/30" },
               ].map(({ label, val, color }) => (
-                <div key={label} className={`rounded-2xl p-3.5 border text-center ${color}`}>
-                  <span className="block text-xs font-black opacity-80 uppercase tracking-wider">{label}</span>
-                  <span className="text-2xl font-black block my-1">
-                    {val.count} <span className="text-xs font-normal opacity-70">HS</span>
-                  </span>
-                  <span className="text-xs font-extrabold text-white">{val.percent}%</span>
+                <div key={label} className={`ct-stat border ${color}`}>
+                  <span className="ct-stat-label">{label}</span>
+                  <div className="ct-stat-value">
+                    <span className="ct-stat-num">{val.count}</span>
+                    <span className="ct-stat-unit">HS</span>
+                  </div>
+                  <span className="ct-stat-pct text-white">{val.percent}%</span>
                 </div>
               ))}
             </div>
@@ -364,9 +366,9 @@ export default async function ChiTieuPage() {
           {/* CHI TIẾT TỪNG LỚP DẠY TOÁN */}
           <section className="space-y-3">
             {subjectClasses.map((cls, idx) => (
-              <div key={cls.id || idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
-                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-2.5">
-                  <div className="flex items-center gap-2.5">
+              <div key={cls.id || idx} className="ct-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                <div className="ct-head border-b border-slate-100 pb-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
                     <span className="w-7 h-7 rounded-lg bg-sky-600 text-white font-black text-xs flex items-center justify-center shadow-sm">
                       {idx + 1}
                     </span>
@@ -380,26 +382,26 @@ export default async function ChiTieuPage() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="ct-stats">
                   {[
                     { label: "TỐT", val: cls.tot, color: "from-emerald-500 to-green-600", bg: "bg-emerald-50/50 text-emerald-900 border-emerald-200" },
                     { label: "KHÁ", val: cls.kha, color: "from-blue-500 to-sky-600", bg: "bg-blue-50/50 text-blue-900 border-blue-200" },
                     { label: "ĐẠT", val: cls.dat, color: "from-amber-500 to-yellow-600", bg: "bg-amber-50/50 text-amber-900 border-amber-200" },
                     { label: "CHƯA ĐẠT", val: cls.chuaDat, color: "from-rose-500 to-red-600", bg: "bg-rose-50/50 text-rose-900 border-rose-200" },
                   ].map(({ label, val, color, bg }) => (
-                    <div key={label} className={`border rounded-xl p-3 text-center ${bg} flex flex-col justify-between`}>
-                      <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">{label}</span>
-                      <div className="my-1">
-                        <span className="text-xl font-black">{val?.count ?? 0}</span>
-                        <span className="text-[11px] font-bold text-slate-500 ml-1">HS</span>
+                    <div key={label} className={`ct-stat ct-stat-sm border ${bg}`}>
+                      <span className="ct-stat-label">{label}</span>
+                      <div className="ct-stat-value">
+                        <span className="ct-stat-num">{val?.count ?? 0}</span>
+                        <span className="ct-stat-unit">HS</span>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden mb-1">
+                      <div className="ct-stat-bar">
                         <div
-                          className={`h-full rounded-full bg-gradient-to-r ${color}`}
+                          className={`ct-stat-fill bg-gradient-to-r ${color}`}
                           style={{ width: `${Math.min(val?.percent ?? 0, 100)}%` }}
                         />
                       </div>
-                      <span className="text-xs font-black">{val?.percent ?? 0}%</span>
+                      <span className="ct-stat-pct">{val?.percent ?? 0}%</span>
                     </div>
                   ))}
                 </div>
@@ -412,8 +414,8 @@ export default async function ChiTieuPage() {
         {/* PHẦN C: DANH HIỆU & PHONG TRÀO                           */}
         {/* ======================================================== */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 border-b-2 border-amber-500 pb-2">
-            <span className="bg-amber-500 text-white text-xs font-black px-2.5 py-1 rounded-md uppercase">
+          <div className="ct-section-title border-b-2 border-amber-500 pb-2">
+            <span className="ct-section-tag bg-amber-500 text-white text-xs font-black px-2.5 py-1 rounded-md uppercase">
               PHẦN C
             </span>
             <h2 className="text-xl font-black text-slate-800">
@@ -421,7 +423,7 @@ export default async function ChiTieuPage() {
             </h2>
           </div>
 
-          <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+          <section className="ct-card bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="border border-slate-100 rounded-2xl p-4 bg-slate-50/70">
                 <span className="text-xs font-bold text-slate-500 uppercase block mb-1">🏅 Danh hiệu lớp phấn đấu</span>
