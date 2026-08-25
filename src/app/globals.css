@@ -343,6 +343,33 @@ button {
   color: rgba(255, 255, 255, 0.76);
 }
 
+/* Khối tên thầy là lối vào khu vực thiết lập. Giữ nguyên dáng cũ; dấu hiệu
+   bấm được chỉ là bánh răng mờ bên phải, sáng lên khi rê chuột hoặc tab tới.
+   Chọn theo span.<lớp> để thắng .site-hero-teacher span:last-child ở trên. */
+a.site-hero-teacher {
+  color: inherit;
+  text-decoration: none;
+}
+
+.site-hero-teacher > span.site-hero-teacher-go {
+  flex: none;
+  margin-left: auto;
+  font-size: 14px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.62);
+  transition: color 0.15s ease;
+}
+
+a.site-hero-teacher:hover > span.site-hero-teacher-go,
+a.site-hero-teacher:focus-visible > span.site-hero-teacher-go {
+  color: #fff;
+}
+
+a.site-hero-teacher:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* Cấp 1 — việc chính, trắng đặc */
 .site-hero-primary {
   position: relative;

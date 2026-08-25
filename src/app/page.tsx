@@ -56,7 +56,10 @@ export default async function HomePage() {
             <span className="site-hero-class">{site.className}</span>
             <span className="site-hero-sub">Lớp chủ nhiệm</span>
           </h1>
-          <div className="site-hero-teacher">
+          {/* Lối tắt vào khu vực thiết lập của GVCN. Dáng vẫn như cũ, chỉ thêm
+              bánh răng mờ ở mép phải — thầy biết bấm được, học sinh bấm nhầm
+              thì cũng chỉ gặp màn hình đăng nhập. */}
+          <Link className="site-hero-teacher" href="/dashboard" title="Vào khu vực thiết lập GVCN">
             <span aria-hidden className="site-hero-avatar">
               {initials}
             </span>
@@ -64,7 +67,10 @@ export default async function HomePage() {
               <strong>{site.gvcnDisplayName}</strong>
               <span>Giáo viên chủ nhiệm</span>
             </div>
-          </div>
+            <span aria-hidden className="site-hero-teacher-go">
+              ⚙
+            </span>
+          </Link>
           {/* Ba cấp tác vụ: việc chính (trắng đặc) → liên hệ thầy (kính mờ) →
               liên kết ra ngoài (viền mảnh). Liên hệ đứng trước liên kết ngoài
               vì gọi được thầy quan trọng hơn mở chatbot hướng nghiệp. */}
