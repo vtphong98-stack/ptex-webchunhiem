@@ -4024,6 +4024,10 @@ a.site-hero-teacher:hover strong {
 /* ── GVCN desk: new panels ─────────────────── */
 .gvcn-stack {
   display: grid;
+  /* Cột auto lấy bề ngang theo nội dung rộng nhất, nên bảng thống kê học kỳ
+     (kéo ngang được) kéo luôn cả khối tra cứu ra 980px và tràn màn hình điện
+     thoại. minmax(0, 1fr) chốt cột theo bề ngang khung chứa. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
@@ -5796,4 +5800,41 @@ a.site-hero-teacher:hover strong {
   .ct-award-value > * {
     margin-top: 0;
   }
+}
+
+/* Ngày sinh: ba ô rời đọc thành một câu "Ngày … tháng … năm …". Ô số nên tắt
+   mũi tên tăng giảm — trong ô rộng 54px chúng chiếm mất chỗ của chữ số. */
+.syll-birth {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.syll-birth label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.syll-birth input {
+  width: 62px;
+  min-width: 0;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.syll-birth-year input {
+  width: 82px;
+}
+
+.syll-birth input::-webkit-outer-spin-button,
+.syll-birth input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
 }

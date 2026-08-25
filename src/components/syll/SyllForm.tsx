@@ -101,6 +101,13 @@ function foldVi(value: string) {
     .toLowerCase();
 }
 
+/** Hồ sơ trả ngày sinh dạng 24/08/2010; ba ô Ngày / tháng / năm cần ba số rời. */
+function splitBirth(text?: string) {
+  const match = (text || "").match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/);
+  if (!match) return { day: "", month: "", year: "" };
+  return { day: match[1], month: match[2], year: match[3] ?? "" };
+}
+
 function Field({
   label,
   name,
@@ -352,6 +359,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
 
   const selected = roster.find((student) => student._id === studentId) ?? null;
   const filledCount = roster.filter((student) => student.submitted).length;
+  const birth = splitBirth(profile?.birthDate);
 
   /** Chỗ nào đã có bạn ngồi thì khoá lại, trừ chỗ của chính em đang khai. */
   const takenSeats = useMemo(() => {
@@ -595,15 +603,59 @@ export function SyllForm({ siteName }: { siteName: string }) {
         <legend className="sr-only">Thông tin sơ yếu lý lịch</legend>
 
         <Section title="2. Thông tin học sinh">
-          <Field
-            hint="Ghi đủ ngày/tháng/năm"
-            inputMode="numeric"
-            label="Ngày sinh"
-            name="birthDate"
-            placeholder="24/08/2010"
-            required
-            defaultValue={profile?.birthDate ?? ""}
-          />
+          {/* Ba ô rời "Ngày … tháng … năm …": mỗi ô chỉ nhận một hai chữ số nên
+              không còn cảnh gõ nhầm thứ tự ngày với tháng, và bàn phím số trên
+              điện thoại không có dấu "/" cũng không sao. */}
+          <div className="syll-field syll-span">
+            <span className="syll-label">
+              Ngày sinh<b aria-hidden="true"> *</b>
+            </span>
+            <div className="syll-birth">
+              <label>
+                <span>Ngày</span>
+                <input
+                  autoComplete="off"
+                  defaultValue={birth.day}
+                  inputMode="numeric"
+                  max={31}
+                  min={1}
+                  name="birthDay"
+                  placeholder="20"
+                  required
+                  type="number"
+                />
+              </label>
+              <label>
+                <span>tháng</span>
+                <input
+                  autoComplete="off"
+                  defaultValue={birth.month}
+                  inputMode="numeric"
+                  max={12}
+                  min={1}
+                  name="birthMonth"
+                  placeholder="10"
+                  required
+                  type="number"
+                />
+              </label>
+              <label className="syll-birth-year">
+                <span>năm</span>
+                <input
+                  autoComplete="off"
+                  defaultValue={birth.year}
+                  inputMode="numeric"
+                  max={2020}
+                  min={1990}
+                  name="birthYear"
+                  placeholder="2009"
+                  required
+                  type="number"
+                />
+              </label>
+            </div>
+            <em className="syll-hint-inline">Thầy cô đã điền sẵn theo sổ lớp — em xem lại, sai thì sửa.</em>
+          </div>
           <Field label="Nơi sinh (tỉnh)" name="birthPlace" placeholder="An Giang" required
             defaultValue={profile?.birthPlace ?? ""}
           />

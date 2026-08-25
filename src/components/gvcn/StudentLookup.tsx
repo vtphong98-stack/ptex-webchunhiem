@@ -98,7 +98,7 @@ export function StudentLookup({ yearName }: { yearName: string }) {
           value={query}
         />
         {error ? <p className="mt-2 text-sm text-amber-700">{error}</p> : null}
-        <ul className="mt-3 max-h-[70vh] space-y-1 overflow-auto">
+        <ul className="mt-3 max-h-[300px] space-y-1 overflow-auto lg:max-h-[70vh]">
           {filtered.map((student) => (
             <li key={student._id}>
               <button
@@ -118,7 +118,7 @@ export function StudentLookup({ yearName }: { yearName: string }) {
         </ul>
       </div>
 
-      <div className="card p-5">
+      <div className="card p-4 sm:p-5">
         {!selected ? (
           <p className="text-sm text-slate-500">Chưa có học sinh trong năm này. Em điền sơ yếu lý lịch để tạo hồ sơ.</p>
         ) : (

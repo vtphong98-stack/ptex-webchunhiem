@@ -45,15 +45,86 @@ function readSeat(form: FormData, teamNumber: number | null, deskCount: number):
   return { team: teamNumber, desk, side };
 }
 
-function parseBirth(raw: string) {
-  const match = raw.trim().match(/^(\d{1,2})[/\-.](\d{1,2})(?:[/\-.](\d{4}))?$/);
-  if (!match) return { birthDay: 0, birthMonth: 0, birthYear: null as number | null };
-  return {
-    birthDay: Number(match[1]),
-    birthMonth: Number(match[2]),
-    birthYear: match[3] ? Number(match[3]) : null,
-  };
+/**
+ * Ngày sinh em gõ tay. Bàn phím số trên điện thoại nhiều máy không có dấu "/"
+ * nên nhận cả tám chữ số liền lẫn dấu ngăn khác, và nhận luôn dạng máy tính
+ * yyyy-mm-dd.
+ *
+ * Trả null khi không đọc được hoặc ngày không có thật. Bản cũ trả về 0/0 rồi
+ * lưu thẳng, nên em gõ "24082010" là mất ngày sinh mà không ai hay biết —
+ * đúng ba em trong lớp đã dính.
+ */
+/** Ngày phải có thật: Date tự dồn 31/02 thành 03/03 nên so lại cả ba số. */
+function validBirth(day: number, month: number, year: number) {
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  const real =
+    probe.getUTCFullYear() === year && probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
+  if (!real || year < 1900 || year > new Date().getUTCFullYear()) return null;
+  return { birthDay: day, birthMonth: month, birthYear: year };
 }
+
+/** Ba ô Ngày / tháng / năm trên form. */
+function readBirthParts(form: FormData) {
+  const day = Number(toPlainString(form.get("birthDay")));
+  const month = Number(toPlainString(form.get("birthMonth")));
+  const year = Number(toPlainString(form.get("birthYear")));
+  if (!day && !month && !year) return null;
+  if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return null;
+  return validBirth(day, month, year);
+}
+
+function parseBirth(raw: string) {
+  const text = raw.trim();
+  const iso = text.match(/^(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})$/);
+  const dmy = text.match(/^(\d{1,2})\s*[/\-. ]\s*(\d{1,2})\s*[/\-. ]\s*(\d{4})$/);
+
+  let day = 0;
+  let month = 0;
+  let year = 0;
+  if (iso) {
+    [year, month, day] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
+  } else if (dmy) {
+    [day, month, year] = [Number(dmy[1]), Number(dmy[2]), Number(dmy[3])];
+  } else if (/^\d{8}$/.test(text)) {
+    [day, month, year] = [Number(text.slice(0, 2)), Number(text.slice(2, 4)), Number(text.slice(4))];
+  } else {
+    return null;
+  }
+
+  return validBirth(day, month, year);
+}
+
+/**
+ * Mọi mục đều bắt buộc trừ "Ghi chú thêm". Nhãn giữ đúng như trên form để câu
+ * báo thiếu chỉ thẳng vào ô em bỏ trống, thay vì lưu một hồ sơ rỗng nửa vời.
+ */
+const REQUIRED_SYLL_FIELDS: ReadonlyArray<readonly [string, string]> = [
+  ["birthPlace", "Nơi sinh (tỉnh)"],
+  ["ethnicity", "Dân tộc"],
+  ["gender", "Giới tính"],
+  ["policy", "Diện chính sách"],
+  ["conduct", "Rèn luyện năm trước"],
+  ["academic", "Học tập năm trước"],
+  ["addressGroup", "Tổ / ấp / khóm"],
+  ["addressWard", "Xã / phường"],
+  ["addressProvince", "Tỉnh / thành phố"],
+  ["fatherName", "Họ và tên cha"],
+  ["fatherJob", "Nghề nghiệp cha"],
+  ["motherName", "Họ và tên mẹ"],
+  ["motherJob", "Nghề nghiệp mẹ"],
+  ["contactPhone", "SĐT liên lạc"],
+  ["motherPhone", "SĐT của mẹ"],
+  ["studentPhone", "SĐT của em"],
+  ["email", "Địa chỉ email"],
+  ["idNumber", "Số CCCD / CMND"],
+  ["weight", "Cân nặng (kg)"],
+  ["height", "Chiều cao (cm)"],
+  ["canSwim", "Biết bơi"],
+  ["eyeDisease", "Bệnh về mắt"],
+  ["medicalHistory", "Tiền sử bệnh cần theo dõi"],
+  ["transport", "Phương tiện đến trường"],
+  ["onlineLearning", "Điều kiện học trực tuyến"],
+];
 
 export async function GET() {
   const context = await resolveSyllContext();
@@ -178,6 +249,12 @@ export async function POST(request: Request) {
       );
     }
   }
+  if (!duty.teamNumber) {
+    return NextResponse.json({ error: "Em chưa chọn tổ của mình." }, { status: 400 });
+  }
+  if (!seat) {
+    return NextResponse.json({ error: "Em chưa chọn chỗ ngồi trong sơ đồ tổ." }, { status: 400 });
+  }
   const clash = await findDutyConflict(context.schoolYearId, String(targetId), duty);
   if (clash) {
     return NextResponse.json(
@@ -186,7 +263,35 @@ export async function POST(request: Request) {
     );
   }
 
-  const birth = parseBirth(toPlainString(form.get("birthDate")));
+  // Thiếu mục nào thì trả về đúng tên mục đó và không ghi gì — trước đây ô
+  // trống vẫn lưu, hồ sơ nằm trong sổ mà bỏ trống một nửa.
+  const missing = REQUIRED_SYLL_FIELDS.filter(([name]) => !toPlainString(form.get(name))).map(
+    ([, label]) => label,
+  );
+  const birthBlank =
+    !toPlainString(form.get("birthDay")) ||
+    !toPlainString(form.get("birthMonth")) ||
+    !toPlainString(form.get("birthYear"));
+  if (birthBlank && !toPlainString(form.get("birthDate"))) missing.unshift("Ngày sinh");
+  if (missing.length) {
+    return NextResponse.json(
+      {
+        error: `Em còn bỏ trống ${missing.length} mục: ${missing.join(" · ")}. Điền đủ rồi gửi lại giúp thầy cô nhé.`,
+      },
+      { status: 400 },
+    );
+  }
+
+  // Ba ô rời là đường chính; chuỗi birthDate chỉ còn để đỡ cho trang cũ mà em
+  // nào đó đang mở dở chưa tải lại.
+  const birth = readBirthParts(form) ?? parseBirth(toPlainString(form.get("birthDate")));
+  if (!birth) {
+    return NextResponse.json(
+      { error: "Ngày sinh chưa đúng. Điền đủ ngày, tháng, năm — ví dụ ngày 20 tháng 10 năm 2009." },
+      { status: 400 },
+    );
+  }
+
   const contactPhone = toPlainString(form.get("contactPhone"));
   const fatherName = toPlainString(form.get("fatherName"));
   const motherName = toPlainString(form.get("motherName"));
