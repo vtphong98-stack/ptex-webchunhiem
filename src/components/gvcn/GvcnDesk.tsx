@@ -61,11 +61,13 @@ import { SemesterStats } from "@/components/gvcn/SemesterStats";
 import { TargetsCompare } from "@/components/gvcn/TargetsCompare";
 import { TargetsManager } from "@/components/gvcn/TargetsManager";
 import { MilestonesManager } from "@/components/gvcn/MilestonesManager";
+import { AttendanceManager } from "@/components/gvcn/AttendanceManager";
 
 type DeskView =
   | "weeks"
   | "teams"
   | "syll"
+  | "attendance"
   | "lookup"
   | "timetable"
   | "notices"
@@ -87,6 +89,7 @@ const DESK_TABS: Array<{ view: DeskView; label: string; icon: string; tone: stri
   { view: "notices", label: "Thông báo", icon: "📢", tone: "tone-notice", title: "Thông báo GVCN" },
   { view: "teams", label: "Ban cán sự", icon: "👥", tone: "tone-team", title: "Phân công ban cán sự" },
   { view: "syll", label: "Sơ yếu lý lịch", icon: "📇", tone: "tone-syll", title: "Sơ yếu lý lịch & chỗ ngồi" },
+  { view: "attendance", label: "Điểm danh", icon: "✅", tone: "tone-attend", title: "Điểm danh theo dịp" },
   { view: "lookup", label: "Tra cứu HS", icon: "🔍", tone: "tone-student", title: "Tra cứu học sinh" },
   { view: "timetable", label: "TKB", icon: "📅", tone: "tone-tkb", title: "Thời khóa biểu" },
   { view: "teaching", label: "Lịch dạy", icon: "📋", tone: "tone-teach", title: "Lịch dạy & Báo giảng" },
@@ -417,6 +420,8 @@ export function GvcnDesk({
         <TeamManager readOnly={!isCurrentYear} yearName={yearName} />
       ) : deskView === "syll" ? (
         <SyllManager yearName={yearName} />
+      ) : deskView === "attendance" ? (
+        <AttendanceManager readOnly={!isCurrentYear} yearName={yearName} />
       ) : deskView === "lookup" ? (
         <div className="gvcn-stack">
           <StudentLookup yearName={yearName} />

@@ -6188,3 +6188,399 @@ a.site-hero-teacher:hover strong {
   border-color: #667eea;
   box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.12);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ĐIỂM DANH THEO DỊP (tab GVCN)
+
+   Bảng 42 dòng, mỗi dòng hai ô tick. Trên điện thoại ô tick phải đủ to
+   để bấm trúng bằng ngón cái, nên tên học sinh co lại còn hai cột tick
+   giữ nguyên số đo.
+   ═══════════════════════════════════════════════════════════════ */
+
+.desk-tab.tone-attend {
+  --tab-soft: #f0fdf4;
+  --tab-ink: #15803d;
+  --tab-grad: linear-gradient(135deg, #22c55e, #0d9488);
+  --tab-glow: rgba(34, 197, 94, 0.3);
+}
+
+.dd-msg {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dd-msg.is-ok {
+  border: 1px solid #a7f3d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.dd-msg.is-err {
+  border: 1px solid #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.dd-empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--line, #dbe4f0);
+  border-radius: 14px;
+  background: #fafbfe;
+  color: #64748b;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ── Thêm dịp ─────────────────────────────────────────────────── */
+.dd-new {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.dd-new .ct-field input[type="text"] {
+  width: 200px;
+}
+
+.dd-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-basis: 100%;
+}
+
+.dd-quick button {
+  padding: 5px 10px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dd-quick button:hover {
+  border-color: var(--accent, #4f46e5);
+  color: var(--accent, #4f46e5);
+}
+
+/* ── Dãy thẻ dịp ──────────────────────────────────────────────── */
+.dd-events {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.dd-event {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dd-event strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dd-event-date {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.dd-event-tally {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.dd-event.is-open {
+  border-color: var(--accent, #4f46e5);
+  background: #eef2ff;
+}
+
+.dd-event.is-closed {
+  background: #f5f7fb;
+}
+
+.dd-event.is-closed strong {
+  color: #64748b;
+}
+
+/* ── Bảng điểm danh ───────────────────────────────────────────── */
+.dd-sheet {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.dd-count {
+  flex: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.dd-count b {
+  font-size: 15px;
+  color: #15803d;
+}
+
+.dd-count b.is-absent {
+  color: #e11d48;
+}
+
+.dd-count em {
+  font-style: normal;
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.dd-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dd-locked {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #b45309;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.dd-table {
+  display: grid;
+  gap: 4px;
+  max-height: 520px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+
+.dd-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 62px 62px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.dd-row-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+  padding-bottom: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
+.dd-row-head > span:first-child {
+  text-align: left;
+}
+
+.dd-row.is-absent {
+  background: #fff1f2;
+}
+
+.dd-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.dd-name > b {
+  flex: none;
+  min-width: 22px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+/* Ô tick: cả ô là vùng bấm, chấm tròn ở giữa cho thấy đang chọn cái nào. */
+.dd-tick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.dd-tick input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.dd-tick.is-present.is-on {
+  border-color: #16a34a;
+  background: #dcfce7;
+}
+
+.dd-tick.is-away.is-on {
+  border-color: #e11d48;
+  background: #ffe4e6;
+}
+
+.dd-tick input:disabled {
+  cursor: default;
+}
+
+.dd-excused {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid #fcd34d;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dd-excused input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+}
+
+.dd-excused.is-on {
+  border-color: #f59e0b;
+  background: #fef3c7;
+}
+
+.dd-excused-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.dd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.dd-remove {
+  margin-left: auto;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #e11d48;
+}
+
+.dd-remove:hover {
+  background: #fff1f2;
+}
+
+/* ── Tổng hợp cả năm ──────────────────────────────────────────── */
+.dd-summary {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.dd-table-sum .dd-row {
+  grid-template-columns: minmax(0, 1fr) 78px 58px;
+}
+
+.dd-sum-count,
+.dd-sum-penalty {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  text-align: center;
+}
+
+.dd-sum-count em {
+  font-style: normal;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.dd-sum-penalty.is-hot {
+  color: #e11d48;
+}
+
+@media (max-width: 640px) {
+  .dd-new .ct-field input[type="text"] {
+    width: 100%;
+  }
+
+  .dd-new .ct-field {
+    flex: 1 1 100%;
+  }
+
+  .dd-events {
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  }
+
+  /* Hai ô tick giữ nguyên bề ngang, tên co lại — bấm trúng quan trọng hơn
+     đọc trọn tên, mà tên vẫn xuống dòng được. */
+  .dd-row {
+    grid-template-columns: minmax(0, 1fr) 54px 54px;
+    padding: 4px 6px;
+  }
+
+  .dd-table-sum .dd-row {
+    grid-template-columns: minmax(0, 1fr) 68px 50px;
+  }
+
+  .dd-name {
+    font-size: 12.5px;
+  }
+
+  .dd-sheet,
+  .dd-summary {
+    padding: 10px;
+  }
+}
