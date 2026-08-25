@@ -5,6 +5,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getDb } from "@/lib/db";
+import { applyDutyChange } from "@/lib/duty-store";
 import { createAuditLog, getDashboardData } from "@/lib/data";
 import {
   canManageAccounts,
@@ -17,8 +18,8 @@ import { getReportFields } from "@/lib/report-fields";
 import { enrichReportFields } from "@/lib/report-schema";
 import { clearSession, requireSessionUser } from "@/lib/session";
 import { cascadeTreasuryFields, parseSignedVnd } from "@/lib/treasury-duty";
-import type { AppRole } from "@/lib/types";
-import { APP_ROLES } from "@/lib/types";
+import type { AppRole, ClassDuty } from "@/lib/types";
+import { APP_ROLES, CLASS_DUTIES } from "@/lib/types";
 import { buildWeeks, toNumberOrNull, toPlainString } from "@/lib/utils";
 import { getExcelWeek } from "@/lib/weeks";
 import { assertWeekWritable } from "@/lib/week-lock-store";
@@ -27,6 +28,11 @@ function requirePermission(condition: boolean) {
   if (!condition) {
     throw new Error("FORBIDDEN");
   }
+}
+
+function readClassDuty(value: FormDataEntryValue | null): ClassDuty | null {
+  const raw = toPlainString(value);
+  return (CLASS_DUTIES as readonly string[]).includes(raw) ? (raw as ClassDuty) : null;
 }
 
 export async function logoutAction() {
@@ -48,13 +54,20 @@ export async function saveStudentAction(formData: FormData) {
     birthDay: Number(toPlainString(formData.get("birthDay")) || "1"),
     birthMonth: Number(toPlainString(formData.get("birthMonth")) || "1"),
     birthYear: toNumberOrNull(formData.get("birthYear")),
-    teamNumber: toNumberOrNull(formData.get("teamNumber")),
-    position: toPlainString(formData.get("position")) || null,
     parentPhone: toPlainString(formData.get("parentPhone")),
     parentName: toPlainString(formData.get("parentName")),
     notes: toPlainString(formData.get("notes")),
     updatedAt: new Date().toISOString(),
   };
+
+  // Tổ và chức vụ đi qua applyDutyChange chứ không ghi thẳng: chỉ nơi đó mới
+  // giữ được "mỗi chức vụ một em" và đồng bộ tên tài khoản đăng nhập.
+  const duty = {
+    teamNumber: toNumberOrNull(formData.get("teamNumber")),
+    classDuty: readClassDuty(formData.get("classDuty")),
+  };
+
+  let savedId = studentId;
 
   if (studentId) {
     await studentsCollection.updateOne({ _id: studentId }, { $set: payload });
@@ -86,9 +99,14 @@ export async function saveStudentAction(formData: FormData) {
       schoolYearId,
       teamRole: null,
       classDuty: null,
+      teamNumber: null,
+      seatDesk: null,
+      seatSide: null,
+      position: null,
       ...payload,
       createdAt,
     };
+    savedId = newStudent._id;
     await studentsCollection.insertOne(newStudent);
     await parentsCollection.insertOne({
       _id: crypto.randomUUID(),
@@ -114,6 +132,11 @@ export async function saveStudentAction(formData: FormData) {
     });
   }
 
+  const saved = await studentsCollection.findOne({ _id: savedId });
+  if (saved) await applyDutyChange(saved, duty);
+
+  revalidateTag("public-site", "max");
+  revalidateTag("contacts", "max");
   revalidatePath("/dashboard");
 }
 

@@ -48,6 +48,10 @@ export type ClassConfig = {
   schoolYearId: string;
   className: string;
   fullName: string;
+  /** Tên trường in ở góc trái biểu mẫu sơ yếu lý lịch. */
+  schoolName?: string;
+  /** Số bàn mỗi tổ trong sơ đồ chỗ ngồi (mặc định 6). */
+  seatDeskCount?: number;
   gvcnName: string;
   gvcnDisplayName: string;
   gvcnPhone: string;
@@ -224,6 +228,12 @@ export type Student = {
   transport?: string;
   onlineLearning?: string;
   profileTt?: number;
+  /** Bàn thứ mấy trong tổ (1 là bàn đầu). Cặp với seatSide thành một chỗ ngồi. */
+  seatDesk?: number | null;
+  /** Chỗ sát lối đi ("ngoai") hay chỗ bên trong ("trong"). */
+  seatSide?: "trong" | "ngoai" | null;
+  /** Lúc học sinh gửi sơ yếu lý lịch — trống nghĩa là chưa điền. */
+  syllSubmittedAt?: string;
   notes: string;
   createdAt: string;
   updatedAt: string;

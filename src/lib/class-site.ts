@@ -167,10 +167,21 @@ function subjectTone(raw: string) {
   return `subject-tone-${hash}`;
 }
 
+/**
+ * Tên môn chuẩn hoá: file thời khóa biểu của trường viết tắt ("T", "V", "CC"),
+ * còn bảng phân công giáo viên lại ghi đủ ("Toán"). Cả hai phải quy về một tên
+ * thì tra tên giáo viên mới trúng.
+ */
+export function canonicalSubject(raw: string) {
+  const name = raw.trim() || "-";
+  if (name === "-") return "-";
+  return SUBJECT_ALIAS[foldSubject(name)] || name;
+}
+
 export function subjectStyle(raw: string): TimetableCell {
   const name = raw.trim() || "-";
   if (name === "-") return { subject: "-" };
-  const canonical = SUBJECT_ALIAS[foldSubject(name)] || name;
+  const canonical = canonicalSubject(name);
   return {
     // Display the canonical name. The uploaded Excel abbreviates ("T", "V",
     // "CC"), and showing the raw cell made the timetable unreadable even though
@@ -232,6 +243,7 @@ export const OFFICER_LINKS = [
   { href: "/bao-cao/phong-trao", label: "Phong Trào", code: "lppt", icon: "🎵", className: "link-5" },
   { href: "/bao-cao/trat-tu", label: "Trật Tự", code: "lptt", icon: "🔔", className: "link-6" },
   { href: "/bao-cao/to-truong", label: "Tổ Trưởng", code: "tt", icon: "🧑‍🤝‍🧑", className: "link-2" },
+  { href: "/bao-cao/to-pho", label: "Tổ Phó", code: "tp", icon: "🤝", className: "link-9" },
   { href: "/bao-cao/thu-quy", label: "Thủ Quỹ", code: "thuquy", icon: "💰", className: "link-3" },
 ];
 

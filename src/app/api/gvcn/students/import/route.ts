@@ -2,17 +2,13 @@ import { NextResponse } from "next/server";
 
 import { createAuditLog } from "@/lib/data";
 import { getDb } from "@/lib/db";
+import { syncDutyAccounts } from "@/lib/duty-store";
 import { parseTeamWorkbook } from "@/lib/excel-teams";
 import { canManageStudents } from "@/lib/permissions";
 import { getVerifiedSessionUser } from "@/lib/session";
 import { getCurrentSchoolYearDoc } from "@/lib/student-store";
-import {
-  CLASS_DUTY_USERNAME,
-  normalizePersonName,
-  studentPositionLabel,
-  teamLeaderUsername,
-} from "@/lib/team-roster";
-import type { ClassDuty, Student, TeamRole } from "@/lib/types";
+import { normalizePersonName, studentPositionLabel } from "@/lib/team-roster";
+import type { Student } from "@/lib/types";
 
 function pickStudent(
   existing: Student[],
@@ -29,23 +25,6 @@ function pickStudent(
   return (
     sameName.find((student) => student.birthDay === birthDay && student.birthMonth === birthMonth) ?? sameName[0]
   );
-}
-
-async function syncLoginName(fullName: string, teamNumber: number, teamRole: TeamRole | null, classDuty: ClassDuty | null) {
-  const db = await getDb();
-  const now = new Date().toISOString();
-  if (classDuty) {
-    await db.collection("users").updateOne(
-      { username: CLASS_DUTY_USERNAME[classDuty] },
-      { $set: { fullName, updatedAt: now } },
-    );
-  }
-  if (teamRole === "toTruong") {
-    await db.collection("users").updateOne(
-      { username: teamLeaderUsername(teamNumber) },
-      { $set: { fullName, updatedAt: now } },
-    );
-  }
 }
 
 export async function POST(request: Request) {
@@ -103,7 +82,12 @@ export async function POST(request: Request) {
       teamNumber: row.teamNumber,
       teamRole,
       classDuty: row.classDuty,
-      position: studentPositionLabel({ teamRole, classDuty: row.classDuty, position: null }),
+      position: studentPositionLabel({
+        teamNumber: row.teamNumber,
+        teamRole,
+        classDuty: row.classDuty,
+        position: null,
+      }),
       notes: row.notes,
       updatedAt: now,
     };
@@ -125,8 +109,11 @@ export async function POST(request: Request) {
       created += 1;
     }
 
-    await syncLoginName(row.fullName, row.teamNumber, teamRole, row.classDuty);
   }
+
+  // Một lượt đồng bộ cho cả lớp: tài khoản chức vụ nào không còn ai giữ cũng
+  // được trả về tên mặc định, việc mà bản sửa lẻ từng em không làm được.
+  await syncDutyAccounts(schoolYearId);
 
   await createAuditLog({
     schoolYearId,

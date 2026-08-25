@@ -7,9 +7,9 @@ import { logoutAction } from "@/app/dashboard/actions";
 import { SubmittedReportsList } from "@/components/officer/SubmittedReportsList";
 import { WeekLockBanner, weekOptionLabel } from "@/components/officer/WeekLockBanner";
 import { useOfficerReports } from "@/components/officer/use-officer-reports";
-import { getReportFields } from "@/lib/report-fields";
+import { getOfficerTitle, getReportFields } from "@/lib/report-fields";
 import { emptyMemberRow, parseMemberRows, TEAM_ROLE_LABELS, type TeamMemberWeekRow } from "@/lib/team-roster";
-import type { TeamRole } from "@/lib/types";
+import type { AppRole, TeamRole } from "@/lib/types";
 import { buildExcelWeeks, getCurrentRealtimeWeekNumber } from "@/lib/weeks";
 import { findLock, pickDefaultOfficerWeek } from "@/lib/week-lock";
 
@@ -42,9 +42,11 @@ function roleLabel(index: number, teamRole: TeamRole | null) {
 
 export function TeamLeaderForm({
   fullName,
+  role = "toTruong",
   teamNumber,
 }: {
   fullName: string;
+  role?: AppRole;
   teamNumber: number;
 }) {
   const weeks = useMemo(() => buildExcelWeeks(), []);
@@ -139,7 +141,7 @@ export function TeamLeaderForm({
             </button>
           </form>
         </div>
-        <h1>Dành cho tổ trưởng tổ {teamNumber}</h1>
+        <h1>{getOfficerTitle(role, teamNumber)}</h1>
         <h2>{fullName}</h2>
 
         {loadingStudents ? (

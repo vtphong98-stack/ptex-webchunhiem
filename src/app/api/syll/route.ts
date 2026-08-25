@@ -1,49 +1,103 @@
-import { ObjectId } from "mongodb";
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { getDb } from "@/lib/db";
-import { shouldRetrySheetsAsEdit, syncSyllToGoogleSheets } from "@/lib/google-sheets";
-import { resolveClassConfig, resolveSchoolYear } from "@/lib/school-year-scope";
+import { resolveSyllContext } from "@/lib/syll-store";
 import { normalizePersonName } from "@/lib/team-roster";
 import type { ParentContact, Student } from "@/lib/types";
 import { toPlainString } from "@/lib/utils";
 
+/**
+ * Sơ yếu lý lịch do chính học sinh khai.
+ *
+ * Danh sách lớp là bản GVCN nhập từ file mẫu, nên form chỉ cho chọn tên có sẵn:
+ * như vậy số thứ tự trong sổ gọi tên không bao giờ lệch và không sinh ra học
+ * sinh trùng do gõ sai chính tả.
+ */
+
 function parseBirth(raw: string) {
   const match = raw.trim().match(/^(\d{1,2})[/\-.](\d{1,2})(?:[/\-.](\d{4}))?$/);
-  if (!match) return { birthDay: 1, birthMonth: 1, birthYear: null as number | null };
-  return { birthDay: Number(match[1]), birthMonth: Number(match[2]), birthYear: match[3] ? Number(match[3]) : null };
+  if (!match) return { birthDay: 0, birthMonth: 0, birthYear: null as number | null };
+  return {
+    birthDay: Number(match[1]),
+    birthMonth: Number(match[2]),
+    birthYear: match[3] ? Number(match[3]) : null,
+  };
+}
+
+export async function GET() {
+  const context = await resolveSyllContext();
+  if (!context) {
+    return NextResponse.json({ className: "", yearName: "", students: [] });
+  }
+
+  const db = await getDb();
+  const students = await db
+    .collection<Student>("students")
+    .find({ schoolYearId: context.schoolYearId }, { projection: { fullName: 1, profileTt: 1, syllSubmittedAt: 1 } })
+    .toArray();
+
+  return NextResponse.json(
+    {
+      className: context.info.className,
+      yearName: context.yearName,
+      // Chỉ tên và trạng thái đã khai — mọi thông tin cá nhân khác không được
+      // trả về đây vì trang này ai cũng mở được.
+      students: students
+        .map((student) => ({
+          _id: String(student._id),
+          tt: student.profileTt ?? null,
+          fullName: student.fullName,
+          submitted: Boolean(student.syllSubmittedAt),
+        }))
+        .sort((a, b) => (a.tt ?? 1e9) - (b.tt ?? 1e9) || a.fullName.localeCompare(b.fullName, "vi")),
+    },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }
 
 export async function POST(request: Request) {
   const form = await request.formData();
-  const fullName = toPlainString(form.get("fullName"));
-  const tt = Number(toPlainString(form.get("tt")) || "0");
-  if (!fullName || tt < 1) {
-    return NextResponse.json({ error: "Cần họ tên và số thứ tự (TT)." }, { status: 400 });
-  }
-
-  const year = await resolveSchoolYear();
-  const schoolYearId = year?._id ? String(year._id) : "";
-  if (!schoolYearId) {
+  const context = await resolveSyllContext();
+  if (!context) {
     return NextResponse.json({ error: "Chưa có năm học hiện hành." }, { status: 400 });
   }
 
+  const db = await getDb();
+  const students = db.collection<Student>("students");
+  const studentId = toPlainString(form.get("studentId"));
+  const fullNameInput = toPlainString(form.get("fullName"));
+
+  const student = studentId
+    ? await students.findOne({ _id: studentId, schoolYearId: context.schoolYearId })
+    : null;
+  const fallback = student
+    ? null
+    : await students
+        .find({ schoolYearId: context.schoolYearId }, { projection: { fullName: 1 } })
+        .toArray()
+        .then((list) =>
+          list.find((item) => normalizePersonName(item.fullName) === normalizePersonName(fullNameInput)),
+        );
+
+  const targetId = student?._id ?? fallback?._id;
+  if (!targetId) {
+    return NextResponse.json(
+      { error: "Không tìm thấy tên em trong danh sách lớp. Báo GVCN bổ sung danh sách rồi khai lại." },
+      { status: 400 },
+    );
+  }
+
+  const fullName = student?.fullName ?? fallback?.fullName ?? fullNameInput;
   const birth = parseBirth(toPlainString(form.get("birthDate")));
   const contactPhone = toPlainString(form.get("contactPhone"));
-  const studentPhone = toPlainString(form.get("studentPhone"));
   const fatherName = toPlainString(form.get("fatherName"));
   const motherName = toPlainString(form.get("motherName"));
   const now = new Date().toISOString();
-  const db = await getDb();
-  const students = db.collection<Student>("students");
-  const roster = await students.find({ schoolYearId }, { projection: { fullName: 1, profileTt: 1 } }).toArray();
-  const existingMeta =
-    roster.find((item) => item.profileTt === tt) ??
-    roster.find((item) => normalizePersonName(item.fullName) === normalizePersonName(fullName));
-  const existing = existingMeta?._id ? await students.findOne({ _id: existingMeta._id }) : null;
 
+  // Không đụng tới classRole/classDuty/teamRole: chức vụ do GVCN bổ nhiệm bên
+  // khu vực chủ nhiệm, học sinh tự khai thì mỗi em một kiểu và sơ đồ lớp sẽ sai.
   const fields: Partial<Student> = {
-    fullName,
     ...birth,
     birthPlace: toPlainString(form.get("birthPlace")),
     gender: toPlainString(form.get("gender")),
@@ -59,12 +113,11 @@ export async function POST(request: Request) {
     contactPhone,
     parentPhone: contactPhone,
     parentName: motherName || fatherName || `Phụ huynh ${fullName}`,
-    classRole: toPlainString(form.get("classRole")),
     conduct: toPlainString(form.get("conduct")),
     academic: toPlainString(form.get("academic")),
     email: toPlainString(form.get("email")),
     idNumber: toPlainString(form.get("idNumber")),
-    studentPhone,
+    studentPhone: toPlainString(form.get("studentPhone")),
     weight: toPlainString(form.get("weight")),
     height: toPlainString(form.get("height")),
     canSwim: toPlainString(form.get("canSwim")),
@@ -72,33 +125,17 @@ export async function POST(request: Request) {
     medicalHistory: toPlainString(form.get("medicalHistory")),
     transport: toPlainString(form.get("transport")),
     onlineLearning: toPlainString(form.get("onlineLearning")),
-    profileTt: tt,
     notes: toPlainString(form.get("notes")),
+    syllSubmittedAt: now,
     updatedAt: now,
   };
 
-  let studentId = existing?._id ? String(existing._id) : "";
-  if (existing?._id) {
-    await students.updateOne({ _id: existing._id }, { $set: fields });
-  } else {
-    studentId = new ObjectId().toHexString();
-    await students.insertOne({
-      _id: studentId,
-      schoolYearId,
-      teamNumber: null,
-      teamRole: null,
-      classDuty: null,
-      position: toPlainString(form.get("classRole")) || null,
-      createdAt: now,
-      ...fields,
-    } as Student);
-  }
+  await students.updateOne({ _id: targetId }, { $set: fields });
 
   const parents = db.collection<ParentContact>("parents");
-  const parentFilter = { schoolYearId, studentId };
   const parentPayload = {
-    schoolYearId,
-    studentId,
+    schoolYearId: context.schoolYearId,
+    studentId: String(targetId),
     studentName: fullName,
     parentName: fields.parentName || `Phụ huynh ${fullName}`,
     relationship: "Phụ huynh",
@@ -106,31 +143,14 @@ export async function POST(request: Request) {
     note: [fatherName && `Cha: ${fatherName}`, motherName && `Mẹ: ${motherName}`].filter(Boolean).join(" · "),
     updatedAt: now,
   };
-  const parentDoc = await parents.findOne(parentFilter);
+  const parentDoc = await parents.findOne({ schoolYearId: context.schoolYearId, studentId: String(targetId) });
   if (parentDoc?._id) {
     await parents.updateOne({ _id: parentDoc._id }, { $set: parentPayload });
   } else {
-    await parents.insertOne({
-      _id: new ObjectId().toHexString(),
-      createdAt: now,
-      ...parentPayload,
-    });
+    await parents.insertOne({ _id: crypto.randomUUID(), createdAt: now, ...parentPayload });
   }
 
-  const sheetFields: Record<string, string> = {};
-  for (const [key, value] of form.entries()) {
-    sheetFields[key] = String(value ?? "");
-  }
-  let sheets = await syncSyllToGoogleSheets(sheetFields);
-  if (!sheets.ok && shouldRetrySheetsAsEdit(sheets) && sheetFields.action !== "edit") {
-    sheets = await syncSyllToGoogleSheets({ ...sheetFields, action: "edit" });
-  }
+  revalidateTag("contacts", "max");
 
-  return NextResponse.json({
-    ok: true,
-    studentId,
-    sheetsSynced: sheets.ok,
-    sheetsMessage: sheets.message || sheets.error || "",
-    className: (await resolveClassConfig(schoolYearId, { fullName: 1 }))?.fullName ?? "",
-  });
+  return NextResponse.json({ ok: true, studentId: String(targetId), fullName });
 }

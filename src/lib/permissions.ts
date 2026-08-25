@@ -33,6 +33,17 @@ export function isClassOfficer(role: AppRole) {
   return role !== "admin" && role !== "gvcn";
 }
 
+/**
+ * Báo cáo tuần của một tổ thuộc về cái tổ đó, không thuộc về một người. Tổ
+ * trưởng và tổ phó cùng nộp được, và bản ghi luôn mang vai trò TEAM_REPORT_ROLE
+ * để bảng tổng kết và thống kê không phải biết ai là người bấm nút.
+ */
+export const TEAM_REPORT_ROLE = "toTruong" as const;
+
+export function isTeamReporter(role: AppRole) {
+  return role === "toTruong" || role === "toPho";
+}
+
 export function canReviewReports(role: AppRole) {
   return role === "admin" || role === "gvcn";
 }

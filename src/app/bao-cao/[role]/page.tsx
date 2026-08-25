@@ -5,8 +5,10 @@ import { Suspense } from "react";
 import { LoginForm } from "@/components/login/LoginForm";
 import { OfficerDesk } from "@/components/officer/OfficerDesk";
 import { isOfficerRole } from "@/lib/access";
+import { isTeamReporter } from "@/lib/permissions";
+import { teamRoleUsername } from "@/lib/team-roster";
 import { getClassIdentity } from "@/lib/public-site";
-import { getSessionUser } from "@/lib/session";
+import { getVerifiedSessionUser } from "@/lib/session";
 import type { AppRole } from "@/lib/types";
 
 export const ROLE_CONFIGS: Record<
@@ -155,6 +157,29 @@ export const ROLE_CONFIGS: Record<
     icon: "👥",
     description: "Chấm điểm thi đua học sinh Tổ 4.",
   },
+  "to-pho": {
+    role: "toPho",
+    defaultTeam: 1,
+    title: "Báo cáo Tổ phó (Tổ 1 – Tổ 4)",
+    shortTitle: "Tổ phó",
+    defaultUsername: "tp1",
+    icon: "🤝",
+    description: "Phụ tổ trưởng chấm điểm thi đua từng học sinh trong tổ.",
+  },
+  ...Object.fromEntries(
+    [1, 2, 3, 4].map((team) => [
+      `tp${team}`,
+      {
+        role: "toPho" as AppRole,
+        defaultTeam: team,
+        title: `Báo cáo Tổ phó Tổ ${team}`,
+        shortTitle: `Tổ phó ${team}`,
+        defaultUsername: `tp${team}`,
+        icon: "🤝",
+        description: `Phụ tổ trưởng chấm điểm thi đua học sinh Tổ ${team}.`,
+      },
+    ]),
+  ),
   "thu-quy": {
     role: "thuQuy",
     title: "Báo cáo Thủ quỹ lớp",
@@ -188,7 +213,9 @@ export default async function OfficerReportPage({
     notFound();
   }
 
-  const session = await getSessionUser();
+  // Tên lấy từ tài khoản đang sống chứ không lấy trong token: GVCN vừa bổ nhiệm
+  // là em đăng nhập thấy tên mình ngay.
+  const session = await getVerifiedSessionUser();
   const site = await getClassIdentity();
 
   // The reporting area belongs to the class officers only. The teacher reviews
@@ -198,8 +225,8 @@ export default async function OfficerReportPage({
   // A tổ trưởng always reports for their own tổ; ?team= must not move them. Only
   // the tổ selector inside the teacher desk may pick another one.
   let teamNumber = config.defaultTeam ?? null;
-  if (config.role === "toTruong") {
-    if (session?.role === "toTruong" && session.teamNumber) {
+  if (isTeamReporter(config.role)) {
+    if (session && isTeamReporter(session.role) && session.teamNumber) {
       teamNumber = session.teamNumber;
     } else {
       const qTeam = parseInt(teamQuery || "");
@@ -222,19 +249,19 @@ export default async function OfficerReportPage({
           </div>
         </div>
 
-        <OfficerDesk fullName={session.fullName} role={config.role} teamNumber={teamNumber} />
+        <OfficerDesk fullName={session.fullName} role={session.role} teamNumber={teamNumber} />
       </main>
     );
   }
 
   // Not signed in, or signed in as somebody else -> offer this role's login box
   // right here, preselected, so one password entry is all it takes.
-  const targetUsername =
-    config.role === "toTruong" && teamNumber ? `tt${teamNumber}` : config.defaultUsername;
-  const nextPath =
-    config.role === "toTruong" && teamNumber
-      ? `/bao-cao/${roleSlug}?team=${teamNumber}`
-      : `/bao-cao/${roleSlug}`;
+  const targetUsername = teamNumber
+    ? teamRoleUsername(config.role === "toPho" ? "toPho" : "toTruong", teamNumber) || config.defaultUsername
+    : config.defaultUsername;
+  const nextPath = teamNumber && isTeamReporter(config.role)
+    ? `/bao-cao/${roleSlug}?team=${teamNumber}`
+    : `/bao-cao/${roleSlug}`;
   const signedInAs = session ? `${session.fullName} (${session.username})` : "";
   // Crossing areas only when a teacher account is the one signed in.
   const crossingArea = Boolean(session && !isOfficerRole(session.role));

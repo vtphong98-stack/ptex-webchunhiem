@@ -6,6 +6,7 @@ import { parseStoredTimetable, timetableDisplayFromGrid, timetableDisplayFromJso
 import { getDb } from "@/lib/db";
 import { getHomeBoard } from "@/lib/home-board";
 import { sortNotices, toPublicNotice } from "@/lib/notices";
+import { CLASS_DUTY_USERNAME, studentPositionLabel, teamRoleUsername } from "@/lib/team-roster";
 import type { ContactCard } from "@/lib/phone";
 import { CLASS_CONFIG_FIELDS, resolveClassConfig, resolveSchoolYear } from "@/lib/school-year-scope";
 import type { ClassTargets, GvcnNotice, Student } from "@/lib/types";
@@ -20,7 +21,19 @@ export const getPublicSiteData = unstable_cache(
       ? await Promise.all([
           db
             .collection<Student>("students")
-            .find({ schoolYearId }, { projection: { fullName: 1, birthDay: 1, birthMonth: 1 } })
+            .find(
+              { schoolYearId },
+              {
+                projection: {
+                  fullName: 1,
+                  birthDay: 1,
+                  birthMonth: 1,
+                  teamNumber: 1,
+                  teamRole: 1,
+                  classDuty: 1,
+                },
+              },
+            )
             .sort({ profileTt: 1, fullName: 1 })
             .toArray(),
           resolveClassConfig(schoolYearId, {
@@ -60,6 +73,17 @@ export const getPublicSiteData = unstable_cache(
     const className = config?.className?.trim() || CLASS_SITE.className;
     const gvcnName = config?.gvcnName?.trim() || CLASS_SITE.gvcnName;
 
+    // Ai đang giữ chức vụ nào — để trang chủ hiện tên ngay dưới nút đăng nhập
+    // của chức vụ đó, khỏi phải mở khu vực GVCN mới biết.
+    const officers: Record<string, string> = {};
+    for (const student of students) {
+      if (student.classDuty && !officers[CLASS_DUTY_USERNAME[student.classDuty]]) {
+        officers[CLASS_DUTY_USERNAME[student.classDuty]] = student.fullName;
+      }
+      const teamAccount = teamRoleUsername(student.teamRole ?? null, student.teamNumber ?? null);
+      if (teamAccount && !officers[teamAccount]) officers[teamAccount] = student.fullName;
+    }
+
     return {
       className,
       fullName: config?.fullName?.trim() || `Lớp ${className} - ${yearName}`,
@@ -70,6 +94,7 @@ export const getPublicSiteData = unstable_cache(
       gvcnPhone: config?.gvcnPhone?.trim() || CLASS_SITE.gvcnPhone,
       gvcnZalo: config?.gvcnZalo?.trim() || config?.gvcnPhone?.trim() || CLASS_SITE.gvcnPhone,
       studentCount: students.length,
+      officers,
       students: students.map((s) => ({
         fullName: s.fullName,
         birthDay: s.birthDay ?? 0,
@@ -132,6 +157,9 @@ export const getBothContactDirectories = unstable_cache(
         {
           projection: {
             fullName: 1,
+            teamNumber: 1,
+            teamRole: 1,
+            classDuty: 1,
             parentName: 1,
             fatherName: 1,
             motherName: 1,
@@ -164,7 +192,8 @@ export const getBothContactDirectories = unstable_cache(
       students.push({
         id: String(s._id),
         fullName: s.fullName,
-        subtitle: s.classRole || s.position || "",
+        // Chức vụ GVCN bổ nhiệm đứng trước phần học sinh từng tự khai.
+        subtitle: studentPositionLabel(s) || s.classRole || "",
         phone: s.studentPhone || "",
       });
     }

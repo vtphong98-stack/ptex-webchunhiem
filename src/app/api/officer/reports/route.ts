@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { createAuditLog } from "@/lib/data";
 import { getDb } from "@/lib/db";
-import { isClassOfficer } from "@/lib/permissions";
+import { TEAM_REPORT_ROLE, isClassOfficer, isTeamReporter } from "@/lib/permissions";
 import { enrichReportFields } from "@/lib/report-schema";
 import { getSessionUser } from "@/lib/session";
 import { parseSignedVnd, previousRemainingFromChain } from "@/lib/treasury-duty";
@@ -61,12 +61,12 @@ export async function GET(request: Request) {
 
   const reportFilter = {
     schoolYearId,
-    reporterRole: session.role,
+    reporterRole: isTeamReporter(session.role) ? TEAM_REPORT_ROLE : session.role,
     teamNumber: session.teamNumber ?? null,
   };
 
   const teamForRoster =
-    session.role === "toTruong" && session.teamNumber
+    isTeamReporter(session.role) && session.teamNumber
       ? session.teamNumber
       : session.role === "lopPhoLaoDong" && teamQuery >= 1 && teamQuery <= 4
         ? teamQuery
@@ -136,7 +136,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const session = await getSessionUser();
-  if (!session || !isClassOfficer(session.role) || session.role !== "toTruong") {
+  if (!session || !isClassOfficer(session.role) || !isTeamReporter(session.role)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -164,7 +164,7 @@ export async function POST(request: Request) {
     reports.findOne({
       schoolYearId,
       weekNumber,
-      reporterRole: session.role,
+      reporterRole: TEAM_REPORT_ROLE,
       teamNumber: session.teamNumber ?? null,
     }),
     session.teamNumber ? getTeamRosterStudents(schoolYearId, session.teamNumber) : Promise.resolve([]),
@@ -184,12 +184,12 @@ export async function POST(request: Request) {
     ...membersToReportFields(aligned),
     week_range: week?.dateRangeLabel ?? "",
   };
-  const fields = enrichReportFields(session.role, rawFields);
+  const fields = enrichReportFields(TEAM_REPORT_ROLE, rawFields);
   const now = new Date().toISOString();
   const payload = {
     weekNumber,
     weekLabel: week?.label ?? `Tuần ${weekNumber}`,
-    reporterRole: session.role,
+    reporterRole: TEAM_REPORT_ROLE,
     reporterName: session.fullName,
     teamNumber: session.teamNumber ?? null,
     summary: fields.team_score ? `Điểm tổ: ${fields.team_score}` : "Đã nộp báo cáo tuần",

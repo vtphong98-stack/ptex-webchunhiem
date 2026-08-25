@@ -51,7 +51,7 @@ export function LoginForm({
   const nextUrl = nextOverride || searchParams.get("next") || "";
   const role = ROLE_COPY[userKey] ?? {
     title: "Đăng nhập báo cáo",
-    hint: "Dùng tài khoản chức vụ: lt, lpht, lpld, lppt, lptt, tt1-tt4, thuquy, gvcn",
+    hint: "Dùng tài khoản chức vụ: lt, lpht, lpld, lppt, lptt, tt1-tt4, tp1-tp4, thuquy, gvcn",
   };
   const errorKey = searchParams.get("error");
   const error = errorKey ? errorMessages[errorKey] : null;
@@ -92,7 +92,7 @@ export function LoginForm({
             ) : (
               <div>
                 <label htmlFor="username">Tài khoản</label>
-                <input id="username" name="username" placeholder="lt, lpht, tt1, thuquy..." />
+                <input id="username" name="username" placeholder="lt, lpht, tt1, tp1, thuquy..." />
               </div>
             )}
             <div>

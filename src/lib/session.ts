@@ -98,7 +98,7 @@ async function readLiveAccount(userId: string, username: string) {
   if (username) or.push({ username });
   return db
     .collection<UserAccount>("users")
-    .findOne({ $or: or } as never, { projection: { username: 1, role: 1, teamNumber: 1, active: 1 } });
+    .findOne({ $or: or } as never, { projection: { username: 1, fullName: 1, role: 1, teamNumber: 1, active: 1 } });
 }
 
 const liveAccount = cache(readLiveAccount);
@@ -128,7 +128,14 @@ export async function getVerifiedSessionUser(): Promise<SessionUser | null> {
   if (!account || account.active === false) return null;
   if (account.role !== session.role) return null;
 
-  return { ...session, teamNumber: account.teamNumber ?? session.teamNumber };
+  // Tên lấy từ tài khoản chứ không lấy trong token: GVCN bổ nhiệm ai vào chức vụ
+  // là em đó thấy tên mình ngay, khỏi phải đăng xuất rồi đăng nhập lại — token
+  // ở đây sống tới 10 năm nên chờ nó hết hạn là không bao giờ.
+  return {
+    ...session,
+    fullName: account.fullName || session.fullName,
+    teamNumber: account.teamNumber ?? session.teamNumber,
+  };
 }
 
 export async function getUserByUsername(username: string) {

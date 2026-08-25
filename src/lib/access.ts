@@ -57,8 +57,9 @@ export function homePathForRole(role: AppRole, teamNumber: number | null): strin
     case "thuQuy":
       return "/bao-cao/thu-quy";
     case "toTruong":
-    case "toPho":
       return teamNumber ? `/bao-cao/to-truong?team=${teamNumber}` : "/bao-cao/to-truong";
+    case "toPho":
+      return teamNumber ? `/bao-cao/to-pho?team=${teamNumber}` : "/bao-cao/to-pho";
     default:
       return "/";
   }

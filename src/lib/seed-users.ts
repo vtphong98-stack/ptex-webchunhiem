@@ -113,6 +113,16 @@ export function getSeedUsers(): SeedUser[] {
       teamNumber: 4,
       resetPassword: false,
     },
+    // Tổ phó cũng là một chức vụ trong sổ ban cán sự, nên cũng phải đăng nhập
+    // được — vào đúng form báo cáo của tổ mình để phụ tổ trưởng chấm thi đua.
+    ...[1, 2, 3, 4].map((team) => ({
+      username: `tp${team}`,
+      password: `tp${team}`,
+      fullName: `Tổ phó tổ ${team}`,
+      role: "toPho" as AppRole,
+      teamNumber: team,
+      resetPassword: false,
+    })),
   ];
 }
 
@@ -123,4 +133,5 @@ export const USERNAME_ALIASES: Record<string, string> = {
   lopphophongtrao: "lppt",
   lopphotrattu: "lptt",
   tt: "tt1",
+  tp: "tp1",
 };

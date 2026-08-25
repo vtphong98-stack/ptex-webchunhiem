@@ -1,14 +1,11 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { createAuditLog } from "@/lib/data";
 import { getDb } from "@/lib/db";
+import { applyDutyChange, syncDutyAccounts } from "@/lib/duty-store";
 import { canManageStudents } from "@/lib/permissions";
 import { getVerifiedSessionUser } from "@/lib/session";
-import {
-  CLASS_DUTY_USERNAME,
-  studentPositionLabel,
-  teamLeaderUsername,
-} from "@/lib/team-roster";
 import type { ClassDuty, Student, TeamRole } from "@/lib/types";
 
 async function requireGvcn() {
@@ -17,16 +14,6 @@ async function requireGvcn() {
     return { session: null, error: NextResponse.json({ error: "unauthorized" }, { status: 401 }) };
   }
   return { session, error: null };
-}
-
-function deskFields(student: Pick<Student, "_id" | "teamNumber" | "teamRole" | "classDuty">) {
-  return {
-    _id: String(student._id),
-    teamNumber: student.teamNumber,
-    teamRole: student.teamRole ?? null,
-    classDuty: student.classDuty ?? null,
-    position: studentPositionLabel({ teamRole: student.teamRole, classDuty: student.classDuty, position: null }),
-  };
 }
 
 export async function PATCH(
@@ -43,79 +30,21 @@ export async function PATCH(
   };
 
   const db = await getDb();
-  const students = db.collection<Student>("students");
-  const student = await students.findOne({ _id: id });
+  const student = await db.collection<Student>("students").findOne({ _id: id });
   if (!student) {
     return NextResponse.json({ error: "Không tìm thấy học sinh." }, { status: 404 });
   }
 
-  const now = new Date().toISOString();
-  const nextTeam = body.teamNumber === undefined ? student.teamNumber : body.teamNumber;
-  let nextRole = body.teamRole === undefined ? student.teamRole : body.teamRole;
-  const nextDuty = body.classDuty === undefined ? student.classDuty : body.classDuty;
+  const result = await applyDutyChange(student, {
+    teamNumber: body.teamNumber,
+    teamRole: body.teamRole,
+    classDuty: body.classDuty,
+  });
 
-  if (body.teamNumber !== undefined && body.teamNumber !== student.teamNumber && body.teamRole === undefined) {
-    nextRole = "thanhVien";
-  }
-
-  const demotedIds = new Set<string>();
-
-  if (nextTeam && nextRole === "toTruong") {
-    const peers = await students
-      .find({ schoolYearId: student.schoolYearId, teamNumber: nextTeam, teamRole: "toTruong", _id: { $ne: id } })
-      .project({ _id: 1 })
-      .toArray();
-    for (const peer of peers) demotedIds.add(String(peer._id));
-    await students.updateMany(
-      { schoolYearId: student.schoolYearId, teamNumber: nextTeam, teamRole: "toTruong", _id: { $ne: id } },
-      { $set: { teamRole: "thanhVien", position: studentPositionLabel({ teamRole: "thanhVien", classDuty: null, position: null }), updatedAt: now } },
-    );
-  }
-  if (nextTeam && nextRole === "toPho") {
-    const peers = await students
-      .find({ schoolYearId: student.schoolYearId, teamNumber: nextTeam, teamRole: "toPho", _id: { $ne: id } })
-      .project({ _id: 1 })
-      .toArray();
-    for (const peer of peers) demotedIds.add(String(peer._id));
-    await students.updateMany(
-      { schoolYearId: student.schoolYearId, teamNumber: nextTeam, teamRole: "toPho", _id: { $ne: id } },
-      { $set: { teamRole: "thanhVien", position: studentPositionLabel({ teamRole: "thanhVien", classDuty: null, position: null }), updatedAt: now } },
-    );
-  }
-  if (nextDuty) {
-    const peers = await students
-      .find({ schoolYearId: student.schoolYearId, classDuty: nextDuty, _id: { $ne: id } })
-      .project({ _id: 1 })
-      .toArray();
-    for (const peer of peers) demotedIds.add(String(peer._id));
-    await students.updateMany(
-      { schoolYearId: student.schoolYearId, classDuty: nextDuty, _id: { $ne: id } },
-      { $set: { classDuty: null, position: studentPositionLabel({ teamRole: null, classDuty: null, position: null }), updatedAt: now } },
-    );
-    await db.collection("users").updateOne(
-      { username: CLASS_DUTY_USERNAME[nextDuty] },
-      { $set: { fullName: student.fullName, updatedAt: now } },
-    );
-  }
-  if (nextRole === "toTruong" && nextTeam) {
-    await db.collection("users").updateOne(
-      { username: teamLeaderUsername(nextTeam) },
-      { $set: { fullName: student.fullName, updatedAt: now } },
-    );
-  }
-
-  const payload = {
-    teamNumber: nextTeam,
-    teamRole: nextRole,
-    classDuty: nextDuty,
-    position: studentPositionLabel({ teamRole: nextRole, classDuty: nextDuty, position: null }),
-    updatedAt: now,
-  };
-  await students.updateOne({ _id: id }, { $set: payload });
-
-  const peers = demotedIds.size
-    ? await students.find({ _id: { $in: [...demotedIds] } }).toArray()
-    : [];
+  // Trang chủ hiện tên em đang giữ chức, danh bạ hiện chức vụ — cả hai đọc qua
+  // unstable_cache nên phải xả tag, không thì phải chờ tới 60 giây mới thấy.
+  revalidateTag("public-site", "max");
+  revalidateTag("contacts", "max");
 
   void createAuditLog({
     schoolYearId: student.schoolYearId,
@@ -128,11 +57,7 @@ export async function PATCH(
     actorRole: auth.session.role,
   });
 
-  return NextResponse.json({
-    ok: true,
-    student: deskFields({ _id: id, ...payload }),
-    peers: peers.map(deskFields),
-  });
+  return NextResponse.json({ ok: true, ...result });
 }
 
 export async function DELETE(
@@ -150,6 +75,10 @@ export async function DELETE(
 
   await db.collection<Student>("students").deleteOne({ _id: id });
   await db.collection("parents").deleteMany({ studentId: id });
+  // Em vừa xoá có thể đang giữ chức: trả tài khoản chức vụ về tên mặc định.
+  await syncDutyAccounts(student.schoolYearId);
+  revalidateTag("public-site", "max");
+  revalidateTag("contacts", "max");
 
   void createAuditLog({
     schoolYearId: student.schoolYearId,

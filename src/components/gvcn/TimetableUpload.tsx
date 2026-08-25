@@ -12,6 +12,7 @@ export function TimetableUpload({ readOnly, yearName }: { readOnly: boolean; yea
   const [message, setMessage] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
   const [versions, setVersions] = useState<VersionRow[]>([]);
+  const [teachers, setTeachers] = useState<Record<string, string>>({});
 
   function qs() {
     return yearName ? `?year=${encodeURIComponent(yearName)}` : "";
@@ -23,6 +24,7 @@ export function TimetableUpload({ readOnly, yearName }: { readOnly: boolean; yea
     const data = await response.json();
     setUpdatedAt(data.updatedAt || "");
     setVersions(Array.isArray(data.versions) ? data.versions : []);
+    setTeachers(data.teachers ?? {});
   }
 
   useEffect(() => {
@@ -46,7 +48,14 @@ export function TimetableUpload({ readOnly, yearName }: { readOnly: boolean; yea
     }
     setUpdatedAt(data.updatedAt || "");
     setVersions(Array.isArray(data.versions) ? data.versions : []);
-    setMessage("Đã cập nhật thời khóa biểu. Bản trước được lưu để xem lại trên trang chủ.");
+    const nextTeachers: Record<string, string> = data.teachers ?? {};
+    setTeachers(nextTeachers);
+    const teacherCount = Object.keys(nextTeachers).length;
+    setMessage(
+      teacherCount
+        ? `Đã cập nhật thời khóa biểu, nhận được tên giáo viên của ${teacherCount} môn. Bản trước được lưu để xem lại trên trang chủ.`
+        : "Đã cập nhật thời khóa biểu. File chưa có sheet \"Giáo viên\" nên trang chủ chỉ hiện tên môn.",
+    );
   }
 
   async function remove(id: string) {
@@ -65,8 +74,9 @@ export function TimetableUpload({ readOnly, yearName }: { readOnly: boolean; yea
     <section className="card p-5">
       <h2 className="text-lg font-semibold">Thời khóa biểu</h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">
-        Tải mẫu Excel, gõ môn theo cột thứ Hai–Bảy (sheet Sáng tiết 1–5, sheet Chiều tiết 2–5), rồi tải lên.
-        Mỗi lần cập nhật, bản cũ được lưu để xem lại trên trang chủ.
+        Tải mẫu Excel, gõ môn theo cột thứ Hai–Bảy (sheet Sáng tiết 1–5, sheet Chiều tiết 2–5), điền tên thầy cô
+        từng môn ở sheet <b>Giáo viên</b>, rồi tải lên — trang chủ sẽ hiện cả tên môn lẫn tên giáo viên. Mẫu tải về
+        đã có sẵn thời khóa biểu và phân công đang dùng. Mỗi lần cập nhật, bản cũ được lưu để xem lại.
       </p>
       {updatedAt ? (
         <p className="mt-3 text-sm font-semibold text-indigo-700">Bản hiện hành cập nhật {formatDateTime(updatedAt)}</p>
@@ -74,7 +84,7 @@ export function TimetableUpload({ readOnly, yearName }: { readOnly: boolean; yea
         <p className="mt-3 text-sm text-slate-500">Chưa có thời khóa biểu năm này.</p>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
-        <a className="button-secondary" href="/api/gvcn/timetable/template">
+        <a className="button-secondary" href={`/api/gvcn/timetable/template${qs()}`}>
           Tải mẫu Excel TKB
         </a>
         {readOnly ? (
@@ -99,6 +109,25 @@ export function TimetableUpload({ readOnly, yearName }: { readOnly: boolean; yea
         </Link>
       </div>
       {message ? <p className="mt-3 text-sm text-amber-700">{message}</p> : null}
+
+      <h3 className="mt-6 text-base font-semibold">Giáo viên bộ môn</h3>
+      {!Object.keys(teachers).length ? (
+        <p className="mt-2 text-sm text-slate-500">
+          Chưa có phân công. Điền sheet <b>Giáo viên</b> trong file mẫu rồi tải lên, hoặc gõ thẳng vào ô theo kiểu
+          &quot;Toán: Võ Thanh Phong&quot;.
+        </p>
+      ) : (
+        <ul className="tkb-teachers">
+          {Object.entries(teachers)
+            .sort(([a], [b]) => a.localeCompare(b, "vi"))
+            .map(([subject, teacher]) => (
+              <li key={subject}>
+                <strong>{subject}</strong>
+                <span>{teacher}</span>
+              </li>
+            ))}
+        </ul>
+      )}
 
       <h3 className="mt-6 text-base font-semibold">Phiên bản cũ</h3>
       {!versions.length ? (

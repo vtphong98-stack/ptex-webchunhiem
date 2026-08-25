@@ -21,7 +21,8 @@ import {
   canManageStudents,
   getAllowedViews,
 } from "@/lib/permissions";
-import type { AppRole, NavView } from "@/lib/types";
+import { classDutyOptions } from "@/lib/team-roster";
+import type { AppRole, ClassDuty, NavView } from "@/lib/types";
 import { APP_ROLES } from "@/lib/types";
 import { formatDate, formatRoleLabel } from "@/lib/utils";
 
@@ -417,6 +418,7 @@ function StudentForm({
     birthMonth: number;
     teamNumber: number | null;
     position: string | null;
+    classDuty: ClassDuty | null;
     parentPhone: string;
     parentName: string;
     notes: string;
@@ -452,8 +454,17 @@ function StudentForm({
       </div>
       <div className="form-grid">
         <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">Chức vụ</label>
-          <input defaultValue={student?.position ?? ""} name="position" placeholder="Lớp trưởng, tổ phó..." />
+          <label className="mb-2 block text-sm font-medium text-slate-700">Chức vụ lớp</label>
+          {/* Chọn từ danh sách chuẩn thay vì gõ tay: cùng một chức vụ mà mỗi chỗ
+              gõ một kiểu thì sơ đồ lớp, Excel và tài khoản đăng nhập lệch nhau. */}
+          <select defaultValue={student?.classDuty ?? ""} name="classDuty">
+            <option value="">Không giữ chức</option>
+            {classDutyOptions().map((duty) => (
+              <option key={duty.value} value={duty.value}>
+                {duty.label}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="mb-2 block text-sm font-medium text-slate-700">Tên phụ huynh</label>

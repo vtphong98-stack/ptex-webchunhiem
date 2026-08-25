@@ -20,7 +20,7 @@ export default async function SyllPage() {
         </p>
         <h1>Sơ yếu lý lịch</h1>
         <p className="syll-sub">
-          {site.fullName} · GVCN {site.gvcnDisplayName}
+          {site.fullName} · GVCN {site.gvcnDisplayName} · Mục có dấu <b>*</b> bắt buộc
         </p>
         <SyllForm siteName={site.fullName} />
       </div>

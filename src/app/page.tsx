@@ -141,7 +141,13 @@ export default async function HomePage() {
                     <span aria-hidden className="tile-icon">
                       {link.icon}
                     </span>
-                    {link.label}
+                    <span className="tile-text">
+                      {link.label}
+                      {/* Tên em đang giữ chức, lấy từ phân công của GVCN. */}
+                      {site.officers?.[link.code] ? (
+                        <em className="tile-holder">{site.officers[link.code]}</em>
+                      ) : null}
+                    </span>
                   </Link>
                 </li>
               ))}

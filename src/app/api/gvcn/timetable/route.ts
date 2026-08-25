@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 import { CURRENT_CLASS_NAME, CURRENT_SCHOOL_YEAR } from "@/lib/academic-calendar";
 import { getDb } from "@/lib/db";
-import { parseTimetableWorkbook } from "@/lib/excel-timetable";
+import { parseStoredTimetable, parseTimetableWorkbook } from "@/lib/excel-timetable";
 import { canManageStudents } from "@/lib/permissions";
 import { CLASS_CONFIG_FIELDS, resolveClassConfig, resolveSchoolYear, resolveSchoolYearFromRequest } from "@/lib/school-year-scope";
 import { getVerifiedSessionUser } from "@/lib/session";
@@ -27,6 +27,7 @@ export async function GET(request: Request) {
     isCurrent: Boolean(year?.isCurrent),
     updatedAt: config?.timetableUpdatedAt || (config?.timetableJson ? config.updatedAt : ""),
     versions: (config?.timetableHistory ?? []).map(versionMeta),
+    teachers: parseStoredTimetable(config?.timetableJson)?.teachers ?? {},
   });
 }
 
@@ -88,5 +89,6 @@ export async function POST(request: Request) {
     yearName: year.name,
     updatedAt: now,
     versions: timetableHistory.map(versionMeta),
+    teachers: grid.teachers ?? {},
   });
 }

@@ -12,6 +12,7 @@ import { SubmittedReportsList } from "@/components/officer/SubmittedReportsList"
 import { TeamLeaderForm } from "@/components/officer/TeamLeaderForm";
 import { WeekLockBanner, weekOptionLabel } from "@/components/officer/WeekLockBanner";
 import { useOfficerReports } from "@/components/officer/use-officer-reports";
+import { isTeamReporter } from "@/lib/permissions";
 import { getOfficerTitle, getReportFields } from "@/lib/report-fields";
 import type { AppRole } from "@/lib/types";
 import { buildExcelWeeks, getCurrentRealtimeWeekNumber } from "@/lib/weeks";
@@ -26,8 +27,8 @@ export function OfficerDesk({
   role: AppRole;
   teamNumber: number | null;
 }) {
-  if (role === "toTruong" && teamNumber) {
-    return <TeamLeaderForm fullName={fullName} teamNumber={teamNumber} />;
+  if (isTeamReporter(role) && teamNumber) {
+    return <TeamLeaderForm fullName={fullName} role={role} teamNumber={teamNumber} />;
   }
 
   if (role === "lopPhoLaoDong") {

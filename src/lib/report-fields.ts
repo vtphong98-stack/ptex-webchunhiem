@@ -129,6 +129,7 @@ export function getOfficerTitle(role: AppRole, teamNumber?: number | null) {
   if (role === "lopPhoPhongTrao") return "Dành cho lớp phó phong trào (LPPT)";
   if (role === "lopPhoTratTu") return "Dành cho lớp phó trật tự (LPTT)";
   if (role === "toTruong") return `Dành cho tổ trưởng tổ ${teamNumber ?? ""}`.trim();
+  if (role === "toPho") return `Dành cho tổ phó tổ ${teamNumber ?? ""}`.trim();
   if (role === "thuQuy") return "Dành cho thủ quỹ";
   return "Báo cáo tuần";
 }

@@ -1,5 +1,5 @@
 import type { ClassDuty, Student, TeamRole } from "@/lib/types";
-import { CLASS_DUTIES } from "@/lib/types";
+import { CLASS_DUTIES, TEAM_ROLES } from "@/lib/types";
 
 export type TeamMemberWeekRow = {
   studentId: string;
@@ -43,6 +43,47 @@ export const CLASS_DUTY_USERNAME: Record<ClassDuty, string> = {
   thuQuy: "thuquy",
 };
 
+/**
+ * Viết tắt chức vụ dùng chung cho sơ đồ chỗ ngồi trên web, sheet SoDoLop và cột
+ * "Ban cán sự lớp" của LyLich1 — cùng một bảng để ba chỗ không bao giờ lệch chữ.
+ */
+export const CLASS_DUTY_SHORT: Record<ClassDuty, string> = {
+  lopTruong: "LT",
+  lopPhoHocTap: "LPHT",
+  lopPhoLaoDong: "LPLĐ",
+  lopPhoPhongTrao: "LPPT",
+  lopPhoTratTu: "LPTT",
+  thuQuy: "TQ",
+};
+
+/** Tài khoản đăng nhập của tổ trưởng / tổ phó từng tổ: tt1..tt4, tp1..tp4. */
+export function teamRoleUsername(teamRole: TeamRole | null, teamNumber: number | null) {
+  if (!teamNumber) return "";
+  if (teamRole === "toTruong") return `tt${teamNumber}`;
+  if (teamRole === "toPho") return `tp${teamNumber}`;
+  return "";
+}
+
+type DutyBearer = Pick<Student, "teamRole" | "teamNumber" | "classDuty">;
+
+/** Viết tắt mọi chức vụ một em đang giữ, ví dụ ["LPLĐ", "TT2"]. */
+export function dutyTags(student: DutyBearer) {
+  const tags: string[] = [];
+  if (student.classDuty) tags.push(CLASS_DUTY_SHORT[student.classDuty]);
+  if (student.teamNumber && student.teamRole === "toTruong") tags.push(`TT${student.teamNumber}`);
+  if (student.teamNumber && student.teamRole === "toPho") tags.push(`TP${student.teamNumber}`);
+  return tags;
+}
+
+/** Tên đầy đủ mọi chức vụ một em đang giữ, ví dụ ["Lớp phó lao động", "Tổ trưởng tổ 2"]. */
+export function dutyLabels(student: DutyBearer) {
+  const labels: string[] = [];
+  if (student.classDuty) labels.push(CLASS_DUTY_LABELS[student.classDuty]);
+  if (student.teamNumber && student.teamRole === "toTruong") labels.push(`Tổ trưởng tổ ${student.teamNumber}`);
+  if (student.teamNumber && student.teamRole === "toPho") labels.push(`Tổ phó tổ ${student.teamNumber}`);
+  return labels;
+}
+
 export function normalizePersonName(value: string) {
   return value.normalize("NFC").replace(/\s+/g, " ").trim().toLowerCase();
 }
@@ -80,12 +121,17 @@ export function parseClassDuty(raw: string | null | undefined): ClassDuty | null
   return null;
 }
 
-export function studentPositionLabel(student: Pick<Student, "teamRole" | "classDuty" | "position">) {
-  const parts: string[] = [];
-  if (student.classDuty) parts.push(CLASS_DUTY_LABELS[student.classDuty]);
-  if (student.teamRole === "toTruong") parts.push("Tổ trưởng");
-  if (student.teamRole === "toPho") parts.push("Tổ phó");
-  return parts.join(" · ") || student.position || "";
+/**
+ * Nhãn chức vụ hiển thị khắp app.
+ *
+ * Chức vụ có cấu trúc (classDuty + teamRole) là bản chính thức; chuỗi `position`
+ * chỉ là phần chữ GVCN từng gõ tay ở trang setup cũ, giữ lại làm phương án dự
+ * phòng cho những em chưa được bổ nhiệm lại.
+ */
+export function studentPositionLabel(
+  student: Pick<Student, "teamRole" | "teamNumber" | "classDuty" | "position">,
+) {
+  return dutyLabels(student).join(" · ") || student.position || "";
 }
 
 export function sortTeamStudents<T extends Pick<Student, "teamRole" | "fullName">>(students: T[]) {
@@ -245,6 +291,10 @@ export function membersToReportFields(members: TeamMemberWeekRow[]) {
 
 export function teamLeaderUsername(teamNumber: number) {
   return `tt${teamNumber}`;
+}
+
+export function teamRoleOptions() {
+  return TEAM_ROLES.map((role) => ({ value: role, label: TEAM_ROLE_LABELS[role] }));
 }
 
 export function classDutyOptions() {

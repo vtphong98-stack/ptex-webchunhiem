@@ -51,28 +51,38 @@ function applyPatchLocal(list: DeskStudent[], id: string, body: PatchBody): Desk
         teamNumber: nextTeam,
         teamRole: nextRole,
         classDuty: nextDuty,
-        position: studentPositionLabel({ teamRole: nextRole, classDuty: nextDuty, position: null }),
+        position: studentPositionLabel({
+          teamNumber: nextTeam,
+          teamRole: nextRole,
+          classDuty: nextDuty,
+          position: null,
+        }),
       };
     }
-    if (nextTeam && nextRole === "toTruong" && student.teamNumber === nextTeam && student.teamRole === "toTruong") {
-      return {
-        ...student,
-        teamRole: "thanhVien",
-        position: studentPositionLabel({ teamRole: "thanhVien", classDuty: student.classDuty, position: null }),
-      };
-    }
-    if (nextTeam && nextRole === "toPho" && student.teamNumber === nextTeam && student.teamRole === "toPho") {
-      return {
-        ...student,
-        teamRole: "thanhVien",
-        position: studentPositionLabel({ teamRole: "thanhVien", classDuty: student.classDuty, position: null }),
-      };
+    for (const role of ["toTruong", "toPho"] as const) {
+      if (nextTeam && nextRole === role && student.teamNumber === nextTeam && student.teamRole === role) {
+        return {
+          ...student,
+          teamRole: "thanhVien" as TeamRole,
+          position: studentPositionLabel({
+            teamNumber: student.teamNumber,
+            teamRole: "thanhVien",
+            classDuty: student.classDuty,
+            position: null,
+          }),
+        };
+      }
     }
     if (nextDuty && student.classDuty === nextDuty) {
       return {
         ...student,
         classDuty: null,
-        position: studentPositionLabel({ teamRole: student.teamRole, classDuty: null, position: null }),
+        position: studentPositionLabel({
+          teamNumber: student.teamNumber,
+          teamRole: student.teamRole,
+          classDuty: null,
+          position: null,
+        }),
       };
     }
     return student;
