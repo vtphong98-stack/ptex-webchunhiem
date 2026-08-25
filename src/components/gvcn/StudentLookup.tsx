@@ -17,6 +17,7 @@ type LookupStudent = {
   parentName: string;
   studentPhone?: string;
   contactPhone?: string;
+  motherPhone?: string;
   email?: string;
   idNumber?: string;
   birthPlace?: string;
@@ -71,6 +72,7 @@ export function StudentLookup({ yearName }: { yearName: string }) {
         student.motherName,
         student.contactPhone,
         student.parentPhone,
+        student.motherPhone,
         student.studentPhone,
         student.addressWard,
         student.addressGroup,
@@ -136,6 +138,7 @@ export function StudentLookup({ yearName }: { yearName: string }) {
               <Row label="Cha" value={[selected.fatherName, selected.fatherJob].filter(Boolean).join(" · ")} />
               <Row label="Mẹ" value={[selected.motherName, selected.motherJob].filter(Boolean).join(" · ")} />
               <Row label="SĐT phụ huynh" value={parentPhone} />
+              <Row label="SĐT của mẹ" value={selected?.motherPhone} />
               <Row label="SĐT học sinh" value={studentPhone} />
               <Row label="Email" value={selected.email} />
               <Row label="Ghi chú" value={selected.notes} />

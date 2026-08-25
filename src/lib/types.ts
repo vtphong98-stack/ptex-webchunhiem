@@ -217,6 +217,8 @@ export type Student = {
   motherName?: string;
   motherJob?: string;
   contactPhone?: string;
+  /** SĐT của mẹ — chỉ dùng để tra cứu, biểu mẫu của trường không có cột này. */
+  motherPhone?: string;
   classRole?: string;
   conduct?: string;
   academic?: string;

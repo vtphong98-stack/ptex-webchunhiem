@@ -54,6 +54,7 @@ export async function GET(request: Request) {
               parentName: student.parentName ?? "",
               studentPhone: student.studentPhone ?? "",
               contactPhone: student.contactPhone ?? "",
+              motherPhone: student.motherPhone ?? "",
               email: student.email ?? "",
               idNumber: student.idNumber ?? "",
               birthPlace: student.birthPlace ?? "",

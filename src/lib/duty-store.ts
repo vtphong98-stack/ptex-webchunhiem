@@ -1,7 +1,9 @@
 import { getDb } from "@/lib/db";
 import { getSeedUsers } from "@/lib/seed-users";
 import {
+  CLASS_DUTY_LABELS,
   CLASS_DUTY_USERNAME,
+  TEAM_ROLE_LABELS,
   studentPositionLabel,
   teamRoleUsername,
 } from "@/lib/team-roster";
@@ -95,6 +97,48 @@ export async function syncDutyAccounts(schoolYearId: string) {
   if (operations.length) {
     await db.collection<UserAccount>("users").bulkWrite(operations, { ordered: false });
   }
+}
+
+export type DutyConflict = { label: string; holderName: string };
+
+/**
+ * Ai đang giữ chức vụ mà một em định nhận.
+ *
+ * Bên GVCN, giao chức cho em này là hạ chức em kia — thầy cô biết mình đang làm
+ * gì. Còn form học sinh tự khai thì không được phép: một em gõ nhầm "Lớp
+ * trưởng" là mất chức của bạn khác mà không ai hay. Nên đường đó hỏi hàm này
+ * trước rồi báo lỗi.
+ */
+export async function findDutyConflict(
+  schoolYearId: string,
+  studentId: string,
+  duty: { classDuty?: ClassDuty | null; teamRole?: TeamRole | null; teamNumber?: number | null },
+): Promise<DutyConflict | null> {
+  const db = await getDb();
+  const students = db.collection<Student>("students");
+
+  if (duty.classDuty) {
+    const holder = await students.findOne(
+      { schoolYearId, classDuty: duty.classDuty, _id: { $ne: studentId } },
+      { projection: { fullName: 1 } },
+    );
+    if (holder) return { label: CLASS_DUTY_LABELS[duty.classDuty], holderName: holder.fullName };
+  }
+
+  if (duty.teamNumber && (duty.teamRole === "toTruong" || duty.teamRole === "toPho")) {
+    const holder = await students.findOne(
+      { schoolYearId, teamNumber: duty.teamNumber, teamRole: duty.teamRole, _id: { $ne: studentId } },
+      { projection: { fullName: 1 } },
+    );
+    if (holder) {
+      return {
+        label: `${TEAM_ROLE_LABELS[duty.teamRole]} tổ ${duty.teamNumber}`,
+        holderName: holder.fullName,
+      };
+    }
+  }
+
+  return null;
 }
 
 /**

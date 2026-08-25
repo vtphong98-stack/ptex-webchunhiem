@@ -23,6 +23,7 @@ type StudentInfo = {
   motherJob: string;
   parentPhone: string;
   contactPhone: string;
+  motherPhone: string;
   studentPhone: string;
   email: string;
   classRole: string;
@@ -62,7 +63,7 @@ export function StudentLookupPublic({ students }: { students: StudentInfo[] }) {
     const q = query.toLowerCase().trim();
     if (!q) return students;
     return students.filter((s) =>
-      [s.fullName, s.idNumber, s.fatherName, s.motherName, s.parentPhone, s.studentPhone, s.addressWard, s.addressGroup]
+      [s.fullName, s.idNumber, s.fatherName, s.motherName, s.parentPhone, s.motherPhone, s.studentPhone, s.addressWard, s.addressGroup]
         .join(" ").toLowerCase().includes(q),
     );
   }, [query, students]);
@@ -107,12 +108,14 @@ export function StudentLookupPublic({ students }: { students: StudentInfo[] }) {
               <Row label="Cha" value={[selected.fatherName, selected.fatherJob].filter(Boolean).join(" · ")} />
               <Row label="Mẹ" value={[selected.motherName, selected.motherJob].filter(Boolean).join(" · ")} />
               <Row label="SĐT phụ huynh" value={selected.parentPhone} />
+              <Row label="SĐT của mẹ" value={selected.motherPhone} />
               <Row label="SĐT học sinh" value={selected.studentPhone} />
               <Row label="Email" value={selected.email} />
               <Row label="Ghi chú" value={selected.notes} />
             </div>
             <div className="sl-actions">
               <PhoneBtn phone={selected.parentPhone} label="Gọi phụ huynh" primary />
+              <PhoneBtn phone={selected.motherPhone} label="Gọi mẹ" />
               <PhoneBtn phone={selected.studentPhone} label="Gọi học sinh" />
             </div>
           </div>

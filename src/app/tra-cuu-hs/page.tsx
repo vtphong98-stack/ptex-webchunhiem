@@ -46,6 +46,7 @@ export default async function TraCuuPage() {
     motherJob: string;
     parentPhone: string;
     contactPhone: string;
+    motherPhone: string;
     studentPhone: string;
     email: string;
     classRole: string;
@@ -81,6 +82,7 @@ export default async function TraCuuPage() {
       motherJob: s.motherJob || "",
       parentPhone: s.contactPhone || s.parentPhone || "",
       contactPhone: s.contactPhone || s.parentPhone || "",
+      motherPhone: s.motherPhone || "",
       studentPhone: s.studentPhone || "",
       email: s.email || "",
       classRole: s.classRole || "",

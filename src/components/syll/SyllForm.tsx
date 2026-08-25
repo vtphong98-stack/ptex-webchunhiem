@@ -2,7 +2,40 @@
 
 import { useEffect, useMemo, useRef, useState, type HTMLAttributes, type ReactNode } from "react";
 
-type RosterStudent = { _id: string; tt: number | null; fullName: string; submitted: boolean };
+import {
+  SEAT_SIDES,
+  SEAT_SIDE_LABELS,
+  SEAT_TEAMS,
+  seatKey,
+  type SeatSide,
+} from "@/lib/syll-seats";
+import { CLASS_DUTY_LABELS, TEAM_ROLE_LABELS } from "@/lib/team-roster";
+import { CLASS_DUTIES, type ClassDuty, type TeamRole } from "@/lib/types";
+
+type RosterStudent = {
+  _id: string;
+  tt: number | null;
+  fullName: string;
+  submitted: boolean;
+  teamNumber: number | null;
+  teamRole: TeamRole | null;
+  classDuty: ClassDuty | null;
+  seatDesk: number | null;
+  seatSide: SeatSide | null;
+};
+
+/** Một danh sách chức vụ duy nhất, gộp chức vụ lớp và chức vụ tổ. */
+const DUTY_OPTIONS: Array<{ value: string; label: string }> = [
+  ...CLASS_DUTIES.map((duty) => ({ value: duty, label: CLASS_DUTY_LABELS[duty] })),
+  { value: "toTruong", label: TEAM_ROLE_LABELS.toTruong },
+  { value: "toPho", label: TEAM_ROLE_LABELS.toPho },
+];
+
+/**
+ * Đúng bốn diện nhà trường thống kê, lưu bằng mã viết tắt như trong sổ để cột
+ * "Diện chính sách" của biểu mẫu ra đúng chữ trường quen đọc.
+ */
+const POLICY_OPTIONS = ["", "HN", "CN", "KK"];
 
 function foldVi(value: string) {
   return value
@@ -147,6 +180,10 @@ export function SyllForm({ siteName }: { siteName: string }) {
   const [loadingRoster, setLoadingRoster] = useState(true);
   const [query, setQuery] = useState("");
   const [studentId, setStudentId] = useState("");
+  const [deskCount, setDeskCount] = useState(6);
+  const [duty, setDuty] = useState("");
+  const [team, setTeam] = useState("");
+  const [seat, setSeat] = useState("");
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState("");
   const [error, setError] = useState("");
@@ -156,9 +193,10 @@ export function SyllForm({ siteName }: { siteName: string }) {
     let cancelled = false;
     fetch("/api/syll")
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error("roster"))))
-      .then((data: { students?: RosterStudent[] }) => {
+      .then((data: { students?: RosterStudent[]; deskCount?: number }) => {
         if (cancelled) return;
         setRoster(data.students ?? []);
+        if (data.deskCount) setDeskCount(data.deskCount);
       })
       .catch(() => {
         if (!cancelled) setRosterError("Chưa tải được danh sách lớp. Tải lại trang giúp thầy cô nhé.");
@@ -180,6 +218,40 @@ export function SyllForm({ siteName }: { siteName: string }) {
   const selected = roster.find((student) => student._id === studentId) ?? null;
   const filledCount = roster.filter((student) => student.submitted).length;
 
+  /** Chỗ nào đã có bạn ngồi thì khoá lại, trừ chỗ của chính em đang khai. */
+  const takenSeats = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const student of roster) {
+      if (student._id === studentId) continue;
+      if (!student.teamNumber || !student.seatDesk || !student.seatSide) continue;
+      map.set(
+        seatKey({ team: student.teamNumber, desk: student.seatDesk, side: student.seatSide }),
+        student.fullName,
+      );
+    }
+    return map;
+  }, [roster, studentId]);
+
+  const takenDuties = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const student of roster) {
+      if (student._id === studentId) continue;
+      if (student.classDuty) map.set(student.classDuty, student.fullName);
+      if (student.teamNumber && (student.teamRole === "toTruong" || student.teamRole === "toPho")) {
+        map.set(`${student.teamRole}-${student.teamNumber}`, student.fullName);
+      }
+    }
+    return map;
+  }, [roster, studentId]);
+
+  function dutyHolder(value: string) {
+    if (!value) return "";
+    if (value === "toTruong" || value === "toPho") {
+      return team ? takenDuties.get(`${value}-${team}`) ?? "" : "";
+    }
+    return takenDuties.get(value) ?? "";
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!studentId) {
@@ -192,6 +264,11 @@ export function SyllForm({ siteName }: { siteName: string }) {
     try {
       const formData = new FormData(form);
       formData.set("studentId", studentId);
+      formData.set("duty", duty);
+      formData.set("teamNumber", team);
+      const [seatDesk, seatSide] = seat ? seat.split("-") : ["", ""];
+      formData.set("seatDesk", seatDesk);
+      formData.set("seatSide", seatSide);
       const response = await fetch("/api/syll", { method: "POST", body: formData });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -209,10 +286,19 @@ export function SyllForm({ siteName }: { siteName: string }) {
     }
   }
 
+  function pickTeam(next: string) {
+    setTeam(next);
+    // Chỗ ngồi thuộc về một tổ cụ thể, đổi tổ thì chỗ vừa chọn không còn nghĩa.
+    setSeat("");
+  }
+
   function startAnother() {
     setDone("");
     setStudentId("");
     setQuery("");
+    setDuty("");
+    setTeam("");
+    setSeat("");
     formRef.current?.reset();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -328,13 +414,17 @@ export function SyllForm({ siteName }: { siteName: string }) {
               { value: "Nữ", label: "Nữ" },
             ]}
           />
-          <Field
-            hint="Hộ nghèo, cận nghèo, khó khăn… Không thuộc diện nào thì bỏ trống"
-            label="Diện chính sách"
-            name="policy"
-            placeholder="HN / CN / KK…"
-            wide
-          />
+          <label className="syll-field">
+            <span className="syll-label">Diện chính sách</span>
+            <select defaultValue="" name="policy">
+              {POLICY_OPTIONS.map((code) => (
+                <option key={code} value={code}>
+                  {code || "Không"}
+                </option>
+              ))}
+            </select>
+            <em className="syll-hint-inline">HN: hộ nghèo · CN: cận nghèo · KK: hoàn cảnh khó khăn</em>
+          </label>
           <SelectField
             label="Rèn luyện năm trước"
             name="conduct"
@@ -347,6 +437,77 @@ export function SyllForm({ siteName }: { siteName: string }) {
             defaultValue=""
             options={["", "Tốt", "Khá", "Đạt", "Chưa đạt"]}
           />
+
+          <label className="syll-field">
+            <span className="syll-label">Chức vụ</span>
+            <select onChange={(event) => setDuty(event.target.value)} value={duty}>
+              <option value="">Không giữ chức vụ</option>
+              {DUTY_OPTIONS.map((option) => {
+                const holder = dutyHolder(option.value);
+                return (
+                  <option disabled={Boolean(holder)} key={option.value} value={option.value}>
+                    {option.label}
+                    {holder ? ` — đã có ${holder}` : ""}
+                  </option>
+                );
+              })}
+            </select>
+            <em className="syll-hint-inline">Giữ hai chức thì chọn một, nhờ GVCN thêm chức còn lại.</em>
+          </label>
+
+          <label className="syll-field">
+            <span className="syll-label">
+              Tổ{duty === "toTruong" || duty === "toPho" ? <b aria-hidden="true"> *</b> : null}
+            </span>
+            <select
+              onChange={(event) => pickTeam(event.target.value)}
+              required={duty === "toTruong" || duty === "toPho"}
+              value={team}
+            >
+              <option value="">— Chọn tổ —</option>
+              {SEAT_TEAMS.map((number) => (
+                <option key={number} value={number}>
+                  Tổ {number}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="syll-field syll-span">
+            <span className="syll-label">Chỗ ngồi</span>
+            {!team ? (
+              <p className="syll-note">Chọn tổ ở trên thì sơ đồ chỗ ngồi của tổ đó hiện ra.</p>
+            ) : (
+              <>
+                <div className="syll-seats">
+                  {Array.from({ length: deskCount }, (_, index) => index + 1).map((desk) => (
+                    <div className="syll-seat-row" key={desk}>
+                      <span className="syll-seat-desk">Bàn {desk}</span>
+                      {SEAT_SIDES.map((side) => {
+                        const value = `${desk}-${side}`;
+                        const holder = takenSeats.get(seatKey({ team: Number(team), desk, side }));
+                        return (
+                          <button
+                            aria-pressed={seat === value}
+                            className={`syll-seat${seat === value ? " is-picked" : ""}${holder ? " is-taken" : ""}`}
+                            disabled={Boolean(holder)}
+                            key={value}
+                            onClick={() => setSeat(seat === value ? "" : value)}
+                            title={holder ? `${SEAT_SIDE_LABELS[side]} — ${holder} đã ngồi` : SEAT_SIDE_LABELS[side]}
+                            type="button"
+                          >
+                            <b>{SEAT_SIDE_LABELS[side].replace("Chỗ phía ", "")}</b>
+                            <span>{holder ?? "còn trống"}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+                <em className="syll-hint-inline">Ô mờ là bạn khác đã ngồi. Bàn 1 gần bảng nhất.</em>
+              </>
+            )}
+          </div>
         </Section>
 
         <Section title="3. Chỗ ở hiện nay" note="Ghi rõ, không viết tắt — đây là mục nhà trường kiểm tra kỹ nhất.">
@@ -367,6 +528,13 @@ export function SyllForm({ siteName }: { siteName: string }) {
             name="contactPhone"
             placeholder="09xxxxxxxx"
             required
+          />
+          <Field
+            hint="Số riêng của mẹ, chỉ dùng để tra cứu — không in vào biểu mẫu"
+            inputMode="tel"
+            label="SĐT của mẹ"
+            name="motherPhone"
+            placeholder="09xxxxxxxx"
           />
         </Section>
 
