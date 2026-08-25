@@ -475,7 +475,7 @@ export function SyllManager({ yearName = "" }: { yearName?: string }) {
             Tải mẫu rỗng
           </a>
           <label className={`button-primary ${readOnly ? "pointer-events-none opacity-50" : "cursor-pointer"}`}>
-            {busy ? "Đang xử lý…" : "Tải danh sách lên"}
+            {busy ? "Đang xử lý…" : "Tải danh sách"}
             <input
               accept=".xlsx"
               className="hidden"
@@ -488,7 +488,7 @@ export function SyllManager({ yearName = "" }: { yearName?: string }) {
             />
           </label>
           <a className="button-secondary" href={`/api/gvcn/syll/export${qs}`}>
-            Xuất Excel đầy đủ
+            Xuất Excel
           </a>
         </div>
 
@@ -550,7 +550,7 @@ export function SyllManager({ yearName = "" }: { yearName?: string }) {
               }
               type="button"
             >
-              {data?.syllLocked ? "Mở lại cho khai" : "Chốt sổ, không cho sửa nữa"}
+              {data?.syllLocked ? "Mở lại cho khai" : "Chốt sổ"}
             </button>
           </div>
           <p className="mt-2 text-sm">

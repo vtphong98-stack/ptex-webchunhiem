@@ -211,10 +211,10 @@ Mất luôn sơ yếu lý lịch, chỗ ngồi và liên hệ phụ huynh của 
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <a className="button-secondary" href="/api/gvcn/students/template">
-            Tải mẫu Excel 4 tổ
+            Tải mẫu 4 tổ
           </a>
           <a className="button-secondary" href="/api/gvcn/students/export">
-            Xuất danh sách lớp
+            Xuất danh sách
           </a>
           <label className={`button-primary ${readOnly ? "pointer-events-none opacity-50" : "cursor-pointer"}`}>
             {importBusy ? "Đang xử lý…" : "Tải Excel lên"}

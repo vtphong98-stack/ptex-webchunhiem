@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { DAY_LABELS, canonicalSubject, subjectAliasTable } from "@/lib/class-site";
 import type { TimetableGrid } from "@/lib/excel-timetable";
@@ -24,6 +24,8 @@ export function TimetableGridEditor({
   readOnly: boolean;
   onChange: (next: TimetableGrid) => void;
 }) {
+  const [copyFrom, setCopyFrom] = useState(0);
+  const [copyTo, setCopyTo] = useState(1);
   const suggestions = useMemo(() => {
     const list: string[] = [];
     for (const [subject, aliases] of subjectAliasTable()) {
@@ -148,29 +150,43 @@ export function TimetableGridEditor({
         không có tiết. Ô nhập có gợi ý sẵn, gõ một chữ rồi nhấn Tab là sang ô kế.
       </p>
 
+      {/* Một dòng "từ → sang → chép" thay cho sáu ô chọn: sáu ô đó chiếm tới bốn
+          hàng trên điện thoại mà vẫn khó hiểu là chép theo chiều nào. */}
       <div className="tkb-edit-copy">
-        <span>Chép cả ngày:</span>
-        {DAY_LABELS.map((day, index) => (
-          <select
-            disabled={readOnly}
-            key={day}
-            onChange={(event) => {
-              const to = Number(event.target.value);
-              if (Number.isInteger(to)) copyDay(index, to);
-              event.target.value = "";
-            }}
-            value=""
-          >
-            <option value="">{day} →</option>
-            {DAY_LABELS.map((target, targetIndex) =>
-              targetIndex === index ? null : (
-                <option key={target} value={targetIndex}>
-                  chép sang {target}
-                </option>
-              ),
-            )}
-          </select>
-        ))}
+        <span>Chép ngày</span>
+        <select
+          aria-label="Chép từ ngày"
+          disabled={readOnly}
+          onChange={(event) => setCopyFrom(Number(event.target.value))}
+          value={copyFrom}
+        >
+          {DAY_LABELS.map((day, index) => (
+            <option key={day} value={index}>
+              {day}
+            </option>
+          ))}
+        </select>
+        <span aria-hidden="true">→</span>
+        <select
+          aria-label="Chép sang ngày"
+          disabled={readOnly}
+          onChange={(event) => setCopyTo(Number(event.target.value))}
+          value={copyTo}
+        >
+          {DAY_LABELS.map((day, index) => (
+            <option key={day} value={index}>
+              {day}
+            </option>
+          ))}
+        </select>
+        <button
+          className="button-secondary"
+          disabled={readOnly || copyFrom === copyTo}
+          onClick={() => copyDay(copyFrom, copyTo)}
+          type="button"
+        >
+          Chép
+        </button>
       </div>
 
       {renderSession("morning", "Buổi sáng · tiết 1–5", MORNING_PERIODS)}
@@ -232,7 +248,7 @@ function FragmentRow({
         autoComplete="off"
         disabled={readOnly}
         onChange={(event) => onTeacher(event.target.value)}
-        placeholder="Họ tên thầy cô"
+        placeholder={`Giáo viên dạy ${subject}`}
         value={teacher}
       />
       <input

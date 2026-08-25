@@ -123,7 +123,9 @@ export function TimetableUpload({ readOnly, yearName }: { readOnly: boolean; yea
       ) : (
         <p className="mt-3 text-sm text-slate-500">Chưa có thời khóa biểu năm này.</p>
       )}
-      <div className="mt-4 flex flex-wrap gap-2">
+      {/* Ba nút cùng cỡ thì trên điện thoại rớt thành ba hàng. Hai cách nhập là
+          một cặp chọn chia đôi, còn xem trang chủ chỉ là liên kết phụ. */}
+      <div className="tkb-mode">
         <button
           className={mode === "type" ? "button-primary" : "button-secondary"}
           onClick={() => setMode("type")}
@@ -136,12 +138,12 @@ export function TimetableUpload({ readOnly, yearName }: { readOnly: boolean; yea
           onClick={() => setMode("excel")}
           type="button"
         >
-          Nhập bằng file Excel
+          File Excel
         </button>
-        <Link className="button-secondary" href="/">
-          Xem trên trang chủ
-        </Link>
       </div>
+      <Link className="tkb-mode-link" href="/">
+        Xem trên trang chủ →
+      </Link>
 
       {mode === "excel" ? (
         <div className="mt-4 flex flex-wrap gap-2">
@@ -152,7 +154,7 @@ export function TimetableUpload({ readOnly, yearName }: { readOnly: boolean; yea
             <span className="text-sm text-slate-500">Năm cũ chỉ xem — không ghi đè TKB.</span>
           ) : (
             <label className="button-primary cursor-pointer">
-              {pending ? "Đang tải…" : "Tải TKB lên"}
+              {pending ? "Đang tải…" : "Tải lên"}
               <input
                 accept=".xlsx,.xls"
                 className="hidden"
@@ -179,7 +181,7 @@ export function TimetableUpload({ readOnly, yearName }: { readOnly: boolean; yea
           {readOnly ? null : (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button className="button-primary" disabled={pending || !dirty} onClick={() => void saveGrid()} type="button">
-                {pending ? "Đang lưu…" : "Lưu thời khóa biểu"}
+                {pending ? "Đang lưu…" : "Lưu TKB"}
               </button>
               <button
                 className="button-secondary"
