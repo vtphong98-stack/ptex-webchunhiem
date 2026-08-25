@@ -5899,3 +5899,86 @@ a.site-hero-teacher:hover strong {
     width: 52px;
   }
 }
+
+/* Danh sách tên trong form sơ yếu lý lịch.
+
+   Trước là <select> — 43 dòng xổ ra che gần hết màn hình điện thoại, tên dài
+   lại bị mũi tên cắt mất chữ cuối. Giờ là khung mở sẵn cao đúng mười dòng,
+   phần còn lại cuộn bên trong; ô Tìm nhanh phía trên lọc thẳng vào khung này. */
+.syll-picker-names {
+  grid-column: 1 / -1;
+}
+
+.syll-names {
+  /* Mỗi dòng cao 41px: mười dòng trọn vẹn cộng một mẩu dòng thứ mười một để
+     em thấy ngay là còn cuộn được nữa. */
+  max-height: 424px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  overflow-y: auto;
+  /* Cuộn hết khung thì dừng ở đó, không kéo theo cả trang. */
+  overscroll-behavior: contain;
+}
+
+.syll-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.syll-name b {
+  flex: none;
+  min-width: 26px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.syll-name span {
+  flex: 1;
+  min-width: 0;
+}
+
+.syll-name em {
+  flex: none;
+  font-style: normal;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.syll-name:hover {
+  background: #eef2ff;
+}
+
+.syll-name.is-picked {
+  background: #667eea;
+  color: #fff;
+}
+
+.syll-name.is-picked b {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.syll-name.is-picked em {
+  color: #bbf7d0;
+}
+
+.syll-names-empty {
+  padding: 14px 10px;
+  font-size: 14px;
+  color: #64748b;
+}

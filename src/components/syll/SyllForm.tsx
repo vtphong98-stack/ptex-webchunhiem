@@ -546,28 +546,37 @@ export function SyllForm({ siteName }: { siteName: string }) {
               value={query}
             />
           </label>
-          <label className="syll-field">
+          {/* Danh sách mở sẵn thay cho ô chọn xổ xuống: 43 dòng xổ ra là che
+              gần hết màn hình điện thoại và tên dài bị cắt. Khung này cao vừa
+              mười dòng, còn lại cuộn trong khung. */}
+          <div className="syll-field syll-picker-names">
             <span className="syll-label">
               Họ và tên<b aria-hidden="true"> *</b>
             </span>
-            <select autoComplete="off"
-              disabled={loadingRoster || !roster.length}
-              onChange={(event) => void pickStudent(event.target.value)}
-              required
-              value={studentId}
-            >
-              <option value="">
-                {loadingRoster ? "Đang tải danh sách…" : roster.length ? "— Chọn tên —" : "Lớp chưa có danh sách"}
-              </option>
-              {filtered.map((student) => (
-                <option key={student._id} value={student._id}>
-                  {student.tt ? `${student.tt}. ` : ""}
-                  {student.fullName}
-                  {student.submitted ? " ✓" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
+            {loadingRoster ? (
+              <p className="syll-note">Đang tải danh sách…</p>
+            ) : !roster.length ? (
+              <p className="syll-note">Lớp chưa có danh sách.</p>
+            ) : (
+              <ul className="syll-names">
+                {filtered.map((student) => (
+                  <li key={student._id}>
+                    <button
+                      aria-pressed={studentId === student._id}
+                      className={`syll-name${studentId === student._id ? " is-picked" : ""}`}
+                      onClick={() => void pickStudent(student._id)}
+                      type="button"
+                    >
+                      <b>{student.tt ? `${student.tt}.` : "•"}</b>
+                      <span>{student.fullName}</span>
+                      {student.submitted ? <em title="đã khai">✓</em> : null}
+                    </button>
+                  </li>
+                ))}
+                {!filtered.length ? <li className="syll-names-empty">Không có tên nào khớp.</li> : null}
+              </ul>
+            )}
+          </div>
         </div>
 
         {!loadingRoster && !roster.length ? (
