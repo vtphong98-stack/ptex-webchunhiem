@@ -563,7 +563,7 @@ export function SyllForm({ siteName }: { siteName: string }) {
                 <option key={student._id} value={student._id}>
                   {student.tt ? `${student.tt}. ` : ""}
                   {student.fullName}
-                  {student.submitted ? " ✓ đã khai" : ""}
+                  {student.submitted ? " ✓" : ""}
                 </option>
               ))}
             </select>

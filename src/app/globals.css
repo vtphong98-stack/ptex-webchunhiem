@@ -5802,39 +5802,100 @@ a.site-hero-teacher:hover strong {
   }
 }
 
-/* Ngày sinh: ba ô rời đọc thành một câu "Ngày … tháng … năm …". Ô số nên tắt
-   mũi tên tăng giảm — trong ô rộng 54px chúng chiếm mất chỗ của chữ số. */
+/* Ngày sinh: ba ô rời đọc thành một câu "Ngày … tháng … năm …", và phải nằm
+   gọn một dòng kể cả trên điện thoại — rớt dòng thì câu đứt làm đôi.
+   Ô số nên tắt mũi tên tăng giảm, chúng chiếm mất chỗ của chữ số. */
 .syll-birth {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .syll-birth label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #475569;
+  white-space: nowrap;
 }
 
 .syll-birth input {
-  width: 62px;
+  width: 52px;
   min-width: 0;
+  padding-left: 4px;
+  padding-right: 4px;
   text-align: center;
   appearance: textfield;
   -moz-appearance: textfield;
 }
 
 .syll-birth-year input {
-  width: 82px;
+  width: 68px;
 }
 
 .syll-birth input::-webkit-outer-spin-button,
 .syll-birth input::-webkit-inner-spin-button {
   appearance: none;
   margin: 0;
+}
+
+@media (max-width: 640px) {
+  /* Ba lớp hộp lồng nhau ăn mất 58px mỗi bên, ô nhập chỉ còn 257px nên tên dài
+     trong danh sách bị cắt và ba ô ngày sinh rớt xuống hai dòng. Bóp đệm lại
+     một nấc, lấy về hơn 40px. */
+  .syll-page,
+  .contact-page {
+    padding: 16px 10px 40px;
+  }
+
+  .syll-card,
+  .contact-shell {
+    padding: 20px 14px 24px;
+  }
+
+  .syll-block {
+    padding: 14px 12px;
+  }
+
+  /* Tên dài nhất trong sổ đo được 244px; bóp đệm ngang để còn chỗ cho mũi tên
+     của ô chọn, khỏi cắt mất chữ cuối của tên. */
+  .syll-field input,
+  .syll-field select {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .syll-birth input {
+    width: 46px;
+  }
+
+  .syll-birth-year input {
+    width: 62px;
+  }
+}
+
+@media (max-width: 360px) {
+  /* Máy hẹp cỡ 320px: bóp thêm một nấc nữa để câu "Ngày … tháng … năm …" vẫn
+     nằm trọn một dòng. */
+  .syll-birth {
+    gap: 4px;
+  }
+
+  .syll-birth label {
+    gap: 4px;
+    font-size: 12px;
+  }
+
+  .syll-birth input {
+    width: 38px;
+    font-size: 15px;
+  }
+
+  .syll-birth-year input {
+    width: 52px;
+  }
 }
